@@ -38,7 +38,7 @@ if __name__=="__main__":
 
     if var_list['Object']=='Campaign':
         var_list.update(sourceChannel(var_list['Campaign Upload'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))
-        var_list.update(sourceChannel(var_list['Campaign to Create'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))
+        var_list.update(sourceChannel(var_list['Campaign to Create'],var_list['Record Name'],var_list['CmpAccountID'],var_list['Object']))
         var_list.update(extract_pdValues(var_list['Campaign Upload']))
         if var_list['Move To Bulk']==True:
             copy_toBulkProcessing(var_list['Campaign to Create'])
