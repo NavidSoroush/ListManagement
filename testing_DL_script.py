@@ -13,6 +13,9 @@ yot = time.strftime("%Y")
 sPath= ['T:/Shared/FS2 Business Operations/Python Search Program/New Lists/',
         'Y:/Business_Intelligence_Analytics/Lists - Archives/'+yot+'OrigListArch/']
 
+##for testing
+##sPath=['C:/Users/rschools/Downloads/ListDownloadTesting/']
+
 def drivepresent(fname, paths):
     if not os.path.isdir(paths):
         try:
@@ -76,6 +79,7 @@ def list_download(att_id, sfObj, objLink):
     eventDate = None
     preORpost = None
     accountName=None
+    aID=None
     if sfObj == 'Campaign':
         sql = 'SELECT StartDate,Account__c FROM Campaign Where id='+'"{}"'.format('" "'.join([objLink[-18:]]))
         for rec in session.selectRecords(sql): 
@@ -90,16 +94,17 @@ def list_download(att_id, sfObj, objLink):
     SQLForce.SQLForceServer.killServer()
     print 'Download successful.'
     attachment=create_moveNewFile(attachment)
-    return (attachment,eventDate, preORpost,accountName)
+    return (attachment,eventDate, preORpost,accountName,aID)
 
 
 ##for testing
 ##att = ['00PE000000SW8R6MAL']
 ##obj = 'Campaign'
 ##obj_link = '701E00000011T7fIAE'
-##link, eD, pop,aName=list_download(att,obj,obj_link)
+##link, eD, pop,aName, aID=list_download(att,obj,obj_link)
 ##
 ##print link
 ##print eD
 ##print pop
 ##print aName
+##print aID

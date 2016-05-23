@@ -11,7 +11,10 @@ import time
 
 EMAIL_ACCOUNT=userEmail+'/Lists'
 EMAIL_FOLDER='INBOX/Auto Lists From SFDC/'
-listUploadStr=['An upload list has been added','An upload list has been added to','by','Account Link: ', 'Attachment Link: ']
+listUploadStr=['An upload list has been added'
+               ,'An upload list has been added to'
+               ,'by','Account Link: '
+               , 'Attachment Link: ']
 Object_Check = ['Campaign', 'BizDev Group']
 
 
@@ -103,7 +106,7 @@ def process_mailbox(M):
                     obj_rec_Link=obj_rec_Link[-18:]
                 else:
                     obj_rec_Link=obj_rec_Link[26:44]
-                filePath,startDate,pre_orPost,aName = list_download([attLink[:18]], obj, obj_rec_Link)
+                filePath,startDate,pre_orPost,aName, aID = list_download([attLink[:18]], obj, obj_rec_Link)
                 newListReceived_notifyOriginator(sentFrom,senderName,obj_rec_Name,obj)
                 #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
                 #M.copy(num,'INBOX/Auto Lists From SFDC')
@@ -117,7 +120,8 @@ def process_mailbox(M):
                  returnDict('Campaign Start Date', startDate), returnDict('Next Step','Pre-processing'),
                  returnDict('Found Path', None), returnDict('ObjectId',obj_rec_Link),
                  returnDict('Pre_or_Post',pre_orPost), returnDict('processStart',pstart),
-                 returnDict('CmpAccountName',aName), returnDict('Found in SFDC Search #2',0)]
+                 returnDict('CmpAccountName',aName), returnDict('CmpAccountID',aID)
+                 returnDict('Found in SFDC Search #2',0)]
                 retItems = dict([(i.item, i.emailVar) for i in Items])
                 return retItems
             else:

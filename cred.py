@@ -1,7 +1,7 @@
 import os
 
 username = str(os.environ.get("USERNAME"))
-print username
+##print username
 if username.lower()=='rschools':
     password = 'Rockon3!3..'
     userPhone='(407) 803-5922'
