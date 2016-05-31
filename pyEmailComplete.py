@@ -1,7 +1,7 @@
 import smtplib
 import string
 import os
-from cred import username, password, userPhone, userEmail, userName
+from cred import username, password, userPhone, outlook_userEmail, userName
 
 
 def sfdcBatchComplete():
@@ -61,7 +61,7 @@ def sendEmail(FROM, TO, BODY):
     server = smtplib.SMTP("smtp.office365.com",587)
     server.ehlo()
     server.starttls()
-    server.login(userEmail,password)
+    server.login(outlook_userEmail,password)
     server.sendmail(FROM,[TO],BODY)
     server.quit()
 
