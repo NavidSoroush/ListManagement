@@ -2,6 +2,7 @@ import shutil
 from functions import splitname
 
 def copy_toBulkProcessing(srcPath):
+    print '\nStep 10. Dropping in bulk processing path.'
     destPath='//sc12-fsphl-01/BulkImports/'
     startPath=srcPath
     fname=splitname(srcPath)
