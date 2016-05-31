@@ -24,8 +24,8 @@ if __name__=="__main__":
     if var_list['SFDC_Found']<var_list['Total Records'] and var_list['FINRA?'] == True:
         var_list.update(fin_search(var_list['File Path'],var_list['Found Path']))
         if var_list['SFDC_Found']+var_list['FINRA_Found']<var_list['Total Records']:
-##            var_list.update(searchsec(var_list['No CRD'],var_list['FINRA_SEC Found']))
-            print 'Skipping SEC'
+            var_list.update(searchsec(var_list['No CRD'],var_list['FINRA_SEC Found']))
+##            print 'Skipping SEC'
         else:
             print '\nSkipping step 6, because all contacts were found.'
         var_list.update(searchtwo(var_list['FINRA_SEC Found'],var_list['Found Path'],var_list['Object']))
@@ -42,14 +42,13 @@ if __name__=="__main__":
         var_list.update(extract_pdValues(var_list['Campaign Upload']))
         if var_list['Move To Bulk']==True:
             copy_toBulkProcessing(var_list['Campaign to Create'])
-            #print 'would process'
+
         else:
             print '\nContacts will not be created. Not enough information provided.'
     else:
         var_list.update(sourceChannel(var_list['Update Path'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))
         if var_list['Move To Bulk']==True:
             copy_toBulkProcessing(var_list['Update Path'])
-            #print 'would process'
         else:
             print '\nContacts will not be created. Not enough information provided.'
     
