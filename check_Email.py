@@ -1,6 +1,6 @@
 import smtplib
 import imaplib
-from cred import username, password, sfuser, sfpw, userEmail
+from cred import username, password, sfuser, sfpw, outlook_userEmail
 from testing_DL_script import list_download
 from pyEmailComplete import newListReceived_notifyOriginator, newListReceived_notifyListMGMT
 import getpass
@@ -10,7 +10,7 @@ import datetime
 import sys
 import time
 
-EMAIL_ACCOUNT=userEmail+'/Lists'
+EMAIL_ACCOUNT=outlook_userEmail+'/Lists'
 EMAIL_FOLDER='INBOX/Auto Lists From SFDC/'
 listUploadStr=['An upload list has been added'
                ,'An upload list has been added to'

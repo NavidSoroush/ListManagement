@@ -5,6 +5,7 @@ username = str(os.environ.get("USERNAME"))
 if username.lower()=='rschools':
     password = 'Rockon3!3..'
     userPhone='(407) 803-5922'
+    outlook_userEmail='rschools@franklinsquare.com'
     userEmail='ricky.schools@franklinsquare.com'
     userName='Ricky Schools'
     sfuser = 'ricky.schools@franklinsquare.com'
@@ -15,6 +16,7 @@ else:
     username = 'mcharles'
     password = 'Cowwonderful@86!'
     userPhone='(215) 309-6808'
+    outlook_userEmail='max.charles@franklinsquare.com'
     userEmail='max.charles@franklinsquare.com'
     userName='Max Charles'
     sfuser = 'max.charles@franklinsquare.com'
