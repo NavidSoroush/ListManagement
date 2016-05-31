@@ -13,11 +13,11 @@ necessaryColumns=acceptedColumns[:8]
 
 cmp_acceptedColumns=['ContactID','CampaignId','Status']
 
-phoneNumbers=[ '1554-568-889525'
-              , '6587453214545'
-              , '(123)469-7891454'
-              , '012.321.4587'
-              ,'1425665873']
+##phoneNumbers=[ '1554-568-889525'
+##              , '6587453214545'
+##              , '(123)469-7891454'
+##              , '012.321.4587'
+##              ,'1425665873']
 
 def sourceChannel(path, recordName, objId, obj):
     move_toBulk=False
