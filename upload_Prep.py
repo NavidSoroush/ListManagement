@@ -38,6 +38,8 @@ def sourceChannel(path, recordName, objId, obj):
         list_df.loc[list_df['SourceChannel'].isnull(),'SourceChannel']=sc_toAdd
     
         list_df=list_df.merge(crd_SC, how='left', on='CRDNumber')
+        del list_df['SourceChannel_y']
+        list_df.rename(columns={'SourceChannel_x':'SourceChannel'},inplace=True)
         move_toBulk=determineMovetoBulkProcessing(list_df) 
         del crd_SC
         del new_contactDF
@@ -54,6 +56,7 @@ def sourceChannel(path, recordName, objId, obj):
             list_df=drop_unneedColumns(list_df,obj,create=False)
             to_create=0
             list_df['CampaignId']=objId
+            
 
         
 
