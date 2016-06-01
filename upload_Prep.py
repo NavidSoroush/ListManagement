@@ -56,11 +56,8 @@ def sourceChannel(path, recordName, objId, obj):
             list_df=drop_unneedColumns(list_df,obj,create=False)
             to_create=0
             list_df['CampaignId']=objId
-            
 
-        
-
-    
+##Clean up phone and fax numbers (ie. format for SFDC upload)
     if 'Phone' in list_df.columns.values:
         try:
             list_df['Phone'].astype(str)
@@ -69,6 +66,16 @@ def sourceChannel(path, recordName, objId, obj):
                 list_df.loc[index,'Phone']=clean_phoneNumber(row['Phone'])
         except:
             print "Can't clean up phone numbers due to %s." % (Exception)
+
+    if 'Fax' in list_df.columns.values:
+        try:
+            list_df['Fax'].astype(str)
+            numRows=len(list_df.index)
+            for index, row in list_df.iterrows():
+                list_df.loc[index,'Fax']=clean_phoneNumber(row['Fax'])
+        except:
+            print "Can't clean up fax numbers due to %s." % (Exception)
+            
     list_df.to_excel(path,index=False)
     return {'Next Step': 'Parse Out Advisors Updates'
             ,'Create': to_create
