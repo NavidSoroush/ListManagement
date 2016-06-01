@@ -110,9 +110,9 @@ def process_mailbox(M):
                 filePath,startDate,pre_orPost,aName, aID = list_download([attLink[:18]], obj, obj_rec_Link)
                 newListReceived_notifyOriginator(sentFrom,senderName,obj_rec_Name,obj)
                 #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
-                #M.copy(num,'INBOX/Auto Lists From SFDC')
-                #M.store(num,'+FLAGS', r'(\Deleted)')
-                #M.expunge()
+                M.copy(num,'INBOX/Auto Processed Lists')
+                M.store(num,'+FLAGS', r'(\Deleted)')
+                M.expunge()
                 ts=time.time()
                 pstart=datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')               
                 Items = [returnDict('Object',obj), returnDict('Record Name',obj_rec_Name),
