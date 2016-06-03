@@ -28,9 +28,7 @@ if __name__=="__main__":
 ##            print 'Skipping SEC'
         else:
             print '\nSkipping step 6, because all contacts were found.'
-        var_list.update(searchtwo(var_list['FINRA_SEC Found'],var_list['Found Path'],var_list['Object']))
-##    elif var_list['SFDC_Found']==var_list['Total Records']:
-##        var_list.update(searchtwo(var_list['Found Path'],var_list['Found Path'],var_list['Object']))     
+        var_list.update(searchtwo(var_list['FINRA_SEC Found'],var_list['Found Path'],var_list['Object'])) 
     else:
         print '\nSkipping email, LkupName, FINRA and SEC searches.'
         
