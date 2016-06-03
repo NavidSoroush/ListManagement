@@ -248,12 +248,17 @@ def searchtwo(path, found_path, listType=None):
 
 def searchsec(path,found_path):
     import datetime
+    today = datetime.datetime.strftime(datetime.datetime.now(),'%m_%d_%Y')
+    SECpath='T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/Individuals/processed_data/'+today+'/'
+    if os.path.exists(SECpath)==False:
+        print "Skipping SEC Search. Today's files could not be found in the listed directory."
+        ret_item = {'Next Step': 'SFDC Search #2','SEC_Found':0}
+        return ret_item
+
     print '\nStep 6:\nSearching against SEC Data.'
-    today = datetime.datetime.strftime(datetime.datetime.now(),'%m_%d_%Y') 
     Campaign_list = pd.read_excel(path, sheetname=0)
     headers = Campaign_list.columns.values
     #test_SECpath='C:/Users/rschools/Downloads/SEC_Data/processed_data/03_30_2016/'
-    SECpath='T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/Individuals/processed_data/'+today+'/'
     SECfiles = os.listdir(SECpath)
     found=0
     for sec in SECfiles:
@@ -293,6 +298,6 @@ def searchsec(path,found_path):
 ##test_found='C:/Users/rschools/Dropbox/Python Search Program/New Lists/Chicago Pre Attendee_foundcontacts.xlsx'
 ##
 ##test_search1='C:/Users/rschools/Dropbox/Python Search Program/New Lists/AMPF Update Rep List_ALPTest/AMPF Update Rep List_ALPTest.xlsx'
-##if __name__=="__main__":
-##    searchsec(test_nocrd, test_found)
+if __name__=="__main__":
+    print searchsec('xyz', 'pdq')
 ##    searchone(test_search1, listType='Account')

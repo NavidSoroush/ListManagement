@@ -15,9 +15,6 @@ CHANGE LOG
 
 '''
 
-
-
-
 def no_crd_path(path):
     fname=splitname(path)
     rootpath=path[:len(path)-len(fname)]
@@ -62,7 +59,10 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
 
 ##  Reference to an output dataframe from step 2. Create list of search texts
     for index, row in Campaign_list.iterrows():
-        search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account']
+        try:
+            search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account']
+        except:
+            search_name = 'Error converting row %s to string' % index
         to_be_searched = to_be_searched + [search_name]
         
     
@@ -109,12 +109,12 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
                     attempted_search_count += 1
                     num_suggestions += [0]
 
-                print '\nSearch # %s\nSearching for: %s' % (attempted_search_count, to_be_searched[attempted_search_count-1])
-                print 'Number FINRA suggestions: %s' % num_suggestions[attempted_search_count-1]
-                print 'CRD Return Num Or String: %s\n\n' % to_be_added[attempted_search_count-1]
+##                for debugging
+##                print '\nSearch # %s\nSearching for: %s' % (attempted_search_count, to_be_searched[attempted_search_count-1])
+##                print 'Number FINRA suggestions: %s' % num_suggestions[attempted_search_count-1]
+##                print 'CRD Return Num Or String: %s\n\n' % to_be_added[attempted_search_count-1]
                 
                 sBar.clear()
-
             else:
                 sel.refresh()
                 print 'refreshing...'
@@ -150,10 +150,13 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
 ### End of Max's ideas ###
 
 
-##for testing on home mac
-if __name__=='__main__':
-    found_contacts_macpath='/Users/rickyschools/Desktop/found_contacts.xlsx'
-    test_file_macpath='/Users/rickyschools/Desktop/test_list.xlsx'
-    mac_chrome_driver='/Users/rickyschools/Documents/ChromeDriver/chromedriver'
-    fin_search(test_file_macpath, found_contacts_macpath, mac_chrome_driver)
+##for testing
+##if __name__=='__main__':
+##    found_contacts_macpath='/Users/rickyschools/Desktop/found_contacts.xlsx'
+##    test_file_macpath='/Users/rickyschools/Desktop/test_list.xlsx'
+##    mac_chrome_driver='/Users/rickyschools/Documents/ChromeDriver/chromedriver'
+##    fin_search(test_file_macpath, found_contacts_macpath, mac_chrome_driver)
+##    test_file_windows='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/FINRA_Search_Test/test_list.xlsx'
+##    found_contacts_windows='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/FINRA_Search_Test/found_contacts.xlsx'
+##    fin_search(test_file_windows, found_contacts_windows)
 
