@@ -29,6 +29,7 @@ def parseList(path,listType=None,preORpost=None):
     list_df=pd.read_excel(path)
     if listType=='Campaign':
         if preORpost=='Post':
+##            cmpStatus='Attended'
             cmpStatus='Needs Follow-Up'
         else:
             cmpStatus='Invited'
