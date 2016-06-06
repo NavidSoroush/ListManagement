@@ -1,27 +1,17 @@
 import shutil
-from functions import splitname
+from functions import splitname, shorten_filename_to95char
 
 def copy_toBulkProcessing(srcPath):
     print '\nStep 10. Dropping in bulk processing path.'
     destPath='//sc12-fsphl-01/BulkImports/'
     startPath=srcPath
     fname=splitname(srcPath)
+    fname=shorten_filename_to95char(fname)
     newPath=destPath+fname
     
     shutil.copy(srcPath,newPath)
 
 
-def detExt(fname):
-    filename, file_ext=os.path.splitext(fname)
-    if file_ext=='.csv' or file_ext=='.pdf' or file_ext=='.xls':
-        shortLen=4
-    if file_ext=='.xlsx':
-        shortLen=5
-
-    del filename   
-    return shortLen
-
-
 ##for testing
-##sPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/campaign_list_test_ALM/campaign_list_test_ALM_cmp_toCreate.xlsx'
+##sPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/June Rep-Advisor List/June Rep-Advisor List_toUpdate.xlsx'
 ##copy_toBulkProcessing(sPath)

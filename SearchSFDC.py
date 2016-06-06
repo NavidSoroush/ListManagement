@@ -32,9 +32,17 @@ def review_contact_path(path):
     fname=fname[:-5]+'_review_contacts.xlsx'
     found_path=rootpath+fname
     return found_path
+
+def sf_advlist():
+    print "Please wait. Downloading SFDC list as today's file was not available."
+    from sqlQuery import run
+    run()
     
 user = os.environ.get("USERNAME")
 AdvListPath = 'T:/Shared/FS2 Business Operations/Search Program/Salesforce Data Files/SFDC Advisor List as of ' + time.strftime("%m-%d-%y") + '.csv'
+if os.path.exists(AdvListPath)==False:
+    sf_advlist()
+
 #path for testing
 #path = 'C:/Users/'+user+'/Dropbox/Python Search Program/New Lists/Chicago Pre Attendee.xlsx'
 #Grab SF advisor list. Edit to where ever this can be found
