@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import re
 import pandas as pd
 from functions import splitname
+import unicodedata
 
 '''
 CHANGE LOG
@@ -14,6 +15,9 @@ CHANGE LOG
 5.18 - Search now in a while loop to account for necessary page refreshes. Need to add confidence check still.
 
 '''
+
+def StripUnicodeChars(row):
+    return [unicodedata.normaalize('NFKD',r).encode('ascii','ignore') for r in row]
 
 def no_crd_path(path):
     fname=splitname(path)
@@ -50,12 +54,19 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
     no_crd=pd.DataFrame()
     FINRA_ambiguity=pd.DataFrame()
     
-    Campaign_list = pd.read_excel(path, sheet=0)
+    Campaign_list = pd.read_excel(path, sheet=0, encoding='utf-8')
 
     to_be_searched = []
-    Campaign_list['FirstName'].astype(str)
-    Campaign_list['LastName'].astype(str)
-    Campaign_list['Account'].astype(str)
+    try:
+        Campaign_list['FirstName']=df.apply(StripUnicodeChars)
+        Campaign_list['LastName']=df.apply(StripUnicodeChars)
+        Campaign_list['Account']=df.apply(StripUnicodeChars)
+    except:
+        pass
+    
+    Campaign_list['FirstName'].astype(str).str.split(',')
+    Campaign_list['LastName'].astype(str).str.split(',')
+    Campaign_list['Account'].astype(str).str.split(',')
 
 ##  Reference to an output dataframe from step 2. Create list of search texts
     for index, row in Campaign_list.iterrows():

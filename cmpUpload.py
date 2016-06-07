@@ -88,9 +88,9 @@ def closeSession(session):
 
 
 ##for testing
-if __name__=='__main__':
+##if __name__=='__main__':
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
-    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Copy of Exhibitor Attendee List - 04-15-16/Copy of Exhibitor Attendee List - 04-15-16_cmpUpload.xlsx'
-    status=extract_pdValues(cmpPath)
-    print 'Request status: %s' % status
+##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Copy of Exhibitor Attendee List - 04-15-16/Copy of Exhibitor Attendee List - 04-15-16_cmpUpload.xlsx'
+##    status=extract_pdValues(cmpPath)
+##    print 'Request status: %s' % status
