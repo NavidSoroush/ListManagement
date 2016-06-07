@@ -108,8 +108,11 @@ def process_mailbox(M):
                 else:
                     obj_rec_Link=obj_rec_Link[26:44]
                 filePath,startDate,pre_orPost,aName, aID = list_download([attLink[:18]], obj, obj_rec_Link)
-                newListReceived_notifyOriginator(sentFrom,senderName,obj_rec_Name,obj)
-                #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
+                try:
+                    newListReceived_notifyOriginator(sentFrom,senderName,obj_rec_Name,obj)
+                    #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
+                except:
+                    pass
                 M.copy(num,'INBOX/Auto Processed Lists')
                 M.store(num,'+FLAGS', r'(\Deleted)')
                 M.expunge()

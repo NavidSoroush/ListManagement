@@ -23,7 +23,6 @@ def cmpUpload(lists_ofValues):
             session.insert('CampaignMember',['ContactId','Status','CampaignId'],
                            toInsert)
             status='Success'
-            print '%s insert complete.'
             
         if len(toUpdate)>0:
             print 'Attempting to update %s in the campaign.' % len(toUpdate)
@@ -31,12 +30,11 @@ def cmpUpload(lists_ofValues):
                            toUpdate)
             
             status='Success'
-            print '%s update complete.' % status
+        closeSession(session)
     except:
         status='Failed'
         
     finally:
-        closeSession(session)
         print status
         print 'Session and server closed.'
         return status
@@ -76,7 +74,7 @@ def cmpMbrId_for_contactId(updateList,cmpList):
 
 
 def initSession():
-    session=SQLForce.Session('Production',sfuser,sfpw, sf_token)
+    session=SQLForce.Session('Production',sfuser, sfpw, sf_token)
     return session
 
 
@@ -88,9 +86,9 @@ def closeSession(session):
 
 
 ##for testing
-##if __name__=='__main__':
+if __name__=='__main__':
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
-##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Copy of Exhibitor Attendee List - 04-15-16/Copy of Exhibitor Attendee List - 04-15-16_cmpUpload.xlsx'
-##    status=extract_pdValues(cmpPath)
-##    print 'Request status: %s' % status
+    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Copy of NAPFA DC 6_15_16/Copy of NAPFA DC 6_15_16_cmpUpload.xlsx'
+    status=extract_pdValues(cmpPath)
+    print 'Request status: %s' % status
