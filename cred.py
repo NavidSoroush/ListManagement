@@ -3,7 +3,7 @@ import os
 username = str(os.environ.get("USERNAME"))
 ##print username
 if username.lower()=='rschools':
-    password = 'Rockon3!3..'
+    password = 'Rockon3!3...'
     userPhone='(407) 803-5922'
     outlook_userEmail='rschools@franklinsquare.com'
     userEmail='ricky.schools@franklinsquare.com'
