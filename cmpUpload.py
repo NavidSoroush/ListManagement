@@ -10,6 +10,41 @@ def extract_pdValues(df_path):
     return {'Next Step': 'Send Email'}
 
 
+def upload(list_ofValues, obj):
+    try:
+        session=initSession()
+        if obj=='Campaign':
+            cmpUpload(session,df_values,obj)
+        elif obj=='BizDev Group':
+            bdgUpload(session,list_ofValues,obj)
+                
+
+def bdgUpload(lists_ofValues):
+    print '\nStep 10. Salesforce BizDev Group Upload.'
+    print 'Attempting to connect to SFDC for BDG upload.'
+    try:
+        session=initSession()
+        print 'Connection successful.'
+        print 'Attempting to update %s in the campaign.' % len(toUpdate)
+        session.update('Contact',['BizDevGroup','FirstName','LastName',
+                                 'AccountId','MailingStreet','MailingCity',
+                                 'MailingState','MailingPostalCode',
+                                 'SourceChannel','Email','Website',
+                                 'AUM','GDC','Fax','HomePhone',
+                                 'MobilePhone','Phone','toAlternatives',
+                                 'toAdvisory','Licenses'],
+                       toUpdate)
+        
+            status='Success'
+        closeSession(session)
+    except:
+        status='Failed'
+        
+    finally:
+        print status
+        print 'Session and server closed.'
+        return status
+
 def cmpUpload(lists_ofValues):
     print '\nStep 10. Salesforce Campaign Upload.'
     print 'Attempting to connect to SFDC for cmpMember upload.'
@@ -86,9 +121,9 @@ def closeSession(session):
 
 
 ##for testing
-if __name__=='__main__':
+##if __name__=='__main__':
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
-    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Copy of NAPFA DC 6_15_16/Copy of NAPFA DC 6_15_16_cmpUpload.xlsx'
-    status=extract_pdValues(cmpPath)
-    print 'Request status: %s' % status
+##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Copy of NAPFA DC 6_15_16/Copy of NAPFA DC 6_15_16_cmpUpload.xlsx'
+##    status=extract_pdValues(cmpPath)
+##    print 'Request status: %s' % status

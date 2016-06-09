@@ -89,6 +89,14 @@ def list_download(att_id, sfObj, objLink):
             sql2='SELECT Name FROM Account Where id='+'"{}"'.format('" "'.join([aID]))
             for rec in session.selectRecords(sql2):
                 accountName=rec.Name
+    elif sfObj == 'BizDev Group':
+        sql = 'SELECT Name,Account__c FROM BizDev__c Where id='+'"{}"'.format('" "'.join([objLink[-18:]]))
+        for rec in session.selectRecords(sql): 
+            aID=rec.Account__c
+        if aID != None:
+            sql2='SELECT Name FROM Account Where id='+'"{}"'.format('" "'.join([aID]))
+            for rec in session.selectRecords(sql2):
+                accountName=rec.Name
             
     session.logout()
     SQLForce.SQLForceServer.killServer()

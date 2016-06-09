@@ -11,6 +11,12 @@ acceptedColumns=['CRDNumber','FirstName','LastName','AccountId'
 
 necessaryColumns=acceptedColumns[:8]
 
+bdg_acceptedColumns=['ContactId','BizDevGroup','FirstName','LastName',
+                     'AccountId','MailingStreet','MailingCity','MailingState',
+                     'MailingPostalCode','SourceChannel','Email','Website',
+                     'AUM','GDC','Fax','HomePhone','MobilePhone','Phone',
+                     'toAlternatives','toAdvisory','Licenses']
+
 cmp_acceptedColumns=['ContactID','CampaignId','Status']
 
 ##phoneNumbers=[ '1554-568-889525'
