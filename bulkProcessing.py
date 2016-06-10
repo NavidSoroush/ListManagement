@@ -1,5 +1,6 @@
 import shutil
 from functions import splitname, shorten_filename_to95char
+import os
 
 def copy_toBulkProcessing(srcPath):
     print '\nStep 10. Dropping in bulk processing path.'
