@@ -130,7 +130,7 @@ def process_mailbox(M):
                 return retItems
             else:
                 print 'No new lists found. Next search will occur in 1 hour.'
-
+                
         
         
 
