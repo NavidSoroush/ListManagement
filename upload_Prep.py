@@ -41,6 +41,7 @@ def sourceChannel(path, recordName, objId, obj):
         crd_SC=new_contactDF[['CRDNumber','SourceChannel']]
         to_create=len(new_contactDF.index)
         list_df.loc[list_df['AccountId'].isnull(),'AccountId']=objId
+        list_df.loc[list_df['AccountId'].notnull(),'AccountId']=objId
         list_df.loc[list_df['SourceChannel'].isnull(),'SourceChannel']=sc_toAdd
     
         list_df=list_df.merge(crd_SC, how='left', on='CRDNumber')
