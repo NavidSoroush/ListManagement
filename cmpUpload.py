@@ -2,37 +2,41 @@ import SQLForce
 from cred import sfuser, sfpw, sf_token, username
 import pandas as pd
 
-def extract_pdValues(df_path):
+def extract_pdValues(df_path):##,obj):
     df=pd.read_excel(df_path)
     df_values=df.values.tolist()
+    df_headers=df.columns.values.tolist()
     del df
+##    upload(df_headers,df_values,obj)
     cmpUpload(df_values)
     return {'Next Step': 'Send Email'}
 
-
-##def upload(list_ofValues, obj):
+##def headersCleanUp(headers,toRemove='ContactID'):
+##    try:
+##        headers.remove(toRemove)
+##    except:
+##        pass
+##    return headers
+##
+##
+##def upload(headers,list_ofValues, obj):
 ##    try:
 ##        session=initSession()
 ##        if obj=='Campaign':
-##            cmpUpload(session,df_values,obj)
+##            cmpUpload(session,list_ofValues,obj)
 ##        elif obj=='BizDev Group':
-##            bdgUpload(session,list_ofValues,obj)
+##            headers=headersCleanUp(headers)
+##            bdgUpload(session,headers,list_ofValues,obj)
 ##                
 ##
-##def bdgUpload(lists_ofValues):
+##def bdgUpload(session, headers, list_ofValues):
 ##    print '\nStep 10. Salesforce BizDev Group Upload.'
 ##    print 'Attempting to connect to SFDC for BDG upload.'
 ##    try:
 ##        session=initSession()
 ##        print 'Connection successful.'
 ##        print 'Attempting to update %s in the campaign.' % len(toUpdate)
-##        session.update('Contact',['BizDevGroup','FirstName','LastName',
-##                                 'AccountId','MailingStreet','MailingCity',
-##                                 'MailingState','MailingPostalCode',
-##                                 'SourceChannel','Email','Website',
-##                                 'AUM','GDC','Fax','HomePhone',
-##                                 'MobilePhone','Phone','toAlternatives',
-##                                 'toAdvisory','Licenses'],
+##        session.update('Contact',headers,
 ##                       toUpdate)
 ##        
 ##            status='Success'
@@ -54,16 +58,15 @@ def cmpUpload(lists_ofValues):
         sf_c_cmpMembers=currentMembers(session,lists_ofValues[0][2])
         toInsert, toUpdate =splitList(sf_c_cmpMembers,lists_ofValues)
         if len(toInsert)>0:
-            print 'Attempting to insert %s into the campaign.' % len(toInsert)
+            print 'Attempting to insert %s into the campaign.' % (len(toInsert))
             session.insert('CampaignMember',['ContactId','Status','CampaignId'],
-                           toInsert)
+                               toInsert)
             status='Success'
             
         if len(toUpdate)>0:
-            print 'Attempting to update %s in the campaign.' % len(toUpdate)
+            print 'Attempting to update %s into the campaign.' % (len(toUpdate))
             session.update('CampaignMember',['Status','CampaignId'],
-                           toUpdate)
-            
+                               toUpdate)
             status='Success'
         closeSession(session)
     except:
@@ -73,8 +76,6 @@ def cmpUpload(lists_ofValues):
         print status
         print 'Session and server closed.'
         return status
-
-
 
 def currentMembers(session, cmpId):
     child_list=[]
@@ -124,6 +125,6 @@ def closeSession(session):
 ##if __name__=='__main__':
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
-##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Copy of NAPFA DC 6_15_16/Copy of NAPFA DC 6_15_16_cmpUpload.xlsx'
+##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/LPL Financial Focus 2016 Preliminary Attendee/LPL Financial Focus 2016 Preliminary Attendee_cmpUpload.xlsx'
 ##    status=extract_pdValues(cmpPath)
 ##    print 'Request status: %s' % status

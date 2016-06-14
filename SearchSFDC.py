@@ -175,7 +175,8 @@ def searchone(path, listType=None):
     return ret_item
 
 def CRDsearch(list_df, advisor_df, n):
-    list_df['CRDNumber'].astype(int)
+    list_df.fillna('')
+##    list_df['CRDNumber'].astype(int)
     to_FINRA = True
     searchfields = ['CRDNumber']
     returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?']
