@@ -8,11 +8,14 @@ from cmpUpload import extract_pdValues
 from bulkProcessing import copy_toBulkProcessing
 from dictExtraction import valuesForEmail
 from recordStats import recordStats
+import sys
 
 if __name__=="__main__":
     var_list=[]
     
     var_list=checkForLists()
+    if var_list==None:
+        sys.exit(1)
     
     if var_list['Object']=='Campaign':
         var_list.update(training(var_list['File Path'],var_list['CmpAccountName']))
@@ -31,7 +34,7 @@ if __name__=="__main__":
     else:
         print '\nSkipping email, LkupName, FINRA and SEC searches.'
         
-    var_list.update(parseList(var_list['Found Path'],var_list['ToReviewPath'],var_list['Object'],var_list['Pre_or_Post']))
+    var_list.update(parseList(var_list['Found Path'],var_list['Object'],var_list['Pre_or_Post']))
 
     if var_list['Object']=='Campaign':
         var_list.update(sourceChannel(var_list['Campaign Upload'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))

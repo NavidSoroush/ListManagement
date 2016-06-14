@@ -173,7 +173,7 @@ def searchone(path, listType=None):
         
     ret_item = {'Next Step': 'FINRA Search','Found Path': found_cont_path
                     , 'SFDC_Found':len(found_contacts),'FINRA?':to_FINRA
-                    , 'ToReviewPath:',review_path}
+                    , 'ToReviewPath:':review_path}
     return ret_item
 
 def CRDsearch(list_df, advisor_df, n):
