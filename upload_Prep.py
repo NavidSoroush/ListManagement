@@ -94,6 +94,8 @@ def determineMovetoBulkProcessing(df):
         if ac not in headers:
             move=False
             break
+        elif len(df.index)==0:
+            move=False
         else:
             move=True
     return move

@@ -57,6 +57,7 @@ def searchone(path, listType=None):
     #--------------------------------------------------------------------
     #Open campaign list (assumes data on first sheet)
     print '\nStep 4:\nPreparing list and searching against SFDC.'
+    review_path=None
     Campaign_list = pd.read_excel(path, sheetname=0)
     #AdvListPath = 'C:/Users/'+user+'/Dropbox/Search Program/Salesforce Data Files/SFDC Advisor List as of ' + time.strftime("%m-%d-%y") + '.csv'
     Advisor_list = pd.read_csv(AdvListPath,error_bad_lines=False,low_memory=False)
@@ -171,7 +172,8 @@ def searchone(path, listType=None):
     Campaign_list.to_excel(path, index=False)
         
     ret_item = {'Next Step': 'FINRA Search','Found Path': found_cont_path
-                    , 'SFDC_Found':len(found_contacts),'FINRA?':to_FINRA}
+                    , 'SFDC_Found':len(found_contacts),'FINRA?':to_FINRA
+                    , 'ToReviewPath:',review_path}
     return ret_item
 
 def CRDsearch(list_df, advisor_df, n):
