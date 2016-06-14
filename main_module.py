@@ -31,12 +31,12 @@ if __name__=="__main__":
     else:
         print '\nSkipping email, LkupName, FINRA and SEC searches.'
         
-    var_list.update(parseList(var_list['Found Path'],var_list['Object'],var_list['Pre_or_Post']))
+    var_list.update(parseList(var_list['Found Path'],var_list['ToReviewPath'],var_list['Object'],var_list['Pre_or_Post']))
 
     if var_list['Object']=='Campaign':
         var_list.update(sourceChannel(var_list['Campaign Upload'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))
         var_list.update(sourceChannel(var_list['Campaign to Create'],var_list['Record Name'],var_list['CmpAccountID'],var_list['Object']))
-        var_list.update(extract_pdValues(var_list['Campaign Upload']))
+        var_list.update(extract_pdValues(var_list['Campaign Upload']))##,var_list['Object']))
         if var_list['Move To Bulk']==True:
             copy_toBulkProcessing(var_list['Campaign to Create'])
 

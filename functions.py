@@ -1,4 +1,5 @@
 #this is for random functions that the list program will use
+import os
 
 def splitname(pathtosplit):
     import os

@@ -11,7 +11,15 @@ def path_toUpdate(path,userString):
     newPath=rootpath+fname
     return newPath
 
-def parseList(path,listType=None,preORpost=None):
+def removeDuplicateCRDorContactID(df, reviewPath):
+    reviewDF=pd.read_excel(reviewPath)
+    reviewDF=reviewDF.append(df.set_index('CRDNumber').index.get_duplicates())
+    reviewDF=reviewDF.append(df.set_index('ContactID').index.get_duplicates())
+    df=df.drop_duplicates(['CRDNumber','ContactID'],keep=False,inplace=True)
+    reviewDF.to_excel(reviewPath)
+    return df
+
+def parseList(path,reviewPath,listType=None,preORpost=None):
     cmpUpload=None
     toCreate=None
     noUpdate=None
@@ -27,6 +35,9 @@ def parseList(path,listType=None,preORpost=None):
     cmpUpload_path=None
     print '\nStep 8. List parsing based on list type.'
     list_df=pd.read_excel(path)
+
+    list_df=removeDuplicateCRDorContactID(list_df, reviewPath)
+    
     if listType=='Campaign':
         if preORpost=='Post':
 ##            cmpStatus='Attended'
