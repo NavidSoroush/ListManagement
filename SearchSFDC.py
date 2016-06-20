@@ -50,23 +50,15 @@ if os.path.exists(AdvListPath)==False:
 
 
 def searchone(path, listType=None): 
-    #currently, the object of the tool is being passed in (which in all cases
-    #except campaign lists will tell us the list type). I need to test with
-    #campaign lists if the get event date and evalutation work so I can
-    #actually build in the list type. 3.22.2016 RMS
-    #--------------------------------------------------------------------
     #Open campaign list (assumes data on first sheet)
     print '\nStep 4:\nPreparing list and searching against SFDC.'
     Campaign_list = pd.read_excel(path, sheetname=0)
-    #AdvListPath = 'C:/Users/'+user+'/Dropbox/Search Program/Salesforce Data Files/SFDC Advisor List as of ' + time.strftime("%m-%d-%y") + '.csv'
-    Advisor_list = pd.read_csv(AdvListPath,error_bad_lines=False,low_memory=False)
+        Advisor_list = pd.read_csv(AdvListPath,error_bad_lines=False,low_memory=False)
     headers = Campaign_list.columns.values
     #remove unknown header columns from search - ricky added 3.21.2016
     keepCols = [c for c in Campaign_list.columns if c.lower()[:7] != 'unknown']
     Campaign_list = Campaign_list[keepCols]
-    #Headers will be one of the following (from the previous step)
-    #"Mailing Street 1", "Phone Number", "Unknown", "First Name","Last Name", "Mailing City", "Mailing State", "Mailing Zip", "Email" "Contact ID","Account","Full Name","CRD","Meta Info","Licenses","List: Lookup Name","Office Name","Product Mix","Mailing Street 2","ID Info","Products Used"
-
+    
     #Empty blank cells
     Campaign_list = Campaign_list.fillna('')
     #--> check here for null values in searched fields, subset#
@@ -84,6 +76,7 @@ def searchone(path, listType=None):
                 Campaign_list.loc[index,"MailingPostalCode"]=row["MailingPostalCode"][:4]
 
         #Format name as necessary
+        #Split FullName if given, cleanup first/last name, create lkup name
         if "FirstName" in headers and "LastName" in headers:        
             Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]
             headers = Campaign_list.columns.values 
@@ -122,23 +115,20 @@ def searchone(path, listType=None):
 
     #Search through the 3 fields we want to try to match by       
     searchfields = ['AMPFMBRID','Email','LkupName']
-    returnFields=['AccountId','SourceChannel','Needs Info Updated?','ContactID', 'CRDNumber']
+    returnFields=['AccountId','SourceChannel','Needs Info Updated?','ContactID', 'CRDNumber','BizDev Group']
+    if listType!='BizDev Group':
+        del returnFields[-1]
+    
     found_contacts = pd.DataFrame()
     contacts_to_review = pd.DataFrame()
     to_FINRA = True
     n=0
     if 'CRDNumber' in headers:
-##        try:
-##            withCRD = Campaign_list[Campaign_list['CRDNumber']!='']
-##            Campaign_list = Campaign_list[Campaign_list['CRDNumber']=='']
-##        except:
-##            withCRD = Campaign_list[Campaign_list['CRDNumber'].notnull()]
-##            Campaign_list = Campaign_list[Campaign_list['CRDNumber'].isnull()]
-##        del Campaign_list['CRDNumber']
-        (found_contacts, Campaign_list, n, found, to_FINRA) = CRDsearch(Campaign_list, Advisor_list, n) #output is df
-        headers = Campaign_list.columns.values
+        (found_contacts, Campaign_list, n, found, to_FINRA) = CRDsearch(Campaign_list, Advisor_list, n, listType) #output is df
     if to_FINRA == False:
-        print 'CRD Info provided for all contacts'
+        print 'CRD Info provided for all contacts. Will not search FINRA.'
+        
+    headers = Campaign_list.columns.values
     else:
         for header in searchfields:
             if header in headers:
@@ -174,12 +164,14 @@ def searchone(path, listType=None):
                     , 'SFDC_Found':len(found_contacts),'FINRA?':to_FINRA}
     return ret_item
 
-def CRDsearch(list_df, advisor_df, n):
+def CRDsearch(list_df, advisor_df, n, obj=None):
     list_df.fillna('')
 ##    list_df['CRDNumber'].astype(int)
     to_FINRA = True
     searchfields = ['CRDNumber']
-    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?']
+    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?','BizDev Group']
+    if obj!='BizDev Group':
+        del returnFields[-1]
     headers = list_df.columns.values
     found_contacts = pd.DataFrame()
     for header in searchfields:
@@ -223,7 +215,10 @@ def searchtwo(path, found_path, listType=None):
     #--> check here for null values in searched fields, subset#
    
     searchfields = ['CRDNumber']
-    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?']
+    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?', 'BizDev Group']
+    if listType!='BizDev Group':
+        del returnFields[-1]
+    
     found_contacts = pd.DataFrame()
 
     FINRA_Found_list['CRDNumber'].astype(int)
@@ -307,6 +302,6 @@ def searchsec(path,found_path):
 ##test_found='C:/Users/rschools/Dropbox/Python Search Program/New Lists/Chicago Pre Attendee_foundcontacts.xlsx'
 ##
 ##test_search1='C:/Users/rschools/Dropbox/Python Search Program/New Lists/AMPF Update Rep List_ALPTest/AMPF Update Rep List_ALPTest.xlsx'
-if __name__=="__main__":
-    print searchsec('xyz', 'pdq')
+##if __name__=="__main__":
+##    print searchsec('xyz', 'pdq')
 ##    searchone(test_search1, listType='Account')

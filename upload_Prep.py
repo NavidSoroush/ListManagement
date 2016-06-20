@@ -25,7 +25,7 @@ cmp_acceptedColumns=['ContactID','CampaignId','Status']
 ##              , '012.321.4587'
 ##              ,'1425665873']
 
-def sourceChannel(path, recordName, objId, obj):
+def sourceChannel(path, recordName, objId, obj, aid=None):
     move_toBulk=False
     if obj=='Campaign':
         print '\nStep 9. Data Prep (will be performed twice)'
@@ -34,7 +34,7 @@ def sourceChannel(path, recordName, objId, obj):
     list_df=pd.read_excel(path, sheetname=0)
     
     
-    if obj=='Account' or obj=='BizDev Group':
+    if obj=='Account':
         sc_toAdd='firm_'+recordName+'_'+yyyymm
         list_df=drop_unneedColumns(list_df,obj)
         new_contactDF=list_df[list_df['AccountId'].isnull()]
@@ -63,6 +63,25 @@ def sourceChannel(path, recordName, objId, obj):
             list_df=drop_unneedColumns(list_df,obj,create=False)
             to_create=0
             list_df['CampaignId']=objId
+
+    elif obj=='BizDev Group':
+        sc_toAdd='bdg_'+recordName+'_'+yyyymm
+        new_contactDF=list_df[list_df['AccountId'].isnull()]
+        new_contactDF=drop_unneedColumns(list_df, obj, ac=bdg_acceptedColumns)
+        crd_SC=new_contactDF[['CRDNumber','SourceChannel']]
+        to_create=len(new_contactDF.index)
+        list_df.loc[list_df['AccountId'].isnull(),'AccountId']=aid
+        list_df.loc[list_df['AccountId'].notnull(),'AccountId']=aid
+        list_df.loc[list_df['SourceChannel'].isnull(),'SourceChannel']=sc_toAdd
+        list_df.loc[list_df['BizDev Group'],'BizDev Group']=objId
+            
+        list_df=list_df.merge(crd_SC, how='left', on='CRDNumber')
+        del list_df['SourceChannel_y']
+        list_df.rename(columns={'SourceChannel_x':'SourceChannel'},inplace=True)
+##        move_toBulk=determineMovetoBulkProcessing(list_df)
+        move_toBulk=False
+        del crd_SC
+        del new_contactDF
 
 ##Clean up phone and fax numbers (ie. format for SFDC upload)
     if 'Phone' in list_df.columns.values:
@@ -97,14 +116,16 @@ def determineMovetoBulkProcessing(df):
             break
         else:
             move=True
+    if df.index() <= 1:
+        move = False
     return move
 
 
-def drop_unneedColumns(dataframe, obj, create=True):
+def drop_unneedColumns(dataframe, obj, ac=acceptedColumns, create=True):
     headers=dataframe.columns.values
     if obj!='Campaign' or create==True:
         for header in headers:
-            if header not in acceptedColumns:
+            if header not in ac:
                 del dataframe[header]
         return dataframe
     else:

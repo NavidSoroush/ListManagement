@@ -11,7 +11,7 @@ def path_toUpdate(path,userString):
     newPath=rootpath+fname
     return newPath
 
-def parseList(path,listType=None,preORpost=None):
+def parseList(path,listType=None,preORpost=None, bdgID=None, accId=None):
     cmpUpload=None
     toCreate=None
     noUpdate=None
@@ -48,12 +48,29 @@ def parseList(path,listType=None,preORpost=None):
         toCreate.to_excel(toCreate_path, index=False)
         cmpUpload.to_excel(cmpUpload_path, index=False)
         
-    elif listType=='Account' or listType=='BizDev Group':
+    elif listType=='Account':
         noUpdate_path=path_toUpdate(path,'noUpdates')
         update_path=path_toUpdate(path,'toUpdate')
         
         noUpdate=list_df[list_df['Needs Info Updated?']=='N']
         toUpdate=list_df[list_df['Needs Info Updated?']!='N']
+
+        num_noUpdate=len(noUpdate.index)
+        num_toUpdate=len(toUpdate.index)
+
+        noUpdate.to_excel(noUpdate_path, index=False)
+        toUpdate.to_excel(update_path, index=False)
+
+    elif listType=='BizDev Group':
+        noUpdate_path=path_toUpdate(path,'noUpdates')
+        update_path=path_toUpdate(path,'toUpdate')
+##Need to evaluate if the advisor is in the bizdev group
+##And if they are assigned to the right BD. If not then they get updated.
+##If they are in the BDG and Account is correct, then we can evaluate
+##If the Needs Info Update field is checked or not.
+  
+        noUpdate=list_df[list_df['BizDev Group']==bdgId and list_df['AccountId']==accId and list_df['Needs Info Updated?']=='N']
+        toUpdate=list_df[list_df['BizDev Group']!=bdgId or list_df['AccountId']!=accId or list_df['Needs Info Updated?']!='N']
 
         num_noUpdate=len(noUpdate.index)
         num_toUpdate=len(toUpdate.index)
