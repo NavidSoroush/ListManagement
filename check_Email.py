@@ -15,7 +15,8 @@ EMAIL_FOLDER='INBOX/Auto Lists From SFDC/'
 listUploadStr=['An upload list has been added'
                ,'An upload list has been added to'
                ,'by','Account Link: '
-               , 'Attachment Link: ']
+               , 'Attachment Link: '
+               , 'BizDev Group Link: ']
 Object_Check = ['Campaign', 'BizDev Group']
 
 
@@ -105,17 +106,20 @@ def process_mailbox(M):
                 #comment here for spacing
                 if obj=='Campaign':
                     obj_rec_Link=obj_rec_Link[-18:]
+                elif obj=='BizDev Group':
+                    obj_rec_Link=listInfoParser(decodedBody,listUploadStr[5],listUploadStr[4])
+                    obj_rec_Link=obj_rec_Link[26:44]
                 else:
                     obj_rec_Link=obj_rec_Link[26:44]
-                filePath,startDate,pre_orPost,aName, aID = list_download([attLink[:18]], obj, obj_rec_Link)
+                filePath,startDate,pre_orPost,aName,aID = list_download([attLink[:18]], obj, obj_rec_Link)
                 try:
                     newListReceived_notifyOriginator(sentFrom,senderName,obj_rec_Name,obj)
                     #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
                 except:
                     pass
-                M.copy(num,'INBOX/Auto Processed Lists')
-                M.store(num,'+FLAGS', r'(\Deleted)')
-                M.expunge()
+##                M.copy(num,'INBOX/Auto Processed Lists')
+##                M.store(num,'+FLAGS', r'(\Deleted)')
+##                M.expunge()
                 ts=time.time()
                 pstart=datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')               
                 Items = [returnDict('Object',obj), returnDict('Record Name',obj_rec_Name),
@@ -130,9 +134,6 @@ def process_mailbox(M):
                 return retItems
             else:
                 print 'No new lists found. Next search will occur in 1 hour.'
-
-        
-        
 
 
 def checkForLists():        

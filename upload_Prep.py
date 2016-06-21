@@ -11,11 +11,7 @@ acceptedColumns=['CRDNumber','FirstName','LastName','AccountId'
 
 necessaryColumns=acceptedColumns[:8]
 
-bdg_acceptedColumns=['ContactId','BizDevGroup','FirstName','LastName',
-                     'AccountId','MailingStreet','MailingCity','MailingState',
-                     'MailingPostalCode','SourceChannel','Email','Website',
-                     'AUM','GDC','Fax','HomePhone','MobilePhone','Phone',
-                     'toAlternatives','toAdvisory','Licenses']
+bdg_acceptedColumns=['ContactID','BizDev Group']
 
 cmp_acceptedColumns=['ContactID','CampaignId','Status']
 
@@ -27,7 +23,7 @@ cmp_acceptedColumns=['ContactID','CampaignId','Status']
 
 def sourceChannel(path, recordName, objId, obj, aid=None):
     move_toBulk=False
-    if obj=='Campaign':
+    if obj!='Campaign':
         print '\nStep 9. Data Prep (will be performed twice)'
     else:
         print '\nStep 9. Data Prep'
@@ -66,22 +62,24 @@ def sourceChannel(path, recordName, objId, obj, aid=None):
 
     elif obj=='BizDev Group':
         sc_toAdd='bdg_'+recordName+'_'+yyyymm
-        new_contactDF=list_df[list_df['AccountId'].isnull()]
-        new_contactDF=drop_unneedColumns(list_df, obj, ac=bdg_acceptedColumns)
-        crd_SC=new_contactDF[['CRDNumber','SourceChannel']]
-        to_create=len(new_contactDF.index)
-        list_df.loc[list_df['AccountId'].isnull(),'AccountId']=aid
-        list_df.loc[list_df['AccountId'].notnull(),'AccountId']=aid
-        list_df.loc[list_df['SourceChannel'].isnull(),'SourceChannel']=sc_toAdd
-        list_df.loc[list_df['BizDev Group'],'BizDev Group']=objId
-            
-        list_df=list_df.merge(crd_SC, how='left', on='CRDNumber')
-        del list_df['SourceChannel_y']
-        list_df.rename(columns={'SourceChannel_x':'SourceChannel'},inplace=True)
-##        move_toBulk=determineMovetoBulkProcessing(list_df)
+        if 'toCreate' in path:
+            list_df=drop_unneedColumns(list_df,obj)
+            to_create=len(list_df.index)
+            list_df.loc[list_df['AccountId'].isnull(),'AccountId']=aid
+            list_df.loc[list_df['SourceChannel'].isnull(),'SourceChannel']=sc_toAdd
+        elif 'bdgUpdate' in path:
+            list_df=drop_unneedColumns(list_df, obj, ac=bdg_acceptedColumns)
+            to_create=0
+            list_df['BizDev Group']=objId
+        else:
+            list_df=drop_unneedColumns(list_df, obj)
+            to_create=0
+            list_df['AccountId']=aid
+            list_df['BizDev Group']=objId
+
+        move_toBulk=determineMovetoBulkProcessing(list_df)
         move_toBulk=False
-        del crd_SC
-        del new_contactDF
+
 
 ##Clean up phone and fax numbers (ie. format for SFDC upload)
     if 'Phone' in list_df.columns.values:
@@ -116,7 +114,7 @@ def determineMovetoBulkProcessing(df):
             break
         else:
             move=True
-    if df.index() <= 1:
+    if len(df.index) == 0:
         move = False
     return move
 

@@ -14,7 +14,7 @@ if __name__=="__main__":
     
     var_list=checkForLists()
     
-    if var_list['Object']=='Campaign':
+    if var_list['Object']!='Account':
         var_list.update(training(var_list['File Path'],var_list['CmpAccountName']))
     else:
         var_list.update(training(var_list['File Path'],var_list['Record Name']))
@@ -35,10 +35,10 @@ if __name__=="__main__":
 
     if var_list['Object']=='Campaign':
         var_list.update(sourceChannel(var_list['Campaign Upload'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))
-        var_list.update(sourceChannel(var_list['Campaign to Create'],var_list['Record Name'],var_list['CmpAccountID'],var_list['Object']))
+        var_list.update(sourceChannel(var_list['toCreate'],var_list['Record Name'],var_list['CmpAccountID'],var_list['Object']))
         var_list.update(extract_pdValues(var_list['Campaign Upload']))##,var_list['Object']))
         if var_list['Move To Bulk']==True:
-            copy_toBulkProcessing(var_list['Campaign to Create'])
+            copy_toBulkProcessing(var_list['toCreate'])
 
         else:
             print '\nContacts will not be created. Not enough information provided.'
@@ -51,12 +51,17 @@ if __name__=="__main__":
 
     elif var_list['Object']=='BizDev Group':
         var_list.update(sourceChannel(var_list['Update Path'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
+        var_list.update(sourceChannel(var_list['toCreate'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
+        var_list.update(sourceChannel(var_list['BDG Update'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
         if var_list['Move To Bulk']==True:
-            copy_toBulkProcessing(var_list['Update Path'])
+            print 'Would move to bulk processing..'
+##            copy_toBulkProcessing(var_list['toCreate'])
+##            copy_toBulkProcessing(var_list['Update Path'])
         else:
             print '\nContacts will not be created. Not enough information provided.'
     
     var_list.update(valuesForEmail(var_list))
 
     var_list.update(recordStats(var_list['Stats Data']))
+
 

@@ -53,7 +53,7 @@ def searchone(path, listType=None):
     #Open campaign list (assumes data on first sheet)
     print '\nStep 4:\nPreparing list and searching against SFDC.'
     Campaign_list = pd.read_excel(path, sheetname=0)
-        Advisor_list = pd.read_csv(AdvListPath,error_bad_lines=False,low_memory=False)
+    Advisor_list = pd.read_csv(AdvListPath,error_bad_lines=False,low_memory=False)
     headers = Campaign_list.columns.values
     #remove unknown header columns from search - ricky added 3.21.2016
     keepCols = [c for c in Campaign_list.columns if c.lower()[:7] != 'unknown']
@@ -115,9 +115,9 @@ def searchone(path, listType=None):
 
     #Search through the 3 fields we want to try to match by       
     searchfields = ['AMPFMBRID','Email','LkupName']
-    returnFields=['AccountId','SourceChannel','Needs Info Updated?','ContactID', 'CRDNumber','BizDev Group']
+    returnFields=['AccountId','SourceChannel','Needs Info Updated?','ContactID', 'CRDNumber','BizDev Group','Licenses']
     if listType!='BizDev Group':
-        del returnFields[-1]
+        del returnFields[-2]
     
     found_contacts = pd.DataFrame()
     contacts_to_review = pd.DataFrame()
@@ -125,10 +125,10 @@ def searchone(path, listType=None):
     n=0
     if 'CRDNumber' in headers:
         (found_contacts, Campaign_list, n, found, to_FINRA) = CRDsearch(Campaign_list, Advisor_list, n, listType) #output is df
-    if to_FINRA == False:
-        print 'CRD Info provided for all contacts. Will not search FINRA.'
-        
+
     headers = Campaign_list.columns.values
+    if to_FINRA == False:
+        print 'CRD Info provided for all contacts. Will not search FINRA.'    
     else:
         for header in searchfields:
             if header in headers:
@@ -169,9 +169,9 @@ def CRDsearch(list_df, advisor_df, n, obj=None):
 ##    list_df['CRDNumber'].astype(int)
     to_FINRA = True
     searchfields = ['CRDNumber']
-    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?','BizDev Group']
+    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?','BizDev Group','Licenses']
     if obj!='BizDev Group':
-        del returnFields[-1]
+        del returnFields[-2]
     headers = list_df.columns.values
     found_contacts = pd.DataFrame()
     for header in searchfields:
@@ -215,9 +215,9 @@ def searchtwo(path, found_path, listType=None):
     #--> check here for null values in searched fields, subset#
    
     searchfields = ['CRDNumber']
-    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?', 'BizDev Group']
+    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?', 'BizDev Group','Licenses']
     if listType!='BizDev Group':
-        del returnFields[-1]
+        del returnFields[-2]
     
     found_contacts = pd.DataFrame()
 

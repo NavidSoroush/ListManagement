@@ -97,18 +97,18 @@ def list_download(att_id, sfObj, objLink):
             sql2='SELECT Name FROM Account Where id='+'"{}"'.format('" "'.join([aID]))
             for rec in session.selectRecords(sql2):
                 accountName=rec.Name
-            
+                
     session.logout()
     SQLForce.SQLForceServer.killServer()
     print 'Download successful.'
     attachment=create_moveNewFile(attachment)
-    return (attachment,eventDate, preORpost,accountName,aID)
+    return (attachment, eventDate, preORpost, accountName, aID)
 
 
 ##for testing
-##att = ['00PE000000SW8R6MAL']
-##obj = 'Campaign'
-##obj_link = '701E00000011T7fIAE'
+##att = ['00PE000000SqO9GMAV']
+##obj = 'BizDev Group'
+##obj_link = 'a0vE00000069dt3IAA'
 ##link, eD, pop,aName, aID=list_download(att,obj,obj_link)
 ##
 ##print link

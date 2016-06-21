@@ -11,20 +11,23 @@ def path_toUpdate(path,userString):
     newPath=rootpath+fname
     return newPath
 
-def parseList(path,listType=None,preORpost=None, bdgID=None, accId=None):
+def parseList(path,listType=None,preORpost=None, bdgID=None, accID=None):
     cmpUpload=None
     toCreate=None
     noUpdate=None
     toUpdate=None
+    bdgUpdate=None
     num_cmpUpload=0
     num_toCreate=0
     num_noUpdate=0
     num_toUpdate=0
+    num_bdgUpdate=0
     cmpStatus=None
     noUpdate_path=None
     update_path=None
     toCreate_path=None
     cmpUpload_path=None
+    bdgUpdate_path=None
     print '\nStep 8. List parsing based on list type.'
     list_df=pd.read_excel(path)
     if listType=='Campaign':
@@ -64,30 +67,41 @@ def parseList(path,listType=None,preORpost=None, bdgID=None, accId=None):
     elif listType=='BizDev Group':
         noUpdate_path=path_toUpdate(path,'noUpdates')
         update_path=path_toUpdate(path,'toUpdate')
+        toCreate_path=path_toUpdate(path,'toCreate')
+        bdgUpdate_path=path_toUpdate(path, 'bdgUpdate')
+        
 ##Need to evaluate if the advisor is in the bizdev group
 ##And if they are assigned to the right BD. If not then they get updated.
 ##If they are in the BDG and Account is correct, then we can evaluate
 ##If the Needs Info Update field is checked or not.
   
-        noUpdate=list_df[list_df['BizDev Group']==bdgId and list_df['AccountId']==accId and list_df['Needs Info Updated?']=='N']
-        toUpdate=list_df[list_df['BizDev Group']!=bdgId or list_df['AccountId']!=accId or list_df['Needs Info Updated?']!='N']
+        noUpdate=list_df[(list_df['AccountId'].notnull() & list_df['Needs Info Updated?']!='N')]
+        toUpdate=list_df[(list_df['AccountId'].notnull() & list_df['Needs Info Updated?']=='N')]
+        toCreate=list_df[list_df['AccountId'].isnull()]
+        bdgUpdate=list_df[list_df['AccountId'].notnull()]
 
         num_noUpdate=len(noUpdate.index)
         num_toUpdate=len(toUpdate.index)
+        num_toCreate=len(toCreate.index)
+        num_bdgUpdate=len(bdgUpdate.index)
 
         noUpdate.to_excel(noUpdate_path, index=False)
         toUpdate.to_excel(update_path, index=False)
+        toCreate.to_excel(toCreate_path, index=False)
+        bdgUpdate.to_excel(bdgUpdate_path, index=False)
 
     ret_item = {'Next Step': 'Data prep.'
                 ,'No Update Path': noUpdate_path
                 ,'Update Path': update_path
                 ,'Num To Update': num_toUpdate
                 ,'Num Not Updating':num_noUpdate
-                ,'Campaign to Create':toCreate_path
+                ,'toCreate':toCreate_path
                 ,'Campaign Upload':cmpUpload_path
                 ,'Num to Create Cmp':num_toCreate
                 ,'Num Campaign Upload':num_cmpUpload
-                ,'Assigned Cmp Status': cmpStatus}
+                ,'Assigned Cmp Status': cmpStatus
+                ,'BDG Update': bdgUpdate_path
+                ,'Num to BDG':num_bdgUpdate}
     return ret_item
         
         
