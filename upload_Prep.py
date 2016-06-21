@@ -23,8 +23,10 @@ cmp_acceptedColumns=['ContactID','CampaignId','Status']
 
 def sourceChannel(path, recordName, objId, obj, aid=None):
     move_toBulk=False
-    if obj!='Campaign':
+    if obj=='Campaign':
         print '\nStep 9. Data Prep (will be performed twice)'
+    elif obj=='BizDev Group':
+        print '\nStep 9. Data Prep (will be performed thrice)'
     else:
         print '\nStep 9. Data Prep'
     list_df=pd.read_excel(path, sheetname=0)
