@@ -7,24 +7,29 @@ colNums=[]
 ##def extract_pdValues(df_path):##,obj):
 def extract_pdValues(df_path,obj):
     df=pd.read_excel(df_path)
-    df_values=df.values.tolist()
-    df_headers=df.columns.values.tolist()
     if obj=='BizDev Group':
         df.rename(columns={'BizDev Group':'BizDev_Group__c'},inplace=True)
+        df=df[['ContactID','BizDev_Group__c']]
         colNums.append(df.columns.get_loc('BizDev_Group__c'))
         colNums.append(df.columns.get_loc('ContactID'))
+    df_values=df.values.tolist()
     df_headers=df.columns.values.tolist()
-    upload(df_headers,df_values,obj, colNums)
-##    cmpUpload(df_values)
+    if obj=='Campaign':
+        cmpUpload(df_values)
+    else:
+        upload(df_headers,df_values,obj, colNums)
+
     return {'Next Step': 'Send Email'}
 
 def headersCleanUp(headers,toRemove='ContactID'):
-    try:
-        headers.remove(toRemove)
-    except:
-        pass
+    headers.remove(toRemove)
     return headers
 
+def remove(toRemove,objID):
+    for to in toRemove:
+        if to[1]==objID:
+            to[1]=''
+    return toRemove
 
 def upload(headers,list_ofValues, obj, colNum):
     try:
@@ -49,14 +54,15 @@ def bdgUpload(session, headers, list_ofValues,obj, colNum):
         toInsert,toUpdate,toRemove=splitList(sf_bdgMembers,list_ofValues, obj, colNum[1])
         print 'Attempting to insert %s in the BizDev Group.' % len(toInsert)
         if len(toInsert)>0:
-            session.update('Contact',headers,toInsert)        
+            session.update('Contact',['BizDev_Group__c'],toInsert)
+            nUpdated=session.getenv('ROW_COUNT')
             status='Success'
-##            
-##        if len(toUpdate)>0:
-##            print toUpdate
 
         if len(toRemove)>0:
-            print toRemove
+            print 'Attempting to remove %s from the BizDev Group.' % len(toRemove)
+            toRemove=remove(toRemove,list_ofValues[0][colNum[0]])
+            session.update('Contact',['BizDev_Group__c'],toRemove)
+            status='Success'
             
         closeSession(session)
     except Exception, e:
@@ -106,7 +112,6 @@ def currentMembers(session, cmpId, obj):
             child_list.append(rec.Id)
     elif obj=='BizDev Group':
         sql='SELECT Id, BizDev_Group__c FROM Contact WHERE BizDev_Group__c="'+cmpId+'"'
-        print sql
         for rec in session.selectRecords(sql):
             child_list.append(rec.Id)
             child_list.append(rec.BizDev_Group__c)
@@ -114,20 +119,29 @@ def currentMembers(session, cmpId, obj):
 
 
 
-def splitList(id_inCmp, ids_fromSearch, obj,col=None,remove=None):
+def splitList(id_inCmp, ids_fromSearch, obj,col=None,remove=None, newList=[]):
     if obj=='Campaign':
         insert=[i for i in ids_fromSearch if i[0] not in id_inCmp]
         update=[i for i in ids_fromSearch if i[0] in id_inCmp]
         if len(update)>0:
             update=cmpMbrId_for_contactId(update,id_inCmp)
     else:
-        if len(id_inCmp)==0:
-            insert=ids_fromSearch[:]
-        else:
-            insert=[i for i in ids_fromSearch if i[col] not in id_inCmp]
-
+        insert=[i for i in ids_fromSearch if i[col] not in id_inCmp]
         update=[i for i in ids_fromSearch if i[col] in id_inCmp]
-        remove=[i for i in id_inCmp if i[0] in ids_fromSearch]
+        if len(id_inCmp)>0:
+            remove=[]
+            newList=[id_inCmp[i:i+2] for i in range(0,len(id_inCmp),2)]
+            for srch in ids_fromSearch:
+                for mbr in newList:
+                    if mbr[0] not in srch:
+                        remove.append(mbr)
+                        newList.remove(mbr)
+                        break
+            for up in update:
+                for re in remove:
+                    if up == re:
+                        remove.remove(re)                    
+        
     return (insert, update, remove)
 
 
@@ -157,10 +171,10 @@ def closeSession(session):
 
 
 ##for testing
-if __name__=='__main__':
+##if __name__=='__main__':
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
-    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/BDG Test List/BDG Test List_toUpdate.xlsx'
-    obj='BizDev Group'
-    status=extract_pdValues(cmpPath,obj)
-    print 'Request status: %s' % status
+##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/BDG Test List/BDG Test List_toUpdate.xlsx'
+##    obj='BizDev Group'
+##    status=extract_pdValues(cmpPath,obj)
+##    print 'Request status: %s' % status
