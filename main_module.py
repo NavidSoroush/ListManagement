@@ -53,6 +53,7 @@ if __name__=="__main__":
         var_list.update(sourceChannel(var_list['Update Path'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
         var_list.update(sourceChannel(var_list['toCreate'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
         var_list.update(sourceChannel(var_list['BDG Update'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
+        var_list.update(extract_pdValues(var_list['BDG Update']),var_list['Object'])
         if var_list['Move To Bulk']==True:
             print 'Would move to bulk processing..'
 ##            copy_toBulkProcessing(var_list['toCreate'])
