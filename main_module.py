@@ -40,7 +40,7 @@ if __name__=="__main__":
     if var_list['Object']=='Campaign':
         var_list.update(sourceChannel(var_list['Campaign Upload'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))
         var_list.update(sourceChannel(var_list['toCreate'],var_list['Record Name'],var_list['CmpAccountID'],var_list['Object']))
-        var_list.update(extract_pdValues(var_list['Campaign Upload']))##,var_list['Object']))
+        var_list.update(extract_pdValues(var_list['Campaign Upload'],var_list['Object']))
         if var_list['Move To Bulk']==True:
             copy_toBulkProcessing(var_list['toCreate'])
 
@@ -57,7 +57,7 @@ if __name__=="__main__":
         var_list.update(sourceChannel(var_list['Update Path'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
         var_list.update(sourceChannel(var_list['toCreate'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
         var_list.update(sourceChannel(var_list['BDG Update'],var_list['Record Name'],var_list['ObjectId'],var_list['Object'], var_list['CmpAccountID']))
-        var_list.update(extract_pdValues(var_list['BDG Update']),var_list['Object'])
+        var_list.update(extract_pdValues(var_list['BDG Update'],var_list['Object']))
         if var_list['Move To Bulk']==True:
             copy_toBulkProcessing(var_list['toCreate'])
             copy_toBulkProcessing(var_list['Update Path'])
@@ -67,5 +67,7 @@ if __name__=="__main__":
     var_list.update(valuesForEmail(var_list))
 
     var_list.update(recordStats(var_list['Stats Data']))
+
+
 
 
