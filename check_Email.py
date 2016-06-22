@@ -117,9 +117,9 @@ def process_mailbox(M):
                     #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
                 except:
                     pass
-##                M.copy(num,'INBOX/Auto Processed Lists')
-##                M.store(num,'+FLAGS', r'(\Deleted)')
-##                M.expunge()
+                M.copy(num,'INBOX/Auto Processed Lists')
+                M.store(num,'+FLAGS', r'(\Deleted)')
+                M.expunge()
                 ts=time.time()
                 pstart=datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')               
                 Items = [returnDict('Object',obj), returnDict('Record Name',obj_rec_Name),
