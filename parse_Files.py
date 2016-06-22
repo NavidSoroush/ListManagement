@@ -75,10 +75,10 @@ def parseList(path,listType=None,preORpost=None, bdgID=None, accID=None):
 ##If they are in the BDG and Account is correct, then we can evaluate
 ##If the Needs Info Update field is checked or not.
   
-        noUpdate=list_df[(list_df['AccountId'].notnull() & list_df['Needs Info Updated?']!='N')]
-        toUpdate=list_df[(list_df['AccountId'].notnull() & list_df['Needs Info Updated?']=='N')]
+        noUpdate=list_df[(list_df['AccountId'].notnull()) & (list_df['Needs Info Updated?']=='N')]
+        toUpdate=list_df[(list_df['AccountId'].notnull()) & (list_df['Needs Info Updated?']!='N')]
         toCreate=list_df[list_df['AccountId'].isnull()]
-        bdgUpdate=list_df[list_df['AccountId'].notnull() & (list_df['Licenses'].isin(['Series 7','Series 22'])]
+        bdgUpdate=list_df[(list_df['AccountId'].notnull()) & (list_df['Licenses'].str.contains('Series 7|Series 22')==True)]
 
         num_noUpdate=len(noUpdate.index)
         num_toUpdate=len(toUpdate.index)
@@ -104,4 +104,6 @@ def parseList(path,listType=None,preORpost=None, bdgID=None, accID=None):
                 ,'Num to BDG':num_bdgUpdate}
     return ret_item
         
-        
+##FOR TESTING     
+##path='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/BDG Test List PAG/BDG Test List PAG_foundcontacts.xlsx'
+##parseList(path, 'BizDev Group')

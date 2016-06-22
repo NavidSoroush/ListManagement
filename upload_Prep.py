@@ -11,7 +11,7 @@ acceptedColumns=['CRDNumber','FirstName','LastName','AccountId'
 
 necessaryColumns=acceptedColumns[:8]
 
-bdg_acceptedColumns=['ContactID','BizDev Group']
+bdg_acceptedColumns=['ContactID','BizDev Group', 'Licenses']
 
 cmp_acceptedColumns=['ContactID','CampaignId','Status']
 
@@ -149,7 +149,7 @@ def clean_phoneNumber(pn):
         
 
 ##if __name__=='__main__':
-##    path='C:/Users/rschools/Dropbox/Python Search Program/New Lists/Chicago Pre Attendee_foundcontacts.xlsx'
-##    sourceChannel(path,'test record name')
+##    path='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/BDG Test List PAG/BDG Test List PAG_bdgUpdate.xlsx'
+##    sourceChannel(path, "Ricky's Test Group", 'a0vE00000069dt3IAA','BizDev Group','001E000000DueknIAB') 
 ##    for p in phoneNumbers:
 ##        print clean_phoneNumber(p)

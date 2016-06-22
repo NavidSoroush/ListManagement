@@ -12,17 +12,14 @@ finra_site = 'http://brokercheck.finra.org/Individual/Summary/'
 chromedriver = "C:/Python27/selenium/Chrome/chromedriver"
 os.environ["webdriver.chrome.driver"] = chromedriver
 elements=['col-md-3']
-sel = webdriver.Chrome(chromedriver)
-sel.get(finra_site)
-wait = WebDriverWait(sel, 1)
-
 ##path='C:/Users/rschools/Desktop/CRD_Test.xlsx'
 
 def licenseSearch(path):
     df=pd.read_excel(path)
     df['Licenses']=''
-    print df.head()
     print 'Pulling licenses from FINRA for %s advisors.' % len(df[df['CRDNumber'].notnull()].index)
+    sel = webdriver.Chrome(chromedriver)
+    wait = WebDriverWait(sel, 1)
     for index, row in df.iterrows():
         if row['CRDNumber']!='':
             crd=row['CRDNumber']
@@ -30,6 +27,7 @@ def licenseSearch(path):
                 url=finra_site+str(crd)
                 lic=[]
                 sel.get(url)
+                
                 license_code=wait.until(EC.visibility_of_element_located((By.CLASS_NAME,elements[0])))
                 reg_info=sel.find_elements_by_class_name(elements[0])
                 for reg in reg_info:
