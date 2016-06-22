@@ -8,6 +8,7 @@ from cmpUpload import extract_pdValues
 from bulkProcessing import copy_toBulkProcessing
 from dictExtraction import valuesForEmail
 from recordStats import recordStats
+from finra_licenses import licenseSearch
 
 if __name__=="__main__":
     var_list=[]
@@ -30,6 +31,9 @@ if __name__=="__main__":
         var_list.update(searchtwo(var_list['FINRA_SEC Found'],var_list['Found Path'],var_list['Object'])) 
     else:
         print '\nSkipping email, LkupName, FINRA and SEC searches.'
+
+    if var_list['Object']=='BizDev Group':
+        var_list.update(licenseSearch(var_list['Found Path']))
         
     var_list.update(parseList(var_list['Found Path'],var_list['Object'],var_list['Pre_or_Post'], var_list['ObjectId'], var_list['CmpAccountID']))
 

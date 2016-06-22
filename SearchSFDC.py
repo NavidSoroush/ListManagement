@@ -115,9 +115,9 @@ def searchone(path, listType=None):
 
     #Search through the 3 fields we want to try to match by       
     searchfields = ['AMPFMBRID','Email','LkupName']
-    returnFields=['AccountId','SourceChannel','Needs Info Updated?','ContactID', 'CRDNumber','BizDev Group','Licenses']
+    returnFields=['AccountId','SourceChannel','Needs Info Updated?','ContactID', 'CRDNumber','BizDev Group']
     if listType!='BizDev Group':
-        del returnFields[-2]
+        del returnFields[-1]
     
     found_contacts = pd.DataFrame()
     contacts_to_review = pd.DataFrame()
@@ -169,9 +169,9 @@ def CRDsearch(list_df, advisor_df, n, obj=None):
 ##    list_df['CRDNumber'].astype(int)
     to_FINRA = True
     searchfields = ['CRDNumber']
-    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?','BizDev Group','Licenses']
+    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?','BizDev Group']
     if obj!='BizDev Group':
-        del returnFields[-2]
+        del returnFields[-1]
     headers = list_df.columns.values
     found_contacts = pd.DataFrame()
     for header in searchfields:
@@ -215,9 +215,9 @@ def searchtwo(path, found_path, listType=None):
     #--> check here for null values in searched fields, subset#
    
     searchfields = ['CRDNumber']
-    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?', 'BizDev Group','Licenses']
+    returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?', 'BizDev Group']
     if listType!='BizDev Group':
-        del returnFields[-2]
+        del returnFields[-1]
     
     found_contacts = pd.DataFrame()
 
