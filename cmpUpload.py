@@ -8,7 +8,7 @@ colNums=[]
 def extract_pdValues(df_path,obj):
     df=pd.read_excel(df_path)
     if obj=='BizDev Group':
-        df.rename(columns={'BizDev Group':'BizDev_Group__c'},inplace=True)
+        df.rename(columns={'BizDev Group':'BizDev_Group__c','Licenses':'Licenses__c'},inplace=True)
         df=df[['ContactID','BizDev_Group__c']]
         colNums.append(df.columns.get_loc('BizDev_Group__c'))
         colNums.append(df.columns.get_loc('ContactID'))
@@ -54,7 +54,7 @@ def bdgUpload(session, headers, list_ofValues,obj, colNum):
         toInsert,toUpdate,toRemove=splitList(sf_bdgMembers,list_ofValues, obj, colNum[1])
         print 'Attempting to insert %s in the BizDev Group.' % len(toInsert)
         if len(toInsert)>0:
-            session.update('Contact',['BizDev_Group__c'],toInsert)
+            session.update('Contact',['BizDev_Group__c','Licenses__c'],toInsert)
             nUpdated=session.getenv('ROW_COUNT')
             status='Success'
 

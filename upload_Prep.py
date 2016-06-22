@@ -11,7 +11,7 @@ acceptedColumns=['CRDNumber','FirstName','LastName','AccountId'
 
 necessaryColumns=acceptedColumns[:8]
 
-bdg_acceptedColumns=['ContactID','BizDev Group']
+bdg_acceptedColumns=['ContactID','BizDev Group', 'Licenses']
 
 cmp_acceptedColumns=['ContactID','CampaignId','Status']
 
