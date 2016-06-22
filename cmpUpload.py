@@ -1,6 +1,7 @@
 import SQLForce
 from cred import sfuser, sfpw, sf_token, username
 import pandas as pd
+from parse_Files import path_toUpdate
 
 colNums=[]
 
@@ -17,9 +18,10 @@ def extract_pdValues(df_path,obj):
     if obj=='Campaign':
         cmpUpload(df_values)
     else:
-        upload(df_headers,df_values,obj, colNums)
+        remove_path=upload(df_headers,df_values,obj, colNums, df_path)
 
-    return {'Next Step': 'Send Email'}
+    return {'Next Step': 'Send Email',
+            'BDG Remove': remove_path}
 
 def headersCleanUp(headers,toRemove='ContactID'):
     headers.remove(toRemove)
@@ -43,7 +45,7 @@ def upload(headers,list_ofValues, obj, colNum):
         print e
                 
 
-def bdgUpload(session, headers, list_ofValues,obj, colNum):
+def bdgUpload(session, headers, list_ofValues,obj, colNum, df_path, remove_path=None):
     print '\nStep 10. Salesforce BizDev Group Upload.'
     print 'Attempting to connect to SFDC for BDG upload.'
     try:
@@ -60,6 +62,9 @@ def bdgUpload(session, headers, list_ofValues,obj, colNum):
 
         if len(toRemove)>0:
             print 'Attempting to remove %s from the BizDev Group.' % len(toRemove)
+            df_remove=pd.DataFrame.from_records(toRemove, columns=['ContactID','Previous BizDevGroupID'])
+            remove_path=path_toUpdate(df_path, 'toRemove')
+            df_remove.to_excel(remove_path, index=False)
             toRemove=remove(toRemove,list_ofValues[0][colNum[0]])
             session.update('Contact',['BizDev_Group__c'],toRemove)
             status='Success'
@@ -72,7 +77,7 @@ def bdgUpload(session, headers, list_ofValues,obj, colNum):
     finally:
         print status
         print 'Session and server closed.'
-        return status
+        return remove_path
 
 def cmpUpload(lists_ofValues):
     print '\nStep 10. Salesforce Campaign Upload.'
