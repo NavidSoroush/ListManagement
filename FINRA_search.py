@@ -152,7 +152,7 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
 ##    Campaign_list.to_excel(path, index=False)
 
     ret_item = {'Next Step': 'Search SEC', 'No CRD': no_crd_fname
-                ,'FINRA_SEC Found':finra_sec_foundPath,'FINRA_Found':found, 'FINRA Ambiguous':FINRA_ambiguous_path}
+                ,'FINRA_SEC Found':finra_sec_foundPath,'FINRA_Found':found, 'FINRA Ambiguous':FINRA_uncertain_path}
     return ret_item
 
 

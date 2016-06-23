@@ -31,14 +31,31 @@ def valuesForEmail(dictValues):
     if dictValues['Object']=='Campaign':
         toUpdate=dictValues['Num Campaign Upload']
         toCreate=dictValues['Num to Create Cmp']
+        objToAdd=dictValues['Num Adding']
+        objToRemove=dictValues['Num Removing']
+        objToUpdate=dictValues['Num Updating/Staying']
+        
     else:
         toUpdate=dictValues['Num To Update']
         toCreate=dictValues['Create']
+        objToAdd=dictValues['Num Adding']
+        objToRemove=dictValues['Num Removing']
+        objToUpdate=dictValues['Num Updating/Staying']
 
     if dictValues['Move To Bulk']==False:
         createAdvisorsNote='Contacts will not be created. Not enough information provided.'
     else:
         createAdvisorsNote=''
+
+    obj=dictValues['Object']
+    if obj=='BizDev Group':
+        att_paths=[dictValues['No CRD'],dictValues['FINRA Ambiguous'],
+                   dictValues['Review Path'],dictValues['BDG Remove'],
+                   dictValues['BDG Add'],dictValues['BDG Stay']]
+    else:
+        att_paths=[dictValues['No CRD'],dictValues['FINRA Ambiguous'],
+                   dictValues['Review Path']]
+
     total=dictValues['Total Records']
     fileName=splitname(dictValues['File Path'])
     num_foundInSFDC=dictValues['Found in SFDC Search #2']+dictValues['SFDC_Found']-toCreate
@@ -57,17 +74,19 @@ def valuesForEmail(dictValues):
     matchRate=(num_foundInSFDC+toCreate)/float(total)
     itemsToEmail=[senderName,objName, userName,userPhone,
                   userEmail,total,num_foundInSFDC,toUpdate,
-                  num_notUpdating,toCreate,need_Research,received,
-                  processStart,completed,processingString,createAdvisorsNote]
+                  num_notUpdating,toCreate,objToAdd,objToUpdate,
+                  objToRemove,need_Research,received,processStart,
+                  completed,processingString,createAdvisorsNote]
     bodyString=craftEmail(itemsToEmail)
+    
     items_forStats={'File Name': fileName,'Received Date': ts_received,'Received From':senderName
                     ,'Created By':userName, 'File Type':obj, 'Advisors on List':total
                     ,'Advisors w/CID':num_foundInSFDC,'Advisors w/CID old Contact Info':num_notUpdating
                     ,'CRD Found Not in SFDC':toCreate,'Creating':toCreate
                     ,'Unable to Find':need_Research,'Last Search Date':completed
                     ,'Match Rate':matchRate,'Processing Time':processingString}
-
-    emailComplete(senderEmail,objName,bodyString)
+    
+    emailComplete(senderEmail,objName,bodyString,att_paths)
     return {'Next Step': 'Record Stats',
             'Stats Data': items_forStats}
 
@@ -85,9 +104,12 @@ If you have questions, please reach out to:
 Search results:
 Total Advisors: %s
 Found in SF: %s
-Updating in SF/Adding to Campaign: %s
-Info Up-To-Date (Not Updating): %s
+Updating Contact in SF or Adding to Campaign: %s
+Contact Info Up-To-Date: %s
 Creating: %s
+Added to Campaign or BDG: %s
+Updated in Campaign or Stayed in BDG: %s
+Removed from Campaign or BDG: %s
 Need Research: %s
 Received: %s
 Process Started: %s
@@ -101,7 +123,9 @@ Processing Time: %s
                                             items[8],items[9],
                                             items[10],items[11],
                                             items[12],items[13],
-                                            items[14],items[15])
+                                            items[14],items[15],
+                                            items[16],items[17],
+                                            items[18])
     return(BODY)
 
 

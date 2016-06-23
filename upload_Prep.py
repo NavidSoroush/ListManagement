@@ -80,7 +80,6 @@ def sourceChannel(path, recordName, objId, obj, aid=None):
             list_df['BizDev Group']=objId
 
         move_toBulk=determineMovetoBulkProcessing(list_df)
-        move_toBulk=False
 
 
 ##Clean up phone and fax numbers (ie. format for SFDC upload)

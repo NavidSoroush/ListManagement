@@ -49,7 +49,7 @@ if os.path.exists(AdvListPath)==False:
 #Pseudocode
 
 
-def searchone(path, listType=None): 
+def searchone(path, listType=None, review_path=None): 
     #Open campaign list (assumes data on first sheet)
     print '\nStep 4:\nPreparing list and searching against SFDC.'
     Campaign_list = pd.read_excel(path, sheetname=0)
@@ -161,7 +161,8 @@ def searchone(path, listType=None):
     Campaign_list.to_excel(path, index=False)
         
     ret_item = {'Next Step': 'FINRA Search','Found Path': found_cont_path
-                    , 'SFDC_Found':len(found_contacts),'FINRA?':to_FINRA}
+                    , 'SFDC_Found':len(found_contacts),'FINRA?':to_FINRA
+                , 'Review Path':review_path}
     return ret_item
 
 def CRDsearch(list_df, advisor_df, n, obj=None):

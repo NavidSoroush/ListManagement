@@ -5,7 +5,6 @@ from parse_Files import path_toUpdate
 
 colNums=[]
 
-##def extract_pdValues(df_path):##,obj):
 def extract_pdValues(df_path,obj):
     df=pd.read_excel(df_path)
     if obj=='BizDev Group':
@@ -16,16 +15,19 @@ def extract_pdValues(df_path,obj):
         colNums.append(df.columns.get_loc('Licenses__c'))        
     df_values=df.values.tolist()
     df_headers=df.columns.values.tolist()
+    
     if obj=='Campaign':
-        cmpUpload(df_values)
-        paths=['','','']
+        paths, stats=cmpUpload(df_values)
     else:
-        paths=upload(df_headers,df_values,obj, colNums, df_path)
+        paths,stats=upload(df_headers,df_values,obj, colNums, df_path)
 
     return {'Next Step': 'Send Email',
             'BDG Remove': paths[0],
             'BDG Add': paths[1],
-            'BDG Stay': paths[2]}
+            'BDG Stay': paths[2],
+            'Num Removing': stats[0],
+            'Num Adding': stats[1],
+            'Num Updating/Staying': stats[2]}
 
 def headersCleanUp(headers,toRemove='ContactID'):
     headers.remove(toRemove)
@@ -37,20 +39,20 @@ def remove(toRemove,objID):
             to[1]=''
     return toRemove
 
-def upload(headers,list_ofValues, obj, colNum, df_path, paths=[]):
+def upload(headers,list_ofValues, obj, colNum, df_path):
     try:
         session=initSession()
         if obj=='Campaign':
-            cmpUpload(session,list_ofValues,obj)
+            paths,stats=cmpUpload(session,list_ofValues,obj)
         elif obj=='BizDev Group':
             headers=headersCleanUp(headers)
-            paths=bdgUpload(session,headers,list_ofValues,obj, colNum, df_path)
+            paths,stats=bdgUpload(session,headers,list_ofValues,obj, colNum, df_path)
     except Exception, e:
         print e
-    return paths
+    return paths,stats
                 
 
-def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path=None, add_path=None, update_path=None):
+def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path=None, add_path=None, update_path=None, nAdd=0, nUp=0, nRe=0):
     print '\nStep 10. Salesforce BizDev Group Upload.'
     print 'Attempting to connect to SFDC for BDG upload.'
     try:
@@ -66,14 +68,19 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
             df_add.to_excel(add_path, index=False)
             
             session.update('Contact',['BizDev_Group__c','Licenses__c'],toInsert)
-            nUpdated=session.getenv('ROW_COUNT')
+            nAdd=len(toInsert)
             status='Success'
 
         if len(toUpdate)>0:
-            print '%s will be staying in the BizDevGroup.' % len(toUpdate)
+            print 'Attempting to update Licenses for %s advisors staying in the BizDevGroup.' % len(toUpdate)
             df_update=pd.DataFrame.from_records(toUpdate, columns=['ContactID','BizDevGroupID','Licenses'])
             update_path=path_toUpdate(df_path, 'bdg_toStay')
-            df_add.to_excel(update_path, index=False)
+            df_update.to_excel(update_path, index=False)
+            nUp=len(toUpdate)
+
+            session.update('Contact',['BizDev_Group__c','Licenses__c'],toUpdate)
+            nUp=session.getenv('ROW_COUNT')
+            status='Success'
 
         if len(toRemove)>0:
             print 'Attempting to remove %s from the BizDev Group.' % len(toRemove)
@@ -83,6 +90,7 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
             
             toRemove=remove(toRemove,list_ofValues[0][colNum[0]])
             session.update('Contact',['BizDev_Group__c'],toRemove)
+            nRe=len(toRemove)
             status='Success'
             
         closeSession(session)
@@ -94,9 +102,9 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
         print status
         print 'Session and server closed.'
 
-    return [remove_path, add_path, update_path]
+    return [remove_path, add_path, update_path], [nRe, nAdd, nUp]
 
-def cmpUpload(lists_ofValues):
+def cmpUpload(lists_ofValues, paths=[],nAdd=0, nRe=0, nUp=0):
     print '\nStep 10. Salesforce Campaign Upload.'
     print 'Attempting to connect to SFDC for cmpMember upload.'
     try:
@@ -108,12 +116,14 @@ def cmpUpload(lists_ofValues):
             print 'Attempting to insert %s into the campaign.' % (len(toInsert))
             session.insert('CampaignMember',['ContactId','Status','CampaignId'],
                                toInsert)
+            nAdd=len(toInsert)
             status='Success'
             
         if len(toUpdate)>0:
             print 'Attempting to update %s into the campaign.' % (len(toUpdate))
             session.update('CampaignMember',['Status','CampaignId'],
                                toUpdate)
+            nUp=len(toUpdate)
             status='Success'
         closeSession(session)
     except:
@@ -122,7 +132,7 @@ def cmpUpload(lists_ofValues):
     finally:
         print status
         print 'Session and server closed.'
-        return status
+        return ['','',''],[nRe, nAdd, nUp]
 
 def currentMembers(session, cmpId, obj):
     child_list=[]
@@ -193,12 +203,12 @@ def closeSession(session):
 
 
 ##for testing
-if __name__=='__main__':
+##if __name__=='__main__':
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
 ##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/BDG Test List/BDG Test List_toUpdate.xlsx'
-    path='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/PAG All Advisors 6.3.16 New May 16/PAG All Advisors 6.3.16 New May 16_bdgUpdate.xlsx'
-    obj='BizDev Group'
-    status={}
-    status=extract_pdValues(path,obj)
-    print 'Request status: %s' % status
+##    path='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/PAG All Advisors 6.3.16 New May 16/PAG All Advisors 6.3.16 New May 16_bdgUpdate.xlsx'
+##    obj='BizDev Group'
+##    status={}
+##    status=extract_pdValues(path,obj)
+##    print 'Request status: %s' % status
