@@ -69,7 +69,7 @@ def training(list_file_path,objName):
     del train['Header Value']
     ###Creating word vectorizer and finding the features of the
     ###training data set
-    vectorizer = CountVectorizer(analyzer = "word",   \
+    vectorizer = CountVectorizer(analyzer = "char",   \
                                  tokenizer = None,    \
                                  preprocessor = None, \
                                  stop_words = None,   \
