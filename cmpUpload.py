@@ -15,9 +15,10 @@ def extract_pdValues(df_path,obj):
         colNums.append(df.columns.get_loc('Licenses__c'))        
     df_values=df.values.tolist()
     df_headers=df.columns.values.tolist()
+
     
     if obj=='Campaign':
-        paths, stats=cmpUpload(df_values)
+        paths, stats=cmpUpload(df_headers,df_values, obj)
     else:
         paths,stats=upload(df_headers,df_values,obj, colNums, df_path)
 
@@ -39,11 +40,11 @@ def remove(toRemove,objID):
             to[1]=''
     return toRemove
 
-def upload(headers,list_ofValues, obj, colNum, df_path):
+def upload(headers,list_ofValues, obj, colNum=None, df_path=None):
     try:
         session=initSession()
         if obj=='Campaign':
-            paths,stats=cmpUpload(session,list_ofValues,obj)
+            paths,stats=cmpUpload(session,list_ofValues, obj)
         elif obj=='BizDev Group':
             headers=headersCleanUp(headers)
             paths,stats=bdgUpload(session,headers,list_ofValues,obj, colNum, df_path)
@@ -56,7 +57,6 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
     print '\nStep 10. Salesforce BizDev Group Upload.'
     print 'Attempting to connect to SFDC for BDG upload.'
     try:
-        session=initSession()
         print 'Connection successful.'
         print 'Getting current members.'
         sf_bdgMembers=currentMembers(session, list_ofValues[0][colNum[0]], obj)
@@ -104,12 +104,11 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
 
     return [remove_path, add_path, update_path], [nRe, nAdd, nUp]
 
-def cmpUpload(lists_ofValues, paths=[],nAdd=0, nRe=0, nUp=0):
+def cmpUpload(session, lists_ofValues, obj,nAdd=0, nRe=0, nUp=0):
     print '\nStep 10. Salesforce Campaign Upload.'
     print 'Attempting to connect to SFDC for cmpMember upload.'
     try:
-        session=initSession()
-        print 'Connection successful.'
+        print 'Connection successful.'      
         sf_c_cmpMembers=currentMembers(session,lists_ofValues[0][2], obj)
         toInsert, toUpdate, toRemove=splitList(sf_c_cmpMembers,lists_ofValues, obj)
         if len(toInsert)>0:
