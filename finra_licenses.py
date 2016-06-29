@@ -12,7 +12,7 @@ finra_site = 'http://brokercheck.finra.org/Individual/Summary/'
 chromedriver = "C:/Python27/selenium/Chrome/chromedriver"
 os.environ["webdriver.chrome.driver"] = chromedriver
 elements=['col-md-3']
-path='C:/Users/rschools/Desktop/CRD_Test.xlsx'
+##path='C:/Users/rschools/Desktop/CRD_Test.xlsx'
 
 def licenseSearch(path, attempted_search_count=0,attempts=0):
     df=pd.read_excel(path)
@@ -60,7 +60,7 @@ def licenseSearch(path, attempted_search_count=0,attempts=0):
     df.to_excel(path, index=False)
     return {'BDG Finra Scrape':'Success'}
 
-licenseSearch(path)
+##licenseSearch(path)
 
         
 
