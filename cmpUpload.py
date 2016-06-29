@@ -18,7 +18,7 @@ def extract_pdValues(df_path,obj):
 
     
     if obj=='Campaign':
-        paths, stats=cmpUpload(df_headers,df_values, obj)
+        paths, stats=upload(df_headers,df_values, obj)
     else:
         paths,stats=upload(df_headers,df_values,obj, colNums, df_path)
 
@@ -58,7 +58,6 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
     print 'Attempting to connect to SFDC for BDG upload.'
     try:
         print 'Connection successful.'
-        print 'Getting current members.'
         sf_bdgMembers=currentMembers(session, list_ofValues[0][colNum[0]], obj)
         toInsert,toUpdate,toRemove=splitList(sf_bdgMembers,list_ofValues, obj, colNum[1])
         print 'Attempting to insert %s in the BizDev Group.' % len(toInsert)
@@ -104,48 +103,58 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
 
     return [remove_path, add_path, update_path], [nRe, nAdd, nUp]
 
-def cmpUpload(session, lists_ofValues, obj,nAdd=0, nRe=0, nUp=0):
+def cmpUpload(session, lists_ofValues, obj, nAdd=0, nRe=0, nUp=0, nAdded=0, nUptd=0):
     print '\nStep 10. Salesforce Campaign Upload.'
     print 'Attempting to connect to SFDC for cmpMember upload.'
     try:
-        print 'Connection successful.'      
-        sf_c_cmpMembers=currentMembers(session,lists_ofValues[0][2], obj)
+        print 'Connection successful.'
+        sf_c_cmpMembers=currentMembers(session,lists_ofValues[0][-1], obj)
         toInsert, toUpdate, toRemove=splitList(sf_c_cmpMembers,lists_ofValues, obj)
-        if len(toInsert)>0:
-            print 'Attempting to insert %s into the campaign.' % (len(toInsert))
+        nAdd=len(toInsert)
+        nUp=len(toUpdate)
+        while nAdded < nAdd:
+            print 'Attempting to insert %s into the campaign.' % (nAdd)
             session.insert('CampaignMember',['ContactId','Status','CampaignId'],
-                               toInsert)
-            nAdd=len(toInsert)
+                           toInsert)
+            
+            nAdded=session.getenv('ROW_COUNT')
             status='Success'
             
-        if len(toUpdate)>0:
+        if nUptd < nUp:
             print 'Attempting to update %s into the campaign.' % (len(toUpdate))
             session.update('CampaignMember',['Status','CampaignId'],
                                toUpdate)
-            nUp=len(toUpdate)
+            nUptd=session.getenv('ROW_COUNT')
             status='Success'
-        closeSession(session)
-    except:
+    except Exception, e:
+        print Exception, e
         status='Failed'
+        closeSession(session)
         
     finally:
         print status
         print 'Session and server closed.'
+        closeSession(session)
         return ['','',''],[nRe, nAdd, nUp]
 
+
 def currentMembers(session, cmpId, obj):
+    print 'Getting current members.'
     child_list=[]
-    if obj=='Campaign':
-        sql='SELECT ContactId, Status, Id FROM CampaignMember WHERE CampaignId="'+cmpId+'"'
-        for rec in session.selectRecords(sql):
-            child_list.append(rec.ContactId)
-            child_list.append(rec.Status)
-            child_list.append(rec.Id)
-    elif obj=='BizDev Group':
-        sql='SELECT Id, BizDev_Group__c FROM Contact WHERE BizDev_Group__c="'+cmpId+'"'
-        for rec in session.selectRecords(sql):
-            child_list.append(rec.Id)
-            child_list.append(rec.BizDev_Group__c)
+    try:
+        if obj=='Campaign':
+            sql='SELECT ContactId, Status, Id FROM CampaignMember WHERE CampaignId="'+cmpId+'"'
+            for rec in session.selectRecords(sql):
+                child_list.append(rec.ContactId)
+                child_list.append(rec.Status)
+                child_list.append(rec.Id)
+        elif obj=='BizDev Group':
+            sql='SELECT Id, BizDev_Group__c FROM Contact WHERE BizDev_Group__c="'+cmpId+'"'
+            for rec in session.selectRecords(sql):
+                child_list.append(rec.Id)
+                child_list.append(rec.BizDev_Group__c)
+    except:
+        print 'No advisors in %s object.' % obj
     return child_list
 
 
@@ -206,8 +215,8 @@ def closeSession(session):
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
 ##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/BDG Test List/BDG Test List_toUpdate.xlsx'
-##    path='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/PAG All Advisors 6.3.16 New May 16/PAG All Advisors 6.3.16 New May 16_bdgUpdate.xlsx'
-##    obj='BizDev Group'
-##    status={}
+##    path='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Voya Alts Forum Rep Invite/Voya Alts Forum Rep Invite_cmpUpload.xlsx'
+##    obj='Campaign'
+####    status={}
 ##    status=extract_pdValues(path,obj)
 ##    print 'Request status: %s' % status
