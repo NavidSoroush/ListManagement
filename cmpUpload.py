@@ -2,10 +2,11 @@ import SQLForce
 from cred import sfuser, sfpw, sf_token, username
 import pandas as pd
 from parse_Files import path_toUpdate
+import datetime
 
 colNums=[]
 
-def extract_pdValues(df_path,obj):
+def extract_pdValues(df_path,obj, objID=None):
     df=pd.read_excel(df_path)
     if obj=='BizDev Group':
         df.rename(columns={'BizDev Group':'BizDev_Group__c','Licenses':'Licenses__c'},inplace=True)
@@ -19,7 +20,7 @@ def extract_pdValues(df_path,obj):
     
     if obj=='Campaign':
         paths, stats=upload(df_headers,df_values, obj)
-    else:
+    elif obj=='BizDev Group':
         paths,stats=upload(df_headers,df_values,obj, colNums, df_path)
 
     return {'Next Step': 'Send Email',
@@ -91,7 +92,8 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
             session.update('Contact',['BizDev_Group__c'],toRemove)
             nRe=len(toRemove)
             status='Success'
-            
+
+        last_list_uploaded(session,list_ofValues[0][colNum[0]], obj)
         closeSession(session)
     except Exception, e:
         print e
@@ -158,6 +160,29 @@ def currentMembers(session, cmpId, obj):
     return child_list
 
 
+def last_list_uploaded(objId, obj, session=None,success=False, attempts=0, s=0):
+    from datetime import date
+    today=date.today()
+    print 'Instantiating SFDC session.'
+    if session==None:
+        s=None
+        session=initSession()
+    sql='SELECT Id, Last_Rep_List_Upload__c FROM %s WHERE Id="%s"' % (obj, [objId][0])
+    try:
+        if obj=='Account':
+            session.update('Account', ['Last_Rep_List_Upload__c'], [[objId][0], today.strftime("%m/%d/%Y")])
+        elif obj=='BizDev Group':
+            session.update('BizDev_Group__c', ['Last_Rep_List_Upload__c'], [objId, today.strftime("%m/%d/%Y")])
+        success=True
+    except Exception, e:
+        print Exception, e
+        
+
+    print 'Closing SFDC session.'
+    if s=None:
+        closeSession(session)
+
+
 
 def splitList(id_inCmp, ids_fromSearch, obj, col=None,remove=None, newList=[]):
     if obj=='Campaign':
@@ -220,3 +245,4 @@ def closeSession(session):
 ####    status={}
 ##    status=extract_pdValues(path,obj)
 ##    print 'Request status: %s' % status
+
