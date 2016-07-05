@@ -4,7 +4,7 @@ from SearchSFDC import searchone, searchtwo, searchsec
 from FINRA_search import fin_search
 from parse_Files import parseList
 from upload_Prep import sourceChannel
-from cmpUpload import extract_pdValues
+from cmpUpload import extract_pdValues, last_list_uploaded
 from bulkProcessing import copy_toBulkProcessing
 from dictExtraction import valuesForEmail
 from recordStats import recordStats
@@ -47,9 +47,11 @@ if __name__=="__main__":
         else:
             print '\nContacts will not be created. Not enough information provided.'
     elif var_list['Object']=='Account':
+        last_list_uploaded(var_list['ObjectId'],var_list['Object'])
         var_list.update(sourceChannel(var_list['Update Path'],var_list['Record Name'],var_list['ObjectId'],var_list['Object']))
         if var_list['Move To Bulk']==True:
             copy_toBulkProcessing(var_list['Update Path'])
+##            print 'Would move to bulk processing.'
         else:
             print '\nContacts will not be created. Not enough information provided.'
 

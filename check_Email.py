@@ -129,7 +129,8 @@ def process_mailbox(M):
                  returnDict('Found Path', None), returnDict('ObjectId',obj_rec_Link),
                  returnDict('Pre_or_Post',pre_orPost), returnDict('processStart',pstart),
                  returnDict('CmpAccountName',aName), returnDict('CmpAccountID',aID),
-                 returnDict('Found in SFDC Search #2',0)]
+                 returnDict('Found in SFDC Search #2',0), returnDict('Num Adding',0),
+                 returnDict('Num Removing',0), returnDict('Num Updating/Staying',0) ]
                 retItems = dict([(i.item, i.emailVar) for i in Items])
                 return retItems
             else:
