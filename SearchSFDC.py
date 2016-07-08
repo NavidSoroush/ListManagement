@@ -49,19 +49,44 @@ if os.path.exists(AdvListPath)==False:
 #Pseudocode
 
 
+def df_column_preprocessing(df):
+    for col in df.columns:
+        if df[col].dtype not in ('int64', 'float64'):
+            df[col]=df[col].str.decode('ascii').str.encode('utf-8')
+    return df
+
+
 def searchone(path, listType=None, review_path=None): 
-    #Open campaign list (assumes data on first sheet)
+    '''
+    In short, this function should be used to prepare the data and perform an
+    initial search against the current SFDC advisor database.
+    =======================================================================
+    
+    PSEUDOCODE: 
+    This function should open the list 'to-be-searched' (currently assumes
+    the data is on the first sheet) as well as the SFDC advisor list. From
+    the 'to-be-searched' list, all headers that are marked as 'unknown' by
+    the match program should be removed. Fill all 'NA'/'NULL' values with ''.
+    If 'FullName'    is present in the 'to-be-searched' headers then the name
+    should be split into first and last names. In addition to transforming /
+    cleansing full, first, and last name fields - state and zip code should
+    cleaned.Following these transformations a 'LkupName' field that is a
+    combination of First Name, Last Name,    Account Name, State, And Zip.
+    If any values aren't present, skip the 'LkupName' creation. Search the
+    'to-be-searched' file by CRD, Email, AMPF_MBR_ID,and LkupName (if present)
+    against the SFDC advsior file.
+    '''
+    
     print '\nStep 4:\nPreparing list and searching against SFDC.'
     Campaign_list = pd.read_excel(path, sheetname=0)
     Advisor_list = pd.read_csv(AdvListPath,error_bad_lines=False,low_memory=False)
     headers = Campaign_list.columns.values
-    #remove unknown header columns from search - ricky added 3.21.2016
-    keepCols = [c for c in Campaign_list.columns if c.lower()[:7] != 'unknown']
+
+    keepCols = [c for c in Campaign_list.columns if c.lower() != 'unknown']
     Campaign_list = Campaign_list[keepCols]
-    
-    #Empty blank cells
     Campaign_list = Campaign_list.fillna('')
-    #--> check here for null values in searched fields, subset#
+
+    Campaign_list = df_column_preprocessing(Campaign_list)
 
     #If we have the information to make LkupName, do so
     if "MailingPostalCode" in headers and "MailingState" in headers:
@@ -123,6 +148,7 @@ def searchone(path, listType=None, review_path=None):
     contacts_to_review = pd.DataFrame()
     to_FINRA = True
     n=0
+    
     if 'CRDNumber' in headers:
         (found_contacts, Campaign_list, n, found, to_FINRA) = CRDsearch(Campaign_list, Advisor_list, n, listType) #output is df
 
@@ -166,6 +192,12 @@ def searchone(path, listType=None, review_path=None):
     return ret_item
 
 def CRDsearch(list_df, advisor_df, n, obj=None):
+    '''
+    If a column titled 'CRDNumber' is present in the 'to-be-searched' list,
+    then the df from 'searchone' function is thrown here for the search against
+    SFDC.
+    '''
+    
     list_df.fillna('')
 ##    list_df['CRDNumber'].astype(int)
     to_FINRA = True
@@ -202,6 +234,14 @@ def CRDsearch(list_df, advisor_df, n, obj=None):
     
 
 def searchtwo(path, found_path, listType=None):
+    '''
+    Following the 'to-be-searched' list that had already be searched against
+    SFDC, the remaining names that could not be identified in the database
+    were sent to FINRA / SEC for CRD scrapping.
+
+    After the scrapping, we re-search the SFDC database to attempt to find any
+    additional contacts that were missed during the 'searchone' function.    
+    '''
     
     FINRA_Found_list = pd.read_excel(path, sheetname=0)
     Advisor_list = pd.read_csv(AdvListPath,error_bad_lines=False,low_memory=False)
@@ -252,6 +292,16 @@ def searchtwo(path, found_path, listType=None):
 
 
 def searchsec(path,found_path):
+    '''
+    Following the 'to-be-searched' list that had already be searched against
+    SFDC, and attempted FINRA scraping, the remaining names that could not be
+    scrapped are searched against the SEC database for CRD scrapping.
+    database
+
+    After the scrapping, we re-search the SFDC database to attempt to find any
+    additional contacts that were missed during the 'searchone' function.    
+    '''
+    
     import datetime
     today = datetime.datetime.strftime(datetime.datetime.now(),'%m_%d_%Y')
     SECpath='T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/Individuals/processed_data/'+today+'/'
