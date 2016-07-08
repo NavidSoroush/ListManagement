@@ -184,9 +184,12 @@ def last_list_uploaded(objId, obj, success=False, attempts=0, s=0):
         return success
         
 
+def remove_duplicates(mbr_list):
+    unique_data = [list(x) for x in set(tuple(x) for x in mbr_list)]
+    return unique_data
 
 
-def splitList(id_inCmp, ids_fromSearch, obj, col=None,remove=None, newList=[]):
+def splitList(id_inCmp, ids_fromSearch, obj, col=None,remove=None, remove_unique=None, newList=[]):
     if obj=='Campaign':
         insert=[i for i in ids_fromSearch if i[0] not in id_inCmp]
         update=[i for i in ids_fromSearch if i[0] in id_inCmp]
@@ -207,9 +210,12 @@ def splitList(id_inCmp, ids_fromSearch, obj, col=None,remove=None, newList=[]):
             for up in update: 
                 for re in remove:
                     if up[:-1] == re:
-                        remove.remove(re)                    
-        
-    return (insert, update, remove)
+                        remove.remove(re)
+            remove_unique=remove_duplicates(remove)
+    update_unique=remove_duplicates(update)
+    insert_unique=remove_duplicates(insert)
+    
+    return (insert_unique, update_unique, remove_unique)
 
 
 
