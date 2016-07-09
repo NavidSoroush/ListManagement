@@ -15,6 +15,7 @@ Change Log:
 """
 
 import pandas as pd
+import numpy as np
 import time
 import os
 from functions import splitname
@@ -99,6 +100,16 @@ def searchone(path, listType=None, review_path=None):
                 Campaign_list.loc[index,"MailingPostalCode"]=row["MailingPostalCode"][:5]
             elif len(row["MailingPostalCode"])==8:
                 Campaign_list.loc[index,"MailingPostalCode"]=row["MailingPostalCode"][:4]
+
+        if np.mean(Campaign_list['MailingState'].str.len()) > 2:
+            import us
+            print 'MailingState column needs to be transformed.'
+            for index, row in Campaign_list.iterrows():
+                try:
+                    state = us.states.lookup(Campaign_list.loc[index,"MailingState"])
+                    Campaign_list.loc[index,"MailingState"] = state
+                except:
+                    pass
 
         #Format name as necessary
         #Split FullName if given, cleanup first/last name, create lkup name
