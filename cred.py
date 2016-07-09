@@ -1,8 +1,8 @@
-import os
+import getpass
 
-username = str(os.environ.get("USERNAME"))
+username = str(getpass.getuser())
 ##print username
-if username.lower()=='rschools':
+if username.lower() == 'rschools' or username.lower() == 'rickyschools':
     password = 'Rockon3!3...'
     userPhone='(407) 803-5922'
     outlook_userEmail='rschools@franklinsquare.com'

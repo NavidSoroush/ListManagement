@@ -6,6 +6,8 @@ import datetime
 
 colNums=[]
 
+
+
 def extract_pdValues(df_path,obj, objID=None):
     df=pd.read_excel(df_path)
     if obj=='BizDev Group':
@@ -160,18 +162,22 @@ def currentMembers(session, cmpId, obj):
     return child_list
 
 
+
+
+
 def last_list_uploaded(objId, obj, success=False, attempts=0, s=0):
-    from datetime import date
-    today=date.today()
+    from datetime import datetime
+    today=datetime.utcnow().isoformat()
     print "Instantiating SFDC session for %s's Last Rep List Upload Updated." % obj
     session=initSession()
-    items=[objId, today.strftime("%m/%d/%Y")]
-    print items
+    items=[objId, today]
+    for i in items:
+        print '%s: %s' % (i, type(i))
     try:
         if obj=='Account':
-            session.update('Account', ['Last_Rep_List_Upload__c'], items)
+            session.update('Account', ['Last_Rep_List_Upload__c'], [items])
         elif obj=='BizDev Group':
-            session.update('BizDev_Group__c', ['Last_Rep_List_Upload__c'], items)
+            session.update('BizDev_Group__c', ['Last_Rep_List_Upload__c'], [items])
         success=True
         print "Successfully updated the last list uploaded field on the %s's page." % obj
     except Exception, e:
@@ -238,20 +244,19 @@ def initSession():
 
 
 def closeSession(session):
-    session.logout()
     SQLForce.SQLForceServer.killServer()
 
 
 
 ##for testing
-if __name__=='__main__':
+##if __name__=='__main__':
 ##    testData=[['003E000000sasOaIAI','Needs Follow-Up','701E0000000bkmAIAQ'],
 ##              ['003E000001P0oQEIAZ','Needs Follow-Up','701E0000000bkmAIAQ']]
 ##    cmpPath='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/BDG Test List/BDG Test List_toUpdate.xlsx'
 ##    path='T:/Shared/FS2 Business Operations/Python Search Program/New Lists/Voya Alts Forum Rep Invite/Voya Alts Forum Rep Invite_cmpUpload.xlsx'
-    obj='Account'
-    objId='001E000000DueknIAB'
-    account_object(objId, obj)
+##    obj='Account'
+##    objId='001E000000DueknIAB'
+##    last_list_uploaded(objId, obj)
 ####    status={}
 ##    status=extract_pdValues(path,obj)
 ##    print 'Request status: %s' % status
