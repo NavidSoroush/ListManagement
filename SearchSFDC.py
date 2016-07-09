@@ -107,7 +107,7 @@ def searchone(path, listType=None, review_path=None):
             for index, row in Campaign_list.iterrows():
                 try:
                     state = us.states.lookup(Campaign_list.loc[index,"MailingState"])
-                    Campaign_list.loc[index,"MailingState"] = state
+                    Campaign_list.loc[index,"MailingState"] = str(state.name)
                 except:
                     pass
 
