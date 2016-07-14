@@ -26,12 +26,18 @@ def run():
         tcon='yes'
         uid = username
         pw = password
-        lkup_strings = ['first name','last name','account name','mailing state/province','mailing zip/postal code']
-        updateCols = ['last meeting or call','chg date - email','chg date - mailing address','chg date - phone','chg date - broker dealer']
-        repHeaders = ['LkupName','First Name', 'Last Name', 'Contact Name','Account', 'AccountId', 'AMPF MBR ID', 'Office Name',
-                      'BizDev Group', 'Email', 'Mailing Address 1', 'Mailing City', 'Mailing State',
-                      'Mailing Zip', 'Phone', 'CRD', 'ContactID', 'Last Meeting/Event', 'Rating', 'Products Used',
-                      'Licenses','SourceChannel','Last Meeting or Call','Chg Date - Email','Chg Date - Mailing Address','Chg Date - Phone',
+        lkup_strings = ['first name','last name','account name',
+                        'mailing state/province','mailing zip/postal code']
+        updateCols = ['last meeting or call','chg date - email','chg date - mailing address',
+                      'chg date - phone','chg date - broker dealer']
+        repHeaders = ['LkupName','First Name', 'Last Name', 'Contact Name',
+                      'Account', 'AccountId', 'AMPF MBR ID', 'Office Name',
+                      'BizDev Group', 'Email', 'Mailing Address 1',
+                      'Mailing City', 'Mailing State','Mailing Zip', 'Phone',
+                      'CRD', 'ContactID', 'Last Meeting/Event', 'Rating',
+                      'Products Used','Licenses','SourceChannel',
+                      'Last Meeting or Call','Chg Date - Email',
+                      'Chg Date - Mailing Address','Chg Date - Phone',
                       'Chg Date - Broker Dealer','Needs Info Updated?']
 
         #Setting save path
