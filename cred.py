@@ -20,5 +20,5 @@ else:
     userEmail='max.charles@franklinsquare.com'
     userName='Max Charles'
     sfuser = 'max.charles@franklinsquare.com'
-    sfpw = 'Cowwonder@86!'
-    sf_token='ha3YclXkAyjU7ExwPL86RWAUH'
+    sfpw = 'Cowwonderful@86!'
+    sf_token='S0isfZqa0U5GggKFA2PlxP2Ig'
