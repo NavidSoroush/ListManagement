@@ -4,6 +4,7 @@ import getpass
 import email
 import base64
 import datetime
+import time
 from pyEmailComplete import newListReceived_notifyOriginator, newListReceived_notifyListMGMT
 from testing_DL_script import list_download
 from cred import username, password, sfuser, sfpw, outlook_userEmail
@@ -41,6 +42,11 @@ def determineExtensionType(fname):
 ################################################################
 ##These functions and variables will be used for email processing when a new
 ##list is received.
+listUploadStr=['An upload list has been added'
+               ,'An upload list has been added to'
+               ,'by','Account Link: '
+               , 'Attachment Link: '
+               , 'BizDev Group Link: ']
 Object_Check = ['Campaign', 'BizDev Group']
 
 class returnDict(object):
@@ -81,11 +87,11 @@ def listInfoParser(bodyStr,lookingFor,lookingFor2=None,n=None):
     return tmpStr
 
 def decode_mailitem(mail_data):
-        msg = email.message_from_string(mail_data)
-        encodedBody=bodyParse(msg,listUploadStr[0])
-        body = msg.get_payload()
-        decodedBody = base64.b64decode(body)
-        return decodedBody
+    msg = email.message_from_string(mail_data)
+    encodedBody=bodyParse(msg,listUploadStr[0])
+    body = msg.get_payload()
+    decodedBody = base64.b64decode(body)
+    return decodedBody
     
 def bodyParse(message,s_string):
     tmpObj=str(message)
@@ -95,62 +101,78 @@ def bodyParse(message,s_string):
     mailBody=tmpObj[start2:]
     return mailBody
 
-def process_list_email(email_data, M, var_list):
+def process_list_email(email_data, M):
 ## need to adjust all of the variables (decoded body, data[0]) to the
 ## variables that are passed to the process_list_email function
+    data=email_data[0]
+    decodedBody=email_data[1]
+    num=email_data[2]
+    
     if Object_Check[0] in decodedBody:
         obj = Object_Check[0]
-        elif Object_Check[1] in decodedBody:
-            obj = Object_Check[1]
-        else:
-            obj = 'Account'
+    elif Object_Check[1] in decodedBody:
+        obj = Object_Check[1]
+    else:
+        obj = 'Account'
 
-        recDate = getMsgPart('date',data[0])
-        sentFrom = getMsgPart('From',data[0])
-        senderName = emailParser(sentFrom,' <')
-        sentFrom = emailParser(sentFrom,'<','>')
+    recDate = getMsgPart('date',data)
+    sentFrom = getMsgPart('From',data)
+    senderName = emailParser(sentFrom,' <')
+    sentFrom = emailParser(sentFrom,'<','>')
 
-        obj_rec_Name=listInfoParser(decodedBody,listUploadStr[1],listUploadStr[2])
-        obj_rec_Link=listInfoParser(decodedBody,listUploadStr[3],listUploadStr[4])
+    obj_rec_Name=listInfoParser(decodedBody,listUploadStr[1],
+                                listUploadStr[2])
+    obj_rec_Link=listInfoParser(decodedBody,listUploadStr[3],
+                                listUploadStr[4])
 
-        attLink=listInfoParser(decodedBody,listUploadStr[4])
+    attLink=listInfoParser(decodedBody,listUploadStr[4])
 
-        if obj=='Campaign':
-            obj_rec_Link=obj_rec_Link[-18:]
-        elif obj=='BizDev Group':
-            obj_rec_Link=listInfoParser(decodedBody,listUploadStr[5],listUploadStr[4])
-            obj_rec_Link=obj_rec_Link[26:44]
-        else:
-            obj_rec_Link=obj_rec_Link[26:44]
-        filePath,startDate,pre_orPost,aName,aID = list_download([attLink[:18]], obj, obj_rec_Link)
-        try:
-            newListReceived_notifyOriginator(sentFrom,senderName,obj_rec_Name,obj)
-            #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
-        except:
-            pass
-        M.copy(num,'INBOX/Auto Processed Lists')
-        M.store(num,'+FLAGS', r'(\Deleted)')
-        M.expunge()
-        ts=time.time()
-        pstart=datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')               
-        Items = [returnDict('Object',obj), returnDict('Record Name',obj_rec_Name),
-         returnDict('Sender Email', sentFrom), returnDict('Sender Name', senderName),
-         returnDict('Received Date', recDate),returnDict('File Path', filePath),
-         returnDict('Campaign Start Date', startDate), returnDict('Next Step','Pre-processing'),
-         returnDict('Found Path', None), returnDict('ObjectId',obj_rec_Link),
-         returnDict('Pre_or_Post',pre_orPost), returnDict('processStart',pstart),
-         returnDict('CmpAccountName',aName), returnDict('CmpAccountID',aID),
-         returnDict('Found in SFDC Search #2',0), returnDict('Num Adding',0),
-         returnDict('Num Removing',0), returnDict('Num Updating/Staying',0) ]
-        ret_items = dict([(i.item, i.emailVar) for i in Items])
-        return ret_items
+    if obj=='Campaign':
+        obj_rec_Link=obj_rec_Link[-18:]
+    elif obj=='BizDev Group':
+        obj_rec_Link=listInfoParser(decodedBody,listUploadStr[5],
+                                    listUploadStr[4])
+        obj_rec_Link=obj_rec_Link[26:44]
+    else:
+        obj_rec_Link=obj_rec_Link[26:44]
+##    filePath,startDate,pre_orPost,aName,aID = list_download([attLink[:18]],
+##                                                            obj,
+##                                                            obj_rec_Link)
+    print 'Would download file now.'
+    filePath='Test File Name'
+    startDate='Dummy Date'
+    pre_orPost='Does not matter.'
+    aName='Test Account Name'
+    aID='1234'
+    try:
+        newListReceived_notifyOriginator(sentFrom,senderName,
+                                         obj_rec_Name,obj)
+        #newListReceived_notifyListMGMT(senderName, cmpgnName, cmpLink, obj)
+    except:
+        pass
+    M.copy(num,'INBOX/Auto Processed Lists')
+    M.store(num,'+FLAGS', r'(\Deleted)')
+    M.expunge()
+    ts=time.time()
+    pstart=datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')               
+    Items = [returnDict('Object',obj), returnDict('Record Name',obj_rec_Name),
+     returnDict('Sender Email', sentFrom), returnDict('Sender Name', senderName),
+     returnDict('Received Date', recDate),returnDict('File Path', filePath),
+     returnDict('Campaign Start Date', startDate), returnDict('Next Step','Pre-processing'),
+     returnDict('Found Path', None), returnDict('ObjectId',obj_rec_Link),
+     returnDict('Pre_or_Post',pre_orPost), returnDict('processStart',pstart),
+     returnDict('CmpAccountName',aName), returnDict('CmpAccountID',aID),
+     returnDict('Found in SFDC Search #2',0), returnDict('Num Adding',0),
+     returnDict('Num Removing',0), returnDict('Num Updating/Staying',0) ]
+    ret_items = dict([(i.item, i.emailVar) for i in Items])
+    return ret_items
 
-    def lists_in_queue(var_list):
-        if var_list['Lists_In_Queue']>0:
-            return True
-        else:
-            print 'No lists to process. Will check back in 1 hour.'
-            return False
+def lists_in_queue(var_list):
+    if var_list['Lists_In_Queue']>0:
+        return True
+    else:
+        print 'No lists to process. Will check back in 1 hour.'
+        return False
     
 def close_mailbox_connection(M):
     print 'Closing email connection.'

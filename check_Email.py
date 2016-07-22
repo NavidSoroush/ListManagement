@@ -1,7 +1,8 @@
 import smtplib
 import imaplib
 from cred import username, password, sfuser, sfpw, outlook_userEmail
-from testing_DL_script import list_download
+##from testing_DL_script import list_download
+from functions import getMsgPart, decode_mailitem, lists_in_queue
 from pyEmailComplete import newListReceived_notifyOriginator, newListReceived_notifyListMGMT
 import getpass
 import email
@@ -97,7 +98,7 @@ def process_mailbox(M):
                 print 'No new lists found. Next search will occur in 1 hour.'
 
 
-Creating new mailbox processes to create a list queue
+##Creating new mailbox processes to create a list queue
 def process_mailbox_2(M, list_queue=[]):
     rv, data = M.search(None, "ALL")
     if rv != 'OK':
@@ -113,15 +114,15 @@ def process_mailbox_2(M, list_queue=[]):
             subject = getMsgPart('Subject',data[0])
             if listUploadStr[0] in subject:
                 decoded=decode_mailitem(data[0][1])
-                list_queue.append([data[0],decoded])
+                list_queue.append([data[0],decoded, num])
 
     items={'Lists_In_Queue': len(list_queue),
-                'Num_Lists_Processed': 0
+                'Num_Processed': 0,
                 'Lists_Data': list_queue}
 
     return items
 
-def checkForLists2():'
+def checkForLists2():
     M= imaplib.IMAP4_SSL('outlook.office365.com')
     try:
         rv, data = M.login(EMAIL_ACCOUNT, password)
@@ -136,12 +137,13 @@ def checkForLists2():'
     rv, data = M.select(EMAIL_FOLDER)
     if rv == 'OK':
         print "\nStep 1:\nLooking for list uploads."
-        var_list = process_mailbox(M)
+        var_list = process_mailbox_2(M)
         
         if lists_in_queue(var_list)==False:
             var_list.update(close_mailbox_connection(M))
-            print 'There are %s lists to process.' % var_list['Lists_In_Queue']
+            
         else:
+            print 'There are %s lists to process.' % var_list['Lists_In_Queue']
             var_list.update({'Mailbox': M})
             
         return var_list

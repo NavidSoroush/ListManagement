@@ -2,7 +2,7 @@ import time
 from cred import sfuser, sfpw, sf_token
 import SQLForce
 from SQLForce import AttachmentReader
-from functions import splitname
+##from functions import splitname
 import os
 import shutil
 from dateutil import parser
