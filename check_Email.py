@@ -26,50 +26,6 @@ payload = {
     'pw': sfpw
 }
 
-class returnDict(object):
-    def __init__(self, item, emailVar):
-        self.item = item
-        self.emailVar = emailVar
-
-def getMsgPart(mPart,array):
-    msg = email.message_from_string(array[1])
-    decode =email.Header.decode_header(msg[mPart])[0]
-    tmp = unicode(decode[0], 'utf-8')
-    return tmp
-
-def emailParser(senderName,look1,look2=None):
-    finder = senderName.find(look1)
-    if look2 is not None:
-        finder2 = senderName.find(look2)
-        tmpStr = senderName[finder+1:finder2]
-    else:
-        tmpStr = senderName[:finder]
-
-    return tmpStr
-
-def listInfoParser(bodyStr,lookingFor,lookingFor2=None,n=None):
-    if n is None:
-        n = 2
-        
-    if lookingFor=='Campaign Link: ' or lookingFor =='Attachment Link: ':
-        incr = 27
-    else:
-        incr = 1
-        
-    lfStart=bodyStr.find(lookingFor)
-    tmpStr=bodyStr[len(lookingFor)+incr+lfStart:]   
-    if lookingFor2 is not None:
-        lf2Start=bodyStr.find(lookingFor2)
-        tmpStr=tmpStr[:lf2Start-len(lookingFor)-n]
-    return tmpStr
-    
-def bodyParse(message,s_string):
-    tmpObj=str(message)
-    start1=tmpObj.find(s_string)
-    tmpObj=tmpObj[start1+29:]
-    start2=tmpObj.find(s_string)
-    mailBody=tmpObj[start2:]
-    return mailBody
 
 def process_mailbox(M):
     rv, data = M.search(None, "ALL")
@@ -90,20 +46,24 @@ def process_mailbox(M):
                 encodedBody=bodyParse(msg,listUploadStr[0])
                 body = msg.get_payload()
                 decodedBody = base64.b64decode(body)
-                recDate = getMsgPart('date',data[0])
+                
                 if Object_Check[0] in decodedBody:
                     obj = Object_Check[0]
                 elif Object_Check[1] in decodedBody:
                     obj = Object_Check[1]
                 else:
                     obj = 'Account'
-                obj_rec_Name=listInfoParser(decodedBody,listUploadStr[1],listUploadStr[2])
-                obj_rec_Link=listInfoParser(decodedBody,listUploadStr[3],listUploadStr[4])
-                attLink=listInfoParser(decodedBody,listUploadStr[4])
+                
+                recDate = getMsgPart('date',data[0])
                 sentFrom = getMsgPart('From',data[0])
                 senderName = emailParser(sentFrom,' <')
                 sentFrom = emailParser(sentFrom,'<','>')
-                #comment here for spacing
+                
+                obj_rec_Name=listInfoParser(decodedBody,listUploadStr[1],listUploadStr[2])
+                obj_rec_Link=listInfoParser(decodedBody,listUploadStr[3],listUploadStr[4])
+                
+                attLink=listInfoParser(decodedBody,listUploadStr[4])
+
                 if obj=='Campaign':
                     obj_rec_Link=obj_rec_Link[-18:]
                 elif obj=='BizDev Group':
@@ -137,7 +97,31 @@ def process_mailbox(M):
                 print 'No new lists found. Next search will occur in 1 hour.'
 
 
-def checkForLists():        
+Creating new mailbox processes to create a list queue
+def process_mailbox_2(M, list_queue=[]):
+    rv, data = M.search(None, "ALL")
+    if rv != 'OK':
+        print "No messages found!"
+        return
+
+    for num in data[0].split():
+        rv, data = M.fetch(num, '(RFC822)')
+        if rv != 'OK':
+            print "ERROR getting message", num
+            return
+        else:
+            subject = getMsgPart('Subject',data[0])
+            if listUploadStr[0] in subject:
+                decoded=decode_mailitem(data[0][1])
+                list_queue.append([data[0],decoded])
+
+    items={'Lists_In_Queue': len(list_queue),
+                'Num_Lists_Processed': 0
+                'Lists_Data': list_queue}
+
+    return items
+
+def checkForLists2():'
     M= imaplib.IMAP4_SSL('outlook.office365.com')
     try:
         rv, data = M.login(EMAIL_ACCOUNT, password)
@@ -148,23 +132,49 @@ def checkForLists():
     print 'Mailbox: ',rv, data
 
     rv, mailboxes = M.list()
-
     var_list = []
     rv, data = M.select(EMAIL_FOLDER)
     if rv == 'OK':
         print "\nStep 1:\nLooking for list uploads."
         var_list = process_mailbox(M)
-        print 'Closing email connection.'
-        M.close()
-##
-##        for k,v in var_list.iteritems():
-##            print '%s: %s' % (k,v)
+        
+        if lists_in_queue(var_list)==False:
+            var_list.update(close_mailbox_connection(M))
+            print 'There are %s lists to process.' % var_list['Lists_In_Queue']
+        else:
+            var_list.update({'Mailbox': M})
+            
         return var_list
     else:
         print "ERROR: Unable to open mailbox ", rv
-
-    
-    M.logout()
+        
+##
+##def checkForLists():        
+##    M= imaplib.IMAP4_SSL('outlook.office365.com')
+##    try:
+##        rv, data = M.login(EMAIL_ACCOUNT, password)
+##    except imaplib.IMAP4.error:
+##        print "LOGIN FAILED!!! "
+##        sys.exit(1)
+##
+##    print 'Mailbox: ',rv, data
+##
+##    rv, mailboxes = M.list()
+##
+##    var_list = []
+##    rv, data = M.select(EMAIL_FOLDER)
+##    if rv == 'OK':
+##        print "\nStep 1:\nLooking for list uploads."
+##        var_list = process_mailbox(M)
+##        print 'Closing email connection.'
+##        M.close()
+##
+##        return var_list
+##    else:
+##        print "ERROR: Unable to open mailbox ", rv
+##
+##    
+##    M.logout()
 
 ##for testing
 ##checkForLists()
