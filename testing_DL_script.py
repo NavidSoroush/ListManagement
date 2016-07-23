@@ -2,7 +2,7 @@ import time
 from cred import sfuser, sfpw, sf_token
 import SQLForce
 from SQLForce import AttachmentReader
-##from functions import splitname
+import errno
 import os
 import shutil
 from dateutil import parser
@@ -10,11 +10,16 @@ import datetime
 
 
 yot = time.strftime("%Y")
-sPath= ['T:/Shared/FS2 Business Operations/Python Search Program/New Lists/',
-        'Y:/Business_Intelligence_Analytics/Lists - Archives/'+yot+'OrigListArch/']
+sPath= ['T:/Shared/FS2 Business Operations/Python Search Program/New Lists/']
+##        'Y:/Business_Intelligence_Analytics/Lists - Archives/'+yot+'OrigListArch/']
 
 ##for testing
 ##sPath=['C:/Users/rschools/Downloads/ListDownloadTesting/']
+
+def splitname(pathtosplit):
+    import os
+    name = os.path.split(os.path.abspath(pathtosplit))
+    return name[1]
 
 def drivepresent(fname, paths):
     if not os.path.isdir(paths):
@@ -75,7 +80,7 @@ def list_download(att_id, sfObj, objLink):
                                                         sPath[0],
                                                        createSubDirs=False)                               
 
-    drivepresent(attachment, sPath[1])
+##    drivepresent(attachment, sPath[1])
     eventDate = None
     preORpost = None
     accountName=None

@@ -13,8 +13,10 @@ from functions import lists_in_queue,close_mailbox_connection, process_list_emai
 
 strings_to_print=['\nSkipping step 6, because all contacts were found.',
                   '\nSkipping email, LkupName, FINRA and SEC searches.',
-                  '\nContacts will not be created. Not enough information provided.',
-                  ]
+                  '\nContacts will not be created. Not enough information provided.',]
+
+dict_keys_to_keep=['Num_Processed','Lists_In_Queue','Lists_Data','Mailbox']
+
 
 if __name__=="__main__":
     var_list=[]
@@ -86,20 +88,22 @@ if __name__=="__main__":
                                                  var_list['Object']))
                             
                 if var_list['Move To Bulk']==True:
-                    copy_toBulkProcessing(var_list['toCreate'])
+##                    copy_toBulkProcessing(var_list['toCreate'])
+                    print 'Would move to bulk processing.'
 
                 else:
                     print strings_to_print[2]
 ##'\nContacts will not be created. Not enough information provided.'
             elif var_list['Object']=='Account':
-                last_list_uploaded(var_list['ObjectId'],var_list['Object'])
+##                last_list_uploaded(var_list['ObjectId'],var_list['Object'])
+                print 'Would update account object last upload date.'
                 var_list.update(sourceChannel(var_list['Update Path'],
                                               var_list['Record Name'],
                                               var_list['ObjectId'],
                                               var_list['Object']))
                 if var_list['Move To Bulk']==True:
-                    copy_toBulkProcessing(var_list['Update Path'])
-        ##            print 'Would move to bulk processing.'
+##                    copy_toBulkProcessing(var_list['Update Path'])
+                    print 'Would move to bulk processing.'
                 else:
                     print strings_to_print[2]
 ##'\nContacts will not be created. Not enough information provided.'
@@ -133,12 +137,14 @@ if __name__=="__main__":
 ##'\nContacts will not be created. Not enough information provided.'
             var_list.update(valuesForEmail(var_list))
 
-            var_list.update(recordStats(var_list['Stats Data']))
+##            var_list.update(recordStats(var_list['Stats Data']))
+            print 'Would record stats data.'
             num+=1
             var_list.update({'Num_Processed':num})
             print 'List #%s processed.' % var_list['Num_Processed']
             for k, v in var_list.iteritems():
-                print '%s: %s' % (k, v)
+                if k not in dict_keys_to_keep:
+                    var_list[k]=None
         var_list.update(close_mailbox_connection(var_list['Mailbox']))
 
 

@@ -47,6 +47,7 @@ listUploadStr=['An upload list has been added'
                ,'by','Account Link: '
                , 'Attachment Link: '
                , 'BizDev Group Link: ']
+
 Object_Check = ['Campaign', 'BizDev Group']
 
 class returnDict(object):
@@ -135,15 +136,15 @@ def process_list_email(email_data, M):
         obj_rec_Link=obj_rec_Link[26:44]
     else:
         obj_rec_Link=obj_rec_Link[26:44]
-##    filePath,startDate,pre_orPost,aName,aID = list_download([attLink[:18]],
-##                                                            obj,
-##                                                            obj_rec_Link)
-    print 'Would download file now.'
-    filePath='Test File Name'
-    startDate='Dummy Date'
-    pre_orPost='Does not matter.'
-    aName='Test Account Name'
-    aID='1234'
+    filePath,startDate,pre_orPost,aName,aID = list_download([attLink[:18]],
+                                                            obj,
+                                                            obj_rec_Link)
+##    print 'Would download file now.'
+##    filePath='Test File Name'
+##    startDate='Dummy Date'
+##    pre_orPost='Does not matter.'
+##    aName='Test Account Name'
+##    aID='1234'
     try:
         newListReceived_notifyOriginator(sentFrom,senderName,
                                          obj_rec_Name,obj)
