@@ -88,25 +88,27 @@ if __name__=="__main__":
                                                  var_list['Object']))
                             
                 if var_list['Move To Bulk']==True:
-##                    copy_toBulkProcessing(var_list['toCreate'])
-                    print 'Would move to bulk processing.'
+                    copy_toBulkProcessing(var_list['toCreate'])
+##                    print 'Would move to bulk processing.'
 
                 else:
                     print strings_to_print[2]
 ##'\nContacts will not be created. Not enough information provided.'
+                    
             elif var_list['Object']=='Account':
-##                last_list_uploaded(var_list['ObjectId'],var_list['Object'])
-                print 'Would update account object last upload date.'
+                last_list_uploaded(var_list['ObjectId'],var_list['Object'])
+##                print 'Would update account object last upload date.'
                 var_list.update(sourceChannel(var_list['Update Path'],
                                               var_list['Record Name'],
                                               var_list['ObjectId'],
                                               var_list['Object']))
                 if var_list['Move To Bulk']==True:
-##                    copy_toBulkProcessing(var_list['Update Path'])
-                    print 'Would move to bulk processing.'
+                    copy_toBulkProcessing(var_list['Update Path'])
+##                    print 'Would move to bulk processing.'
                 else:
                     print strings_to_print[2]
 ##'\nContacts will not be created. Not enough information provided.'
+                    
             elif var_list['Object']=='BizDev Group':
                 var_list.update(sourceChannel(var_list['Update Path'],
                                               var_list['Record Name'],
@@ -137,8 +139,8 @@ if __name__=="__main__":
 ##'\nContacts will not be created. Not enough information provided.'
             var_list.update(valuesForEmail(var_list))
 
-##            var_list.update(recordStats(var_list['Stats Data']))
-            print 'Would record stats data.'
+            var_list.update(recordStats(var_list['Stats Data']))
+##            print 'Would record stats data.'
             num+=1
             var_list.update({'Num_Processed':num})
             print 'List #%s processed.' % var_list['Num_Processed']
