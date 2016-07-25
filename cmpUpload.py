@@ -85,16 +85,19 @@ def bdgUpload(session, headers, list_ofValues, obj, colNum, df_path, remove_path
             status='Success'
 
         if len(toRemove)>0:
-            print 'Attempting to remove %s from the BizDev Group.' % len(toRemove)
-            df_remove=pd.DataFrame.from_records(toRemove, columns=['ContactID','Previous BizDevGroupID'])
-            remove_path=path_toUpdate(df_path, 'toRemove')
-            df_remove.to_excel(remove_path, index=False)
+            print 'We are not removing contacts by request of Krista Bono'
+            status = 'Success'
+            ###
+            #print 'Attempting to remove %s from the BizDev Group.' % len(toRemove)
+            #df_remove=pd.DataFrame.from_records(toRemove, columns=['ContactID','Previous BizDevGroupID'])
+            #remove_path=path_toUpdate(df_path, 'toRemove')
+            #df_remove.to_excel(remove_path, index=False)
             
-            toRemove=remove(toRemove,list_ofValues[0][colNum[0]])
-            session.update('Contact',['BizDev_Group__c'],toRemove)
+            #toRemove=remove(toRemove,list_ofValues[0][colNum[0]])
+            #session.update('Contact',['BizDev_Group__c'],toRemove)
             nRe=len(toRemove)
-            status='Success'
-
+            #status='Success'
+            ###
         last_list_uploaded(session,list_ofValues[0][colNum[0]], obj)
         closeSession(session)
     except Exception, e:

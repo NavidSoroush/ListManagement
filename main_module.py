@@ -14,7 +14,7 @@ if __name__=="__main__":
     var_list=[]
     
     var_list=checkForLists()
-    
+    print var_list['Object']
     if var_list['Object']!='Account':
         var_list.update(training(var_list['File Path'],var_list['CmpAccountName']))
     else:
