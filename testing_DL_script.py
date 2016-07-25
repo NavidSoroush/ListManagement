@@ -4,6 +4,7 @@ import SQLForce
 from SQLForce import AttachmentReader
 from functions import splitname
 import os
+import errno
 import shutil
 from dateutil import parser
 import datetime
