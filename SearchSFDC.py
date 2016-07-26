@@ -61,6 +61,13 @@ def df_column_preprocessing(df):
             count +=1
     return df
 
+def clean_comma_and_space(row):
+    row=str(row)
+    if ' ' in row:
+        row.replace(' ', '')
+    if ',' in row:
+        row.replace(',', ', ')
+    return row
 
 def searchone(path, listType=None, review_path=None): 
     '''
@@ -94,6 +101,35 @@ def searchone(path, listType=None, review_path=None):
 
     Campaign_list = df_column_preprocessing(Campaign_list)
 
+    if "FullName" in headers:
+        Campaign_list.insert(0,"LastName","")
+        Campaign_list.insert(0,"FirstName","")
+        for index, row in Campaign_list.iterrows():
+            if ',' in row["FullName"]:
+                Campaign_list.loc[index,"FullName"]=clean_comma_and_space(row["FullName"])
+                if row["FullName"].index(' ') < row["FullName"].index(','): #A Space comes before the comma. Assume we are dealing with First Last, Accred orientatoin
+                    row["FirstName"]=row["FullName"].split(' ')[0]
+                    row["LastName"]=row["FullName"].split(' ')[1][:-1]
+                else: #Comma before space. Assume Last, First orientation
+                    row["LastName"]=row["FullName"].split(',')[0]
+                    row["FirstName"]=row["FullName"].split(' ')[1]#Assumes space after ','
+                    
+            else: #Assume first last/middle last/suffix order
+                names = row["FullName"].split()
+                names_left = []
+                names_to_remove = ["jr","jr.","sr","sr.","ii","iii","iv",'aams','aif','aifa','bcm','caia','casl','ccps','cdfa','cea','cebs','ces','cfa','cfe','cfp','cfs','chfc','chfcicap','chfebc','cic','cima','cis','cltc','clu','cpa','cpwa','crpc','crps','csa','iar','jd','lutcf','mba','msa','msfp','pfs','phd','ppc']
+                for name in names:
+                    if name.lower() in names_to_remove:
+                        continue
+                    else:
+                        names_left = names_left+ [name]
+                if len(names_left)==3:
+                    Campaign_list.loc[index,"FirstName"]=names_left[0]
+                    Campaign_list.loc[index,"LastName"]=names_left[2]
+                else:
+                    Campaign_list.loc[index,"FirstName"]=names_left[0]
+                    Campaign_list.loc[index,"LastName"]=names_left[1]
+
     #If we have the information to make LkupName, do so
     if "MailingPostalCode" in headers and "MailingState" in headers:
         
@@ -121,36 +157,6 @@ def searchone(path, listType=None, review_path=None):
         if "FirstName" in headers and "LastName" in headers:        
             Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]
             headers = Campaign_list.columns.values 
-        elif "FullName" in headers:
-            Campaign_list.insert(0,"LastName","")
-            Campaign_list.insert(0,"FirstName","")
-            for index, row in Campaign_list.iterrows():
-                if ',' in row["FullName"]:
-                    if row["FullName"].index(' ') < row["FullName"].index(','): #A Space comes before the comma. Assume we are dealing with First Last, Accred orientatoin
-                        row["FirstName"]=row["FullName"].split(' ')[0]
-                        row["LastName"]=row["FullName"].split(' ')[1][:-1]
-                    else: #Comma before space. Assume Last, First orientation
-                        row["LastName"]=row["FullName"].split(',')[0]
-                        row["FirstName"]=row["FullName"].split(' ')[1]#Assumes space after ','
-                        
-                else: #Assume first last/middle last/suffix order
-                    names = row["FullName"].split()
-                    names_left = []
-                    names_to_remove = ["jr","jr.","sr","sr.","ii","iii","iv",'aams','aif','aifa','bcm','caia','casl','ccps','cdfa','cea','cebs','ces','cfa','cfe','cfp','cfs','chfc','chfcicap','chfebc','cic','cima','cis','cltc','clu','cpa','cpwa','crpc','crps','csa','iar','jd','lutcf','mba','msa','msfp','pfs','phd','ppc']
-                    for name in names:
-                        if name.lower() in names_to_remove:
-                            continue
-                        else:
-                            names_left = names_left+ [name]
-                    if len(names_left)==3:
-                        Campaign_list.loc[index,"FirstName"]=names_left[0]
-                        Campaign_list.loc[index,"LastName"]=names_left[2]
-                    else:
-                        Campaign_list.loc[index,"FirstName"]=names_left[0]
-                        Campaign_list.loc[index,"LastName"]=names_left[1]
-
-            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]
-            headers = Campaign_list.columns.values
         else:
             print "Advisor name or account information missing"
 

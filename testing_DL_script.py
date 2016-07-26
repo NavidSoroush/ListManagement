@@ -2,7 +2,7 @@ import time
 from cred import sfuser, sfpw, sf_token
 import SQLForce
 from SQLForce import AttachmentReader
-from functions import splitname
+import errno
 import os
 import errno
 import shutil
@@ -16,6 +16,11 @@ sPath= ['T:/Shared/FS2 Business Operations/Python Search Program/New Lists/']
 
 ##for testing
 ##sPath=['C:/Users/rschools/Downloads/ListDownloadTesting/']
+
+def splitname(pathtosplit):
+    import os
+    name = os.path.split(os.path.abspath(pathtosplit))
+    return name[1]
 
 def drivepresent(fname, paths):
     if not os.path.isdir(paths):
