@@ -51,9 +51,14 @@ if os.path.exists(AdvListPath)==False:
 
 
 def df_column_preprocessing(df):
+    count = 0
     for col in df.columns:
-        if df[col].dtype not in ('int64', 'float64'):
-            df[col]=df[col].str.decode('ascii').str.encode('utf-8')
+        if df[col].dtype not in ('int64', 'float64','object'):
+            #print count, df[col].dtype, df[col]
+            for cell in xrange(0,len(df[col])):
+                df[cell][count]=df[cell][count].encode('utf-8','ignore')
+        else:
+            count +=1
     return df
 
 def clean_comma_and_space(row):
@@ -181,7 +186,7 @@ def searchone(path, listType=None, review_path=None):
                 for rf in returnFields:
                     j_headers.append(rf)
                 headerandIDs = Advisor_list[j_headers]
-                Campaign_list = Campaign_list.merge (headerandIDs, how='left', on = header)
+                Campaign_list = Campaign_list.merge(headerandIDs, how='left', on = header)
                 Campaign_list = Campaign_list.fillna('')
                 num_searched_on = len(Campaign_list)
                 if 'CRD Provided by List' in headers:
@@ -195,8 +200,8 @@ def searchone(path, listType=None, review_path=None):
                 print 'Found %s on %s search.' % (found,header)
                 for rField in returnFields:
                     del Campaign_list[rField]
-    if 'CRD Provided by List' in headers:
-        del Campaign_list['CRD Provided by List']
+    if 'CRD Provided by List' in headers and to_FINRA == False:
+        contacts_to_review = contacts_to_review.append(Campaign_list,ignore_index = True)
         review_path = review_contact_path(path)
         contacts_to_review.to_excel(review_path)
     found_cont_path=found_contact_path(path)
@@ -216,7 +221,6 @@ def CRDsearch(list_df, advisor_df, n, obj=None):
     '''
     
     list_df.fillna('')
-##    list_df['CRDNumber'].astype(int)
     to_FINRA = True
     searchfields = ['CRDNumber']
     returnFields=['AccountId','SourceChannel','ContactID','Needs Info Updated?','BizDev Group']
@@ -232,8 +236,10 @@ def CRDsearch(list_df, advisor_df, n, obj=None):
                 j_headers.append(rf)
             headerandIDs = advisor_df[j_headers]
             #headerandIDs = Advisor_list[keepCols]
-            list_df = list_df.merge (headerandIDs, how='left', on = header)
+            list_df = list_df.merge(headerandIDs, how='left', on = header)
+            print list_df.head()
             list_df = list_df.fillna('')
+            print list_df.head()
             found_contacts = found_contacts.append(list_df[list_df['ContactID']!=''], ignore_index = True)
             list_df = list_df[list_df['ContactID']=='']
             found = len(found_contacts)

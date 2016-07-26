@@ -49,14 +49,18 @@ def valuesForEmail(dictValues):
 
     obj=dictValues['Object']
     if obj=='BizDev Group':
-        att_paths=[dictValues['No CRD'],dictValues['FINRA Ambiguous'],
+        if dictValues['FINRA?']==False:
+            att_paths=[dictValues['File Path'],dictValues['Review Path'],dictValues['BDG Remove'],
+                      dictValues['BDG Add'],dictValues['BDG Stay']]
+        else:    
+            att_paths=[dictValues['No CRD'],dictValues['FINRA Ambiguous'],
                    dictValues['Review Path'],dictValues['BDG Remove'],
                    dictValues['BDG Add'],dictValues['BDG Stay']]
     elif dictValues['FINRA?']!=False:
-        att_paths=[dictValues['No CRD'],dictValues['FINRA Ambiguous'],
+        att_paths=[dictValues['File Path'],dictValues['No CRD'],dictValues['FINRA Ambiguous'],
                    dictValues['Review Path']]
     else:
-        att_paths=[]
+        att_paths=[dictValues['Review Path']]
 
     total=dictValues['Total Records']
     fileName=splitname(dictValues['File Path'])

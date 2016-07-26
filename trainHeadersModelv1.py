@@ -120,7 +120,7 @@ def training(list_file_path,objName):
     ###Based on the users inputs this section will also
     ###update the headers of the original file.
     ### W_I_R stands for 'Was I Right'.
-    print "Here are my predicitions:\n"
+    print "Here are my predictions:\n"
     trainingAppends=[]
     for index, row in predictions_to_validate.iterrows():
         print "Header given: '%s'\nMy prediction: '%s'." % (str(row['Header Value']), str(row['Class']))

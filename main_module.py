@@ -21,7 +21,7 @@ dict_keys_to_keep=['Num_Processed','Lists_In_Queue','Lists_Data','Mailbox']
 if __name__=="__main__":
     var_list=[]
     
-    var_list=checkForLists2()
+    var_list=checkForLists()
     if lists_in_queue(var_list)==True:
         while var_list['Num_Processed']<(var_list['Lists_In_Queue']):
             num=var_list['Num_Processed']
