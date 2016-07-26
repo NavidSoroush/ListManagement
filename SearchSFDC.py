@@ -194,8 +194,8 @@ def searchone(path, listType=None, review_path=None):
                 print 'Found %s on %s search.' % (found,header)
                 for rField in returnFields:
                     del Campaign_list[rField]
-    if 'CRD Provided by List' in headers:
-        del Campaign_list['CRD Provided by List']
+    if 'CRD Provided by List' in headers and to_FINRA == False:
+        contacts_to_review = contacts_to_review.append(Campaign_list,ignore_index = True)
         review_path = review_contact_path(path)
         contacts_to_review.to_excel(review_path)
     found_cont_path=found_contact_path(path)
