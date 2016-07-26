@@ -1,4 +1,4 @@
-from check_Email import checkForLists2
+from check_Email import checkForLists
 from trainHeadersModelv1 import training
 from SearchSFDC import searchone, searchtwo, searchsec
 from FINRA_search import fin_search
