@@ -1,8 +1,12 @@
 import shutil
 from functions import splitname, shorten_filename_to95char
-import os
 
 def copy_toBulkProcessing(srcPath):
+    '''
+    move file from original location to directory for bulk processing.
+    :param srcPath: orignal file location
+    :return: N/A
+    '''
     print '\nStep 10. Dropping in bulk processing path.'
     destPath='//sc12-fsphl-01/BulkImports/'
     startPath=srcPath

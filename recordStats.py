@@ -3,18 +3,41 @@ import pandas as pd
 statsPath='T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
 
 def initStatsFile():
+    '''
+    instantiates stats file object by reading into dataframe.
+
+    :return: stats dataframe
+    '''
     df=pd.read_excel(statsPath)
     return df
 
 def saveStatsFile(df):
+    '''
+    saves the states dataframe
+
+    :param df:
+    :return: N/A
+    '''
     df.to_excel(statsPath,index=False)
 
 def newstatline(value_dict):
+    '''
+    writes the new line of data to the stats dataframe
+
+    :param value_dict: values to add to stats
+    :return: dataframe of stats to record.
+    '''
     df2 = pd.DataFrame(value_dict.values(),index=value_dict.keys())
     df2 = df2.transpose()
     return df2
  
 def recordStats(values):
+    '''
+    processes stats data files
+
+    :param values: data to record in stats dataframe
+    :return: dictionary items for list processing
+    '''
     df=initStatsFile()
     print '\nStep 11. Recording stats from processing.'
     df2 = newstatline(values)
