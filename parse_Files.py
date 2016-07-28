@@ -5,6 +5,13 @@ from functions import splitname
 
 
 def path_toUpdate(path,userString):
+    '''
+    helps to create a new file.
+
+    :param path: path of the file
+    :param userString: what we will be renaming new file.
+    :return: the new file path
+    '''
     fname=splitname(path)
     rootpath=path[:len(path)-len(fname)]
     fname=fname[:-19]+'_'+userString+'.xlsx'
@@ -12,6 +19,17 @@ def path_toUpdate(path,userString):
     return newPath
 
 def parseList(path,listType=None,preORpost=None, bdgID=None, accID=None):
+    '''
+    parses the list into new files based on the current bizdev or campaign
+    advisor list.
+
+    :param path: path to original list of advisors
+    :param listType: SFDC object (campaign or bizdev group)
+    :param preORpost: if object is Campaign, pre or post
+    :param bdgID: if object is bdg, passes the object id
+    :param accID: passes the account id
+    :return: updated dictionary values for the main_module list processing.
+    '''
     cmpUpload=None
     toCreate=None
     noUpdate=None
@@ -32,7 +50,6 @@ def parseList(path,listType=None,preORpost=None, bdgID=None, accID=None):
     list_df=pd.read_excel(path)
     if listType=='Campaign':
         if preORpost=='Post':
-##            cmpStatus='Attended'
             cmpStatus='Needs Follow-Up'
         else:
             cmpStatus='Invited'

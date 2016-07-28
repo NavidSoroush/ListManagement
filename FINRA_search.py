@@ -17,16 +17,34 @@ CHANGE LOG
 '''
 
 def StripUnicodeChars(row):
-    return [unicodedata. normalize('NFKD',r).encode('ascii','ignore') for r in row]
+    '''
+    attempts to remove all unicode data from the row values.
+
+    :param row: cell value with unicode chars
+    :return: transformed cell value without unicode chars
+    '''
+    return [unicodedata.normalize('NFKD',r).encode('ascii','ignore') for r in row]
 
 def no_crd_path(path):
-    fname=splitname(path)
-    rootpath=path[:len(path)-len(fname)]
-    fname=fname[:-5]+'_nocrd.xlsx'
-    found_path=rootpath+fname
+    '''
+    creates a new file for advisors without CRD numbers.
+
+    :param path: original path
+    :return: new path for no_crd file
+    '''
+    fname = splitname(path)
+    rootpath = path[:len(path)-len(fname)]
+    fname = fname[:-5]+'_nocrd.xlsx'
+    found_path = rootpath+fname
     return found_path
 
 def found_FINRASEC_path(path):
+    '''
+    creates a new file for advisors found by FINRA / SEC scraping.
+
+    :param path: original path
+    :return: new path for found file
+    '''
     fname=splitname(path)
     rootpath=path[:len(path)-len(fname)]
     fname=fname[:-5]+'_finrasec_found.xlsx'
@@ -34,6 +52,13 @@ def found_FINRASEC_path(path):
     return found_path
 
 def FINRA_ambiguous_path(path):
+    '''
+    creates a new file for advisors found by FINRA with more than one
+    suggestion in the FINRA search.
+
+    :param path: original path
+    :return: new path for ambiguous file file
+    '''
     fname=splitname(path)
     rootpath=path[:len(path)-len(fname)]
     fname=fname[:-5]+'_FINRA_ambiguous.xlsx'
@@ -44,6 +69,15 @@ def FINRA_ambiguous_path(path):
 ##and adds search names to a list to be search for via Rickys code'
 'It appends the results of the FINRA scrape to a dataframe'
 def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chromedriver"):
+    '''
+    attempts to search FINRA to get CRD numbers for advisors not found
+    in the SFDC search.
+
+    :param path: path of adivsors that need to be scrapped
+    :param foundPath: path to advisors that were found via SFDC search 1
+    :param chromedriver: path to chromedriver
+    :return: updated dictionary data to guide main_module in list processing.
+    '''
     os.environ["webdriver.chrome.driver"] = chromedriver
     finra_site = 'http://www.finra.org/'
     

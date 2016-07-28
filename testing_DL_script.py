@@ -2,7 +2,6 @@ import time
 from cred import sfuser, sfpw, sf_token
 import SQLForce
 from SQLForce import AttachmentReader
-import errno
 import os
 import errno
 import shutil
@@ -12,17 +11,32 @@ import datetime
 
 yot = time.strftime("%Y")
 sPath= ['T:/Shared/FS2 Business Operations/Python Search Program/New Lists/']
-##        'Y:/Business_Intelligence_Analytics/Lists - Archives/'+yot+'OrigListArch/']
+
 
 ##for testing
 ##sPath=['C:/Users/rschools/Downloads/ListDownloadTesting/']
 
 def splitname(pathtosplit):
+    '''
+    splits the directory name into folder location and file name.
+
+    :param pathtosplit: directory to a file
+    :return: filename of path
+    '''
     import os
     name = os.path.split(os.path.abspath(pathtosplit))
     return name[1]
 
 def drivepresent(fname, paths):
+    '''
+    attempts to identify if a directory is available and create a copy of
+    a file in 'destination' location. if not, it attempts to create the
+    directory and then moves the file.
+
+    :param fname: original file name
+    :param paths: list of paths 0) original path, 1) destination
+    :return: N/A
+    '''
     if not os.path.isdir(paths):
         try:
             os.makedirs(paths)
@@ -34,6 +48,12 @@ def drivepresent(fname, paths):
     shutil.copy(fname[0],paths)
 
 def detExt(fname):
+    '''
+    identifies the extension of a file.
+
+    :param fname: path or file name
+    :return: len of the extension
+    '''
     filename, file_ext=os.path.splitext(fname)
     if file_ext.lower()=='.csv' or file_ext.lower()=='.pdf' or file_ext.lower()=='.xls':
         shortLen=4
@@ -44,6 +64,13 @@ def detExt(fname):
     return shortLen
 
 def convert_uniToDate(date_string):
+    '''
+    transforms a date-string to a date. based on the date
+    determines if a campaign has happened or if it is upcoming.
+
+    :param date_string: string of a date value.
+    :return: variable, is the list pre or post.
+    '''
     date_string=parser.parse(date_string)
     today=datetime.datetime.now()
     diff=today-date_string
@@ -54,6 +81,13 @@ def convert_uniToDate(date_string):
     return (date_string,list_prePost)
 
 def create_moveNewFile(attPath):
+    '''
+    takes a file path, and from the file's name, it creates
+    a new folder for the file.
+
+    :param attPath: file path
+    :return: the new path of the file passed to the function.
+    '''
     startPath=attPath[0]
     fname=splitname(attPath[0])
     shortenLen=detExt(fname)
@@ -75,6 +109,14 @@ def create_moveNewFile(attPath):
     
 
 def list_download(att_id, sfObj, objLink):
+    '''
+    downloads the new list from SFDC for processing.
+
+    :param att_id: SFDC attachment id
+    :param sfObj: Object of the attachment
+    :param objLink: Link to the SFDC object
+    :return: tuple of variables used by main_module for list processing.
+    '''
     session = SQLForce.Session('Production',sfuser,sfpw,sf_token)
     print '\nStep 2:\nSFDC session established.'
     attachment = AttachmentReader.exportByAttachmentIds(session,att_id,

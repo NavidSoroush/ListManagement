@@ -9,25 +9,23 @@ from bulkProcessing import copy_toBulkProcessing
 from dictExtraction import valuesForEmail
 from recordStats import recordStats
 from finra_licenses import licenseSearch
-from functions import lists_in_queue,close_mailbox_connection, process_list_email
+from functions import lists_in_queue, close_mailbox_connection, process_list_email
 
-strings_to_print=['\nSkipping step 6, because all contacts were found.',
-                  '\nSkipping email, LkupName, FINRA and SEC searches.',
-                  '\nContacts will not be created. Not enough information provided.',]
+strings_to_print = ['\nSkipping step 6, because all contacts were found.',
+                    '\nSkipping email, LkupName, FINRA, and SEC searches.',
+                    '\nContacts will not be created. Not enough information provided.']
 
-dict_keys_to_keep=['Num_Processed','Lists_In_Queue','Lists_Data','Mailbox']
+dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox']
 
-
-if __name__=="__main__":
-    var_list=[]
+if __name__== "__main__":
+    var_list = []
     
-    var_list=checkForLists()
-    if lists_in_queue(var_list)==True:
-        while var_list['Num_Processed']<(var_list['Lists_In_Queue']):
-            num=var_list['Num_Processed']
+    var_list = checkForLists()
+    if lists_in_queue(var_list):
+        while var_list['Num_Processed'] < (var_list['Lists_In_Queue']):
+            num = var_list['Num_Processed']
             var_list.update(process_list_email(var_list['Lists_Data'][num],
                                                var_list['Mailbox']))
-
 
             if var_list['Object']!='Account':
                             
@@ -43,7 +41,7 @@ if __name__=="__main__":
                                       var_list['Object']))
                             
             
-            if var_list['SFDC_Found']< var_list['Total Records'] and \
+            if var_list['SFDC_Found'] < var_list['Total Records'] and \
                             var_list['FINRA?'] == True:
                             
                 var_list.update(fin_search(var_list['File Path'],
