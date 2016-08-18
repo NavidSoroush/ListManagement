@@ -1,7 +1,7 @@
 import pandas as pd
 
 networkPath = '//sc12-fsphl-01/BulkImports/'
-
+# for manual ref: \\sc12-fsphl-01\BulkImports\
 
 def drop_forBulkProcessing(f_path):
     '''

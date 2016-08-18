@@ -62,7 +62,6 @@ def df_column_preprocessing(df):
     return df
 
 def clean_comma_and_space(row):
-    row=str(row)
     if ' ' in row:
         row.replace(' ', '')
     if ',' in row:
@@ -143,7 +142,7 @@ def searchone(path, listType=None, review_path=None):
                 Campaign_list.loc[index,"MailingPostalCode"]=row["MailingPostalCode"][:4]
 
         if np.mean(Campaign_list['MailingState'].str.len()) > 2:
-            import us
+            import us_state_abbr
             print 'MailingState column needs to be transformed.'
             for index, row in Campaign_list.iterrows():
                 try:
@@ -155,8 +154,8 @@ def searchone(path, listType=None, review_path=None):
         #Format name as necessary
         #Split FullName if given, cleanup first/last name, create lkup name
         if "FirstName" in headers and "LastName" in headers:        
-            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]
-            headers = Campaign_list.columns.values 
+            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"].str[:-2]
+            headers = Campaign_list.columns.values
         else:
             print "Advisor name or account information missing"
 

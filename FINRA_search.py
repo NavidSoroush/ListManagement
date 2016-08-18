@@ -23,7 +23,7 @@ def StripUnicodeChars(row):
     :param row: cell value with unicode chars
     :return: transformed cell value without unicode chars
     '''
-    return [unicodedata.normalize('NFKD',r).encode('ascii','ignore') for r in row]
+    return [unicodedata.normalize('NFKD',r).encode('utf-8','ignore') for r in row]
 
 def no_crd_path(path):
     '''
@@ -98,9 +98,9 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
     except:
         pass
     
-    Campaign_list['FirstName'].astype(str)
-    Campaign_list['LastName'].astype(str)
-    Campaign_list['Account'].astype(str)
+    #Campaign_list['FirstName'].astype(str)
+    #Campaign_list['LastName'].astype(str)
+    #Campaign_list['Account'].astype(str)
 
 ##  Reference to an output dataframe from step 2. Create list of search texts
     for index, row in Campaign_list.iterrows():
