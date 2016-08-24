@@ -136,7 +136,11 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
                     s_text = code.text.split()
                     suggestion_code=sel.page_source
                     choices = len(suggestion_code.split(elements[2]))-1
-                    if choices>1:
+                    if choices == 0:
+                        to_be_added += ["CRD Not Found"]
+                        attempted_search_count += 1
+                        num_suggestions += [0]
+                    elif choices>1:
                         to_be_added += ["Multiple CRDs Present"] 
                         attempted_search_count +=1
                         num_suggestions += [choices]

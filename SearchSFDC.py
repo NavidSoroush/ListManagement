@@ -105,7 +105,7 @@ def searchone(path, listType=None, review_path=None):
         Campaign_list.insert(0,"FirstName","")
         for index, row in Campaign_list.iterrows():
             if ',' in row["FullName"]:
-                Campaign_list.loc[index,"FullName"]=clean_comma_and_space(row["FullName"])
+                #Campaign_list.loc[index,"FullName"]=clean_comma_and_space(row["FullName"])
                 if row["FullName"].index(' ') < row["FullName"].index(','): #A Space comes before the comma. Assume we are dealing with First Last, Accred orientatoin
                     row["FirstName"]=row["FullName"].split(' ')[0]
                     row["LastName"]=row["FullName"].split(' ')[1][:-1]
@@ -154,7 +154,8 @@ def searchone(path, listType=None, review_path=None):
         #Format name as necessary
         #Split FullName if given, cleanup first/last name, create lkup name
         if "FirstName" in headers and "LastName" in headers:        
-            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"].str[:-2]
+            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]
+            print Campaign_list.head()
             headers = Campaign_list.columns.values
         else:
             print "Advisor name or account information missing"
@@ -234,7 +235,7 @@ def CRDsearch(list_df, advisor_df, n, obj=None):
             for rf in returnFields:
                 j_headers.append(rf)
             headerandIDs = advisor_df[j_headers]
-            #headerandIDs = Advisor_list[keepCols]
+            print headerandIDs.head()
             list_df = list_df.merge(headerandIDs, how='left', on = header)
             print list_df.head()
             list_df = list_df.fillna('')
