@@ -51,7 +51,7 @@ def upload(headers, list_ofValues, obj, colNum=None, df_path=None):
             paths, stats = cmpUpload(session, list_ofValues, obj)
             if list_ofValues[0][2] == 'Needs Follow-Up':
                 session.update('Campaign', ['Post_Event_Leads_Uploaded__c'],
-                               [[list_ofValues[0][2], 'true']])
+                               [[list_ofValues[0][1], 'true']])
         elif obj == 'BizDev Group':
             headers = headersCleanUp(headers)
             paths, stats = bdgUpload(session, headers, list_ofValues, obj, colNum, df_path)
