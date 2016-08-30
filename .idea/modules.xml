@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/ListManagement.iml" filepath="$PROJECT_DIR$/.idea/ListManagement.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Theme_Extraction/.idea/Theme_Extraction.iml" filepath="$PROJECT_DIR$/../Theme_Extraction/.idea/Theme_Extraction.iml" />
     </modules>
   </component>
 </project>
