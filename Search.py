@@ -157,7 +157,7 @@ def lkup_name_address_processing(headers, search_list):
     return search_list
 
 
-class Search():
+class Search:
     def __init__(self):
         import datetime
         self._today = datetime.datetime.strftime(datetime.datetime.now(), '%m_%d_%Y')
