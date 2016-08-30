@@ -54,12 +54,6 @@ if os.path.exists(AdvListPath) == False:
     sf_advlist()
 
 
-# path for testing
-# path = 'C:/Users/'+user+'/Dropbox/Python Search Program/New Lists/Chicago Pre Attendee.xlsx'
-# Grab SF advisor list. Edit to where ever this can be found
-# Pseudocode
-
-
 def df_column_preprocessing(df):
     count = 0
     for col in df.columns:
@@ -159,12 +153,7 @@ def lkup_name_address_processing(headers, search_list):
     return search_list
 
 
-def sfdc_search_one():
-
-
 class Search():
-    import pandas as pd
-
     def __init__(self):
         self._SFDC_advisor_list = init_advisor_list()
         self._headers = self._search_list.columns.values
@@ -177,12 +166,13 @@ class Search():
         self._to_finra = True
         self._num_searches_performed = 0
 
-    def __data_preprocessing(self):
+    def __data_preprocessing(self, additional=False):
         search_list = self._search_list
         search_list = search_list[self._keep_cols]
         search_list = search_list.fillna('')
-        search_list = name_preprocessing(self._headers, search_list)
-        search_list = lkup_name_address_processing(self._headers, search_list)
+        if additional:
+            search_list = name_preprocessing(self._headers, search_list)
+            search_list = lkup_name_address_processing(self._headers, search_list)
         self._headers = search_list.columns.values
         self._search_list = search_list
         return self
@@ -192,34 +182,38 @@ class Search():
             del self._return_fields[-1]
         return self
 
-    def __join_headers(self, header, advisor_list):
+    def __join_headers(self, header):
         joined_headers = header
         for ret_field in self._return_fields:
             joined_headers.append(ret_field)
         return joined_headers
 
-    def __create_meta_data(self, headers):
-        if 'CRD Provided by List' in headers:
-            search_list = self._search_list
-            to_review = self._contacts_to_review
-            to_review = to_review.append(search_list[search_list['ContactID'] != ''], ignore_index=True)
-            search_list = search_list[search_list['ContactID'] == '']
-            self._search_list = search_list
-            self._contacts_to_review = to_review
+    def __create_meta_data(self, headers=None, search_two=False):
+        if not search_two:
+            if 'CRD Provided by List' in headers:
+                search_list = self._search_list
+                to_review = self._contacts_to_review
+                to_review = to_review.append(search_list[search_list['ContactID'] != ''], ignore_index=True)
+                search_list = search_list[search_list['ContactID'] == '']
+                self._search_list = search_list
+                self._contacts_to_review = to_review
+            else:
+                found_contacts = self._found_contacts
+                search_list = self._search_list
+                found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''], ignore_index=True)
+                search_list = search_list[search_list['CRDNumber'] == '']
+                self._search_list = search_list
+                self._contacts_to_review = found_contacts
         else:
-            found_contacts = self._found_contacts
-            search_list = self._search_list
-            found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''], ignore_index=True)
-            search_list = search_list[search_list['CRDNumber'] == '']
-            self._search_list = search_list
-            self._contacts_to_review = found_contacts
+            self._found_contacts = read_list(self._found_contact_path)
+            self._found_contacts.append(self._search_list, ignore_index=True)
         return self
 
     def __num_found(self, found_df):
         self._num_found_contacts = len(found_df)
         return self
 
-    def __search_and_merge(self, search_fields):
+    def __search_and_merge(self, search_fields, search_two=False):
         for header in search_fields:
             for header in self._headers:
                 self._num_searches_performed += 1
@@ -231,8 +225,11 @@ class Search():
                 self._num_searched_on = len(self._search_list)
                 self.__create_meta_data(self._headers)
                 self._num_remaining = len(self._search_list)
-                print 'Found %s on %s search.' % (self.__num_found(self._found_contacts), header)
-
+                if not search_two:
+                    print 'Found %s on %s search.' % (self.__num_found(self._found_contacts), header)
+                else:
+                    print 'Found %s on %s search.' % (self.__num_found(self._found_contacts['ContactID'].nonzero()[0]),
+                                                      header)
                 for ret_field in self._return_fields:
                     del self._search_list[ret_field]
 
@@ -247,11 +244,11 @@ class Search():
         self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
         return self
 
-    def perform_searchone(self, searching_list_path, list_type):
+    def perform_search_one(self, searching_list_path, list_type):
         self._search_list = read_list(searching_list_path)
         self._list_type = list_type
         self.__check_list_type()
-        self.__data_preprocessing()
+        self.__data_preprocessing(additional=True)
 
         if 'CRDNumber' in self._headers:
             self._crd_search(self._search_list, self._SFDC_advisor_list,
@@ -271,68 +268,34 @@ class Search():
         self._found_contacts.to_excel(self._found_contact_path, index=False)
         self._search_list.to_excel(searching_list_path, index=False)
 
-        ret_item = {'Next Step': 'FINRA Search', 'Found Path': self._found_contact_path
-            , 'SFDC_Found': self._num_found_contacts, 'FINRA?': self._to_finra
-            , 'Review Path': self._review_path}
+        ret_item = {'Next Step': 'FINRA Search',
+                    'Found Path': self._found_contact_path,
+                    'SFDC_Found': self._num_found_contacts,
+                    'FINRA?': self._to_finra,
+                    'Review Path': self._review_path}
         return ret_item
 
+    def perform_search_two(self, searching_list_path, found_path, list_type):
+        self._search_fields = ['CRDNumber']
+        self._return_fields = ['AccountId', 'SourceChannel', 'ContactID',
+                               'Needs Info Updated?', 'BizDev Group']
+        self._found_contact_path = read_list(found_path)
 
-def searchtwo(path, found_path, listType=None):
-    '''
-    Following the 'to-be-searched' list that had already be searched against
-    SFDC, the remaining names that could not be identified in the database
-    were sent to FINRA / SEC for CRD scrapping.
+        self._search_list = read_list(searching_list_path)
+        self._keep_cols = [c for c in self._search_list.columns if c.lower()[:7] != 'unknown']
+        self._list_type = list_type
 
-    After the scrapping, we re-search the SFDC database to attempt to find any
-    additional contacts that were missed during the 'searchone' function.
-    '''
+        self.__check_list_type()
+        self.__data_preprocessing()
+        print '\nStep 7:\nSearching against SFDC following FINRA/SEC searches.'
+        self.__search_and_merge(self._search_fields, search_two=True)
 
-    FINRA_Found_list = pd.read_excel(path, sheetname=0)
-    Advisor_list = pd.read_csv(AdvListPath, error_bad_lines=False, low_memory=False)
-    headers = FINRA_Found_list.columns.values
-    print '\nStep 7:\nSearching against SFDC following FINRA/SEC searches.'
-    # remove unknown header columns from search - ricky added 3.21.2016
-    keepCols = [c for c in FINRA_Found_list.columns if c.lower()[:7] != 'unknown']
-    FINRA_Found_list = FINRA_Found_list[keepCols]
+        self._found_contacts.to_excel(found_path, index=False)
+        self._search_list.to_excel(searching_list_path, index=False)
 
-    # Empty blank cells
-    FINRA_Found_list = FINRA_Found_list.fillna('')
-    # --> check here for null values in searched fields, subset#
-
-    searchfields = ['CRDNumber']
-    returnFields = ['AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?', 'BizDev Group']
-    if listType != 'BizDev Group':
-        del returnFields[-1]
-
-    found_contacts = pd.DataFrame()
-
-    FINRA_Found_list['CRDNumber'].astype(int)
-    # IF LIST TYPE IS CONFERENCE
-    n = 0
-    for header in searchfields:
-        if header in headers:
-            n += 1
-            print 'Performing search #%s on %s' % (n, header)
-            j_headers = [header]
-            for rf in returnFields:
-                j_headers.append(rf)
-            headerandIDs = Advisor_list[j_headers]
-            # headerandIDs = Advisor_list[keepCols]
-            FINRA_Found_list = FINRA_Found_list.merge(headerandIDs, how='left', on=header)
-            FINRA_Found_list = FINRA_Found_list.fillna('')
-            found_contacts = found_contacts.append(FINRA_Found_list, ignore_index=True)
-            ##            Campaign_list = Campaign_list[Campaign_list.ContactID=='']
-            found = len(found_contacts['ContactID'].nonzero()[0])
-            print 'Found %s on %s search.' % (found, header)
-            ##            for rField in returnFields:
-            ##                del Campaign_list[rField]
-
-    df = pd.read_excel(found_path, sheetname=0)
-    df = df.append(found_contacts)
-    df.to_excel(found_path, index=False)
-    FINRA_Found_list.to_excel(path, index=False)
-    ret_item = {'Next Step': 'Upload Prep', 'Found in SFDC Search #2': found}
-    return ret_item
+        ret_item = {'Next Step': 'Upload Prep',
+                    'Found in SFDC Search #2': self._num_found_contacts}
+        return ret_item
 
 
 def searchsec(path, found_path):
