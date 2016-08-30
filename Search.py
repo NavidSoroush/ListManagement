@@ -42,7 +42,7 @@ def sf_advlist():
 
     :rtype: object
     """
-    print "Please wait. Downloading SFDC list as today's file was not available."
+    print("Please wait. Downloading SFDC list as today's file was not available.")
     from sqlQuery import run
     run()
 
@@ -79,7 +79,7 @@ def init_advisor_list():
 
 
 def read_list(path_to_load):
-    return pd.read_excel(path, sheetname=0)
+    return pd.read_excel(path_to_load, sheetname=0)
 
 
 def name_preprocessing(headers, search_list):
@@ -132,9 +132,9 @@ def lkup_name_address_processing(headers, search_list):
                 search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"][:4]
 
         if np.mean(search_list['MailingState'].str.len()) > 2:
-            import us_state_abbr
-            print 'MailingState column needs to be transformed.'
-            for index, row in Campaign_list.iterrows():
+            import us
+            print('MailingState column needs to be transformed.')
+            for index, row in search_list.iterrows():
                 try:
                     state = us.states.lookup(search_list.loc[index, "MailingState"])
                     search_list.loc[index, "MailingState"] = str(state.abbr)
@@ -149,15 +149,13 @@ def lkup_name_address_processing(headers, search_list):
                                       search_list["MailingState"] + search_list["MailingPostalCode"]
 
         else:
-            print "Advisor name or account information missing"
+            print("Advisor name or account information missing")
     return search_list
 
 
 class Search():
     def __init__(self):
         self._SFDC_advisor_list = init_advisor_list()
-        self._headers = self._search_list.columns.values
-        self._keep_cols = [c for c in self._headers if c.lower() != 'unknown']
         self._search_fields = ['AMPFMBRID', 'Email', 'LkupName']
         self._return_fields = ['AccountId', 'SourceChannel', 'Needs Info Updated?',
                                'ContactID', 'CRDNumber', 'BizDev Group']
@@ -165,6 +163,15 @@ class Search():
         self._contacts_to_review = pd.DataFrame()
         self._to_finra = True
         self._num_searches_performed = 0
+        self._total_found = 0
+        self._num_found_contacts = 0
+        self._review_path = ''
+        self._found_contact_path = ''
+
+    def __init_list_metadata(self):
+        self._headers = self._search_list.columns.values
+        self._keep_cols = [c for c in self._headers if c.lower() != 'unknown']
+        return self
 
     def __data_preprocessing(self, additional=False):
         search_list = self._search_list
@@ -182,8 +189,8 @@ class Search():
             del self._return_fields[-1]
         return self
 
-    def __join_headers(self, header):
-        joined_headers = header
+    def __join_headers(self, header, joined_headers=[]):
+        joined_headers.append(header)
         for ret_field in self._return_fields:
             joined_headers.append(ret_field)
         return joined_headers
@@ -193,6 +200,7 @@ class Search():
             if 'CRD Provided by List' in headers:
                 search_list = self._search_list
                 to_review = self._contacts_to_review
+
                 to_review = to_review.append(search_list[search_list['ContactID'] != ''], ignore_index=True)
                 search_list = search_list[search_list['ContactID'] == '']
                 self._search_list = search_list
@@ -200,10 +208,11 @@ class Search():
             else:
                 found_contacts = self._found_contacts
                 search_list = self._search_list
-                found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''], ignore_index=True)
+                found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''],
+                                                       ignore_index=True)
                 search_list = search_list[search_list['CRDNumber'] == '']
                 self._search_list = search_list
-                self._contacts_to_review = found_contacts
+                self._found_contacts = found_contacts
         else:
             self._found_contacts = read_list(self._found_contact_path)
             self._found_contacts.append(self._search_list, ignore_index=True)
@@ -211,48 +220,53 @@ class Search():
 
     def __num_found(self, found_df):
         self._num_found_contacts = len(found_df)
+        self._total_found += self._num_found_contacts
         return self
 
     def __search_and_merge(self, search_fields, search_two=False):
         for header in search_fields:
-            for header in self._headers:
+            if header in self._headers:
                 self._num_searches_performed += 1
-                print 'Performing search #%s on %s' % (self._num_searches_performed, header)
+                print('Performing search #%s on %s' % (self._num_searches_performed, header))
                 self._joined_headers = self.__join_headers(header)
-                self._headers_and_ids = self._SFDC_advisor_list[joined_headers]
-                self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on='header')
+                self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
+                self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
                 self._search_list = self._search_list.fillna('')
                 self._num_searched_on = len(self._search_list)
                 self.__create_meta_data(self._headers)
                 self._num_remaining = len(self._search_list)
-                if not search_two:
-                    print 'Found %s on %s search.' % (self.__num_found(self._found_contacts), header)
+
+                if search_two:
+                    self.__num_found(self._found_contacts['ContactID'].nonzero()[0])
                 else:
-                    print 'Found %s on %s search.' % (self.__num_found(self._found_contacts['ContactID'].nonzero()[0]),
-                                                      header)
+                    self.__num_found(self._found_contacts)
+
+                print('Found %s on %s search.' % (self._num_found_contacts, header))
                 for ret_field in self._return_fields:
                     del self._search_list[ret_field]
 
         return self
 
-    def _crd_search(self, list_df, sfdc_df, n, search_field=['CRDNumber']):
+    def _crd_search(self, search_field=['CRDNumber']):
+        self._return_fields = ['AccountId', 'SourceChannel',
+                               'Needs Info Updated?', 'ContactID']
         self._search_list.fillna('')
         self.__search_and_merge(search_field)
-        if self._search_list.count() == len(self._search_list) and \
-                        + len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list):
-            self._to_finra = False
+        if self._search_list['CRDNumber'].count() == len(self._search_list):
+            if len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list):
+                self._to_finra = False
         self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
         return self
 
     def perform_search_one(self, searching_list_path, list_type):
         self._search_list = read_list(searching_list_path)
+        self.__init_list_metadata()
         self._list_type = list_type
         self.__check_list_type()
         self.__data_preprocessing(additional=True)
 
         if 'CRDNumber' in self._headers:
-            self._crd_search(self._search_list, self._SFDC_advisor_list,
-                             self._num_searches_performed, self._list_type)
+            self._crd_search()
 
         if self._to_finra == False:
             print('CRD Info provided for all contacts. Will not search FINRA.')
@@ -260,7 +274,7 @@ class Search():
         else:
             self.__search_and_merge(self._search_fields)
 
-        if 'CRD Provided by List' in self._headers and self._to_finra == False:
+        if 'CRD Provided by List' in self._headers and not self._to_finra:
             self._contacts_to_review = self._contacts_to_review.append(self._search_list, ignore_index=True)
             self._review_path = review_contact_path(searching_list_path)
             self._contacts_to_review.to_excel(self._review_path, index=False)
@@ -282,12 +296,13 @@ class Search():
         self._found_contact_path = read_list(found_path)
 
         self._search_list = read_list(searching_list_path)
+        self.__init_list_metadata()
         self._keep_cols = [c for c in self._search_list.columns if c.lower()[:7] != 'unknown']
         self._list_type = list_type
 
         self.__check_list_type()
         self.__data_preprocessing()
-        print '\nStep 7:\nSearching against SFDC following FINRA/SEC searches.'
+        print('\nStep 7:\nSearching against SFDC following FINRA/SEC searches.')
         self.__search_and_merge(self._search_fields, search_two=True)
 
         self._found_contacts.to_excel(found_path, index=False)
@@ -313,11 +328,11 @@ def searchsec(path, found_path):
     today = datetime.datetime.strftime(datetime.datetime.now(), '%m_%d_%Y')
     SECpath = 'T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/Individuals/processed_data/' + today + '/'
     if os.path.exists(SECpath) == False:
-        print "Skipping SEC Search. Today's files could not be found in the listed directory."
+        print("Skipping SEC Search. Today's files could not be found in the listed directory.")
         ret_item = {'Next Step': 'SFDC Search #2', 'SEC_Found': 0}
         return ret_item
 
-    print '\nStep 6:\nSearching against SEC Data.'
+    print('\nStep 6:\nSearching against SEC Data.')
     Campaign_list = pd.read_excel(path, sheetname=0)
     headers = Campaign_list.columns.values
     # test_SECpath='C:/Users/rschools/Downloads/SEC_Data/processed_data/03_30_2016/'
@@ -336,7 +351,7 @@ def searchsec(path, found_path):
             if header in headers:
                 n += 1
 
-                print 'Performing search #%s on %s for %s sec file' % (n, header, sec)
+                print('Performing search #%s on %s for %s sec file' % (n, header, sec))
                 headerandIDs = sec_df[[header, 'CRDNumber']]
                 Campaign_list = Campaign_list.merge(headerandIDs, how='left', on=header)
                 Campaign_list = Campaign_list.fillna('')
@@ -347,7 +362,7 @@ def searchsec(path, found_path):
                     found = (len(found_contacts) - found)
                 else:
                     found = len(found_contacts)
-                print 'Found %s on %s search.' % (found, header)
+                print('Found %s on %s search.' % (found, header))
                 del Campaign_list['CRDNumber']
 
     df = pd.read_excel(found_path, sheetname=0)
@@ -357,10 +372,13 @@ def searchsec(path, found_path):
     ret_item = {'Next Step': 'SFDC Search #2', 'SEC_Found': found}
     return ret_item
 
+
 ##test_nocrd='C:/Users/rschools/Dropbox/Python Search Program/New Lists/Chicago Pre Attendee_nocrd.xlsx'
 ##test_found='C:/Users/rschools/Dropbox/Python Search Program/New Lists/Chicago Pre Attendee_foundcontacts.xlsx'
 ##
-##test_search1='C:/Users/rschools/Dropbox/Python Search Program/New Lists/AMPF Update Rep List_ALPTest/AMPF Update Rep List_ALPTest.xlsx'
-##if __name__=="__main__":
-##    print searchsec('xyz', 'pdq')
-##    searchone(test_search1, listType='Account')
+
+if __name__ == "__main__":
+    test_search1 = 'C:/Users/rschools/Desktop/search_class_test.xlsx'
+
+    search = Search()
+    print(search.perform_search_one(test_search1, list_type='Account'))
