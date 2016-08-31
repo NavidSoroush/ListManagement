@@ -65,4 +65,20 @@ def finra_ambiguous_path(path):
 
 class Finra_Scrape:
     def __init__(self):
+        self._chrome_driver = "C:/Python27/selenium/Chrome/chromedriver"
+        os.environ["webdriver.chrome.driver"] = self._chrome_driver
+        self._finra_site = 'http://www.finra.org/'
+        self._finra_sec_found_path = ''
+        self._no_crd_fname = ''
+        self._uncertain_path = ''
+        self._no_crd = pd.DataFrame()
+        self._finra_ambiguity = pd.DataFrame()
+        self._to_be_searched = []
+
+    def finra_search(self, path, found_path):
+        print('\nStep 5:\nScraping FINRA data.')
+        self._finra_sec_found_path = found_finra_sec_path(path)
+        self._no_crd_fname = no_crd_path(path)
+        self._uncertain_path = finra_ambiguous_path(path)
+        self._search_list = pd.read_excel(path, sheet=0, encoding='utf-8')
 
