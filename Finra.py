@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 from functions import splitname
 import unicodedata
+import sys
 
 
 def strip_unicode_chars(row):
@@ -78,6 +79,7 @@ class finraScraping:
         self._finra_ambiguity = pd.DataFrame()
         self._search_list = None
         self._found_df = None
+        self._type = None
         self._finra_sec_found_path = ''
         self._no_crd_fname = ''
         self._uncertain_path = ''
@@ -85,6 +87,8 @@ class finraScraping:
         self._to_be_added = []
         self._num_suggestions = []
         self._licenses = []
+        self._crd_enabled = False
+        self._license_enabled = False
 
     def __init_selenium_components(self):
         self._sel = webdriver.Chrome(self._chrome_driver)
@@ -267,3 +271,52 @@ class finraScraping:
         self.__license_finra_search()
         self.__save_license_output(path)
         return {'BDG Finra Scrape': 'Success'}
+
+    def __str_or_int(self, search_input):
+        if type(search_input) is int:
+            self._crd_enabled = True
+            self._license_enabled = True
+
+        if type(search_input) is str:
+            self._crd_enabled = True
+
+        return self
+
+    def __input_type(self, search_input):
+        if type(search_input) is list:
+            self.__str_or_int(search_input[0])
+        else:
+            self.__str_or_int(search_input)
+
+        if not self._crd_enabled and not self._license_enabled:
+            print('Input %s is of type %s which is not a supported format' % (
+                search_input, type(search_input)
+            ))
+            sys.exit(0)
+        return self
+
+    def __init_input_metadata(self, search_input):
+        self.__input_type(search_input)
+        return self
+
+    def __determine_search_method(self, search_input, crd, licenses):
+        if not self._crd_enabled and crd:
+            print('CRD is not possible to search for given the data type of input %s.' % (
+                search_input
+            ))
+            sys.exit(0)
+
+        if not self._license_enabled and licenses:
+            print('License is not possible to search for given the data type of input %s.' % (
+                search_input
+            ))
+            sys.exit(0)
+
+        # need to build out an actual way to determine what search method to use
+
+        return self
+
+    def advisor_search(self, search_input, crd=True, licenses=False):
+        self.__init_input_metadata(search_input)
+        self.__determine_search_method(search_input, crd, licenses)
+#         need to build out actual search method for this.
