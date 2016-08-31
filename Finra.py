@@ -1,10 +1,8 @@
 from selenium import webdriver
-# from selenium.webdriver.common.keys import Keys
 import os
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-import re
 import pandas as pd
 from functions import splitname
 import unicodedata
@@ -74,21 +72,24 @@ class finraScraping:
         self._finra_site = 'http://www.finra.org/'
         self._elements = ['finra_pc_search_box', 's4_item-field', 's4_suggestion']
         self._attempted_search_count = 0
+        self._attempts = 0
         self._found = 0
         self._no_crd = pd.DataFrame()
         self._finra_ambiguity = pd.DataFrame()
         self._search_list = None
+        self._found_df = None
         self._finra_sec_found_path = ''
         self._no_crd_fname = ''
         self._uncertain_path = ''
         self._to_be_searched = []
         self._to_be_added = []
         self._num_suggestions = []
-        self._found_df = ''
+        self._licenses = []
 
     def __init_selenium_components(self):
         self._sel = webdriver.Chrome(self._chrome_driver)
         self._wait = WebDriverWait(self._sel, 1)
+        return self
 
     def __create_finra_search_output_paths(self, path):
         self._finra_sec_found_path = found_finra_sec_path(path)
@@ -97,9 +98,9 @@ class finraScraping:
         return self
 
     def __data_preparations(self):
-        self._search_list['FirstName'] = pd.apply(strip_unicode_chars)
-        self._search_list['LastName'] = pd.apply(strip_unicode_chars)
-        self._search_list['Account'] = pd.apply(strip_unicode_chars)
+        self._search_list['FirstName'].apply(strip_unicode_chars)
+        self._search_list['LastName'].apply(strip_unicode_chars)
+        self._search_list['Account'].apply(strip_unicode_chars)
         for index, row in self._search_list.iterrows():
             try:
                 search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account']
@@ -111,6 +112,10 @@ class finraScraping:
     def __refreshing(self):
         self._sel.refresh()
         print('refreshing...')
+
+    def __close_selenium_components(self):
+        self._sel.close(), self._sel.quit()
+        return self
 
     def __crd_only_search_functionality(self, elements=[]):
         if len(elements) > 0:
@@ -156,7 +161,7 @@ class finraScraping:
                     self.__refreshing()
             except:
                 self.__refreshing()
-        self._sel.close(), self._sel.quit()
+        self.__close_selenium_components()
         return self
 
     def __save_outputs(self):
@@ -187,6 +192,7 @@ class finraScraping:
         if url != '':
             self._finra_site = url
         print('\nStep 5:\nScraping FINRA data.')
+        self.__init_selenium_components()
         self.__create_finra_search_output_paths(path)
         self._search_list = read_excel(path)
         self.__data_preparations()
@@ -205,3 +211,59 @@ class finraScraping:
                     'FINRA_Found': self._found,
                     'FINRA Ambiguous': self._uncertain_path}
         return ret_item
+
+    def __init_license_metadata(self, path):
+        self._url = 'http://brokercheck.finra.org/Individual/Summary/'
+        self._elements = ['col-md-3']
+        self._search_list = read_excel(path)
+        self.__init_selenium_components()
+        return self
+
+    def __clean_licenses(self):
+        self._search_list[self._attempted_search_count, ['Licenses']] = ';'.join(self._licenses)
+        self._attempted_search_count += 1
+        del self._licenses
+        return self
+
+    def __save_license_output(self, path):
+        self._search_list.to_excel(path, index=False)
+
+    def __license_finra_search(self):
+        while self._attempted_search_count < len(self._search_list['CRDNumber']):
+            if self._search_list['CRDNumber'][self._attempted_search_count] != '':
+                if self._attempts < 2:
+                    try:
+                        crd = self._search_list['CRDNumber'][self._attempted_search_count]
+                        url = self._finra_site + str(crd)
+                        self._sel.get(url)
+
+                        self._licenses = []
+                        self._wait.until(EC.visibility_of_element_located((By.CLASS_NAME, self._elements[0])))
+                        reg_info = self._sel.find_elements_by_class_name(self._elements[0])
+                        for reg in reg_info:
+                            if reg.text[:6] == 'Series':
+                                self._licenses.append(int(reg.text[7:]))
+                        self._licenses.sort()
+                        self._licenses = ['Series {0}'.format(l) for l in self._licenses]
+                        self.__clean_licenses()
+                    except:
+                        self._licenses = []
+                        self._attempts += 1
+
+                else:
+                    self._attempts = 0
+                    self._licenses = ['CRD Not found']
+                    self.__clean_licenses()
+            else:
+                self._licenses = []
+                self.__clean_licenses()
+        self.__close_selenium_components()
+
+    def advisor_license_search(self, path):
+        self.__init_license_metadata(path)
+        print('Pulling licenses from FINRA for %s advisors.' % (
+            len(self._search_list[self._search_list['CRDNumber'].notnull()].index)))
+
+        self.__license_finra_search()
+        self.__save_license_output(path)
+        return {'BDG Finra Scrape': 'Success'}
