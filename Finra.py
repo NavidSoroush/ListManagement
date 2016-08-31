@@ -312,6 +312,13 @@ class finraScraping:
             ))
             sys.exit(0)
 
+        if (crd and licenses) and not (self._crd_enabled or self._license_enabled):
+            print('Finra search cannot return CRD or Licenses as you provided %s'
+                  'and the license search does not support %s type.' % (search_input,
+                                                                        type(search_input))
+            sys.exit(0)
+
+
         # need to build out an actual way to determine what search method to use
 
         return self
@@ -319,4 +326,5 @@ class finraScraping:
     def advisor_search(self, search_input, crd=True, licenses=False):
         self.__init_input_metadata(search_input)
         self.__determine_search_method(search_input, crd, licenses)
-#         need to build out actual search method for this.
+
+# need to build out actual search method for this.
