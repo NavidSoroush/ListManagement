@@ -188,7 +188,7 @@ class finraScraping:
         self.__save_outputs()
         return self
 
-    def crd_only_finra_search(self, path, url=''):
+    def crd_check(self, path, url=''):
         if url != '':
             self._finra_site = url
         print('\nStep 5:\nScraping FINRA data.')
@@ -259,7 +259,7 @@ class finraScraping:
                 self.__clean_licenses()
         self.__close_selenium_components()
 
-    def advisor_license_search(self, path):
+    def license_check(self, path):
         self.__init_license_metadata(path)
         print('Pulling licenses from FINRA for %s advisors.' % (
             len(self._search_list[self._search_list['CRDNumber'].notnull()].index)))
