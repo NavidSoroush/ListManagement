@@ -81,11 +81,14 @@ class finraScraping:
         self._attempted_search_count = 0
         self._attempts = 0
         self._found = 0
+        self._refresh_count = 0
         self._no_crd = pd.DataFrame()
         self._finra_ambiguity = pd.DataFrame()
         self._search_list = None
         self._found_df = None
         self._type = None
+        self._search_data = None
+        self._return_name = False
         self._finra_sec_found_path = ''
         self._no_crd_fname = ''
         self._uncertain_path = ''
@@ -121,7 +124,8 @@ class finraScraping:
 
     def __refreshing(self):
         self._sel.refresh()
-        print('refreshing...')
+        self._refresh_count += 1
+        print('refreshing...%s' % self._refresh_count)
 
     def __close_selenium_components(self):
         self._sel.close(), self._sel.quit()
@@ -201,13 +205,16 @@ class finraScraping:
     def __init_crd_metadata(self, path, url):
         if url != '':
             self._finra_site = url
+
         self.__init_selenium_components()
-        self.__create_finra_search_output_paths(path)
-        self._search_list = read_excel(path)
-        self.__data_preparations()
+
+        if path is not None:
+            self.__create_finra_search_output_paths(path)
+            self._search_list = read_excel(path)
+            self.__data_preparations()
         return self
 
-    def crd_check(self, path, url=''):
+    def crd_check(self, path=None, url=''):
         print('\nStep 5:\nScraping FINRA data.')
         self.__init_crd_metadata(path, url)
 
@@ -286,15 +293,18 @@ class finraScraping:
         if type(search_input) is int:
             self._crd_enabled = True
             self._license_enabled = True
+            self._search_data = [search_input]
 
         if type(search_input) is str:
             self._crd_enabled = True
+            self._search_data = [search_input]
 
         return self
 
     def __input_type(self, search_input):
         if type(search_input) is list:
             self.__str_or_int(search_input[0])
+            self._search_data = search_input
         else:
             self.__str_or_int(search_input)
 
@@ -307,7 +317,7 @@ class finraScraping:
 
     def __init_input_metadata(self, search_input):
         self.__input_type(search_input)
-        self._to_be_searched = search_input
+        self._to_be_searched = self._search_data
         return self
 
     def __determine_search_method(self, search_input, crd, licenses):
@@ -336,9 +346,10 @@ class finraScraping:
 
     def __advisor_crd_search(self):
         self.__init_selenium_components()
+        self._sel.get(self._finra_site)
         self.__crd_only_search_functionality()
-        for search in len(self._to_be_searched):
-            print('%s returned %s' % (self._to_be_searched[search], self._to_be_added[search]))
+        for search in range(len(self._to_be_searched)):
+            print("CRD search for '%s' returned: '%s'" % (self._to_be_searched[search], self._to_be_added[search]))
 
     def advisor_search(self, search_input, crd=True, licenses=False):
         self.__init_input_metadata(search_input)
@@ -350,4 +361,4 @@ class finraScraping:
 
 if __name__ == '__main__':
     fin = finraScraping()
-    fin.advisor_search(['Ricky Schools'])
+    fin.advisor_search('Lance Murphy')
