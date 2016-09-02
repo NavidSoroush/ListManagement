@@ -4,6 +4,7 @@ from cred import userPhone, userEmail, userName
 from pyEmailComplete import emailComplete
 from functions import splitname
 import time
+import pandas as pd
 
 
 def cleanDate(received):
@@ -27,6 +28,14 @@ def stringDate(value):
     '''
     value = datetime.datetime.strftime(value, '%d/%m/%Y %H:%M:%S')
     return value
+
+
+def determine_num_records(path):
+    df = pd.read_excel(path)
+    if 'found' in path:
+        num = len(df[df['ContactID' != '']])
+    del df
+    return num
 
 
 def convert_timedelta(duration):
@@ -71,7 +80,7 @@ def valuesForEmail(dictValues):
         objToRemove = dictValues['Num Removing']
         objToUpdate = dictValues['Num Updating/Staying']
 
-    if dictValues['Move To Bulk'] == False:
+    if not dictValues['Move To Bulk']:
         createAdvisorsNote = 'Contacts will not be created. Not enough information provided.'
     else:
         createAdvisorsNote = ''
@@ -85,7 +94,7 @@ def valuesForEmail(dictValues):
             att_paths = [dictValues['No CRD'], dictValues['FINRA Ambiguous'],
                          dictValues['Review Path'], dictValues['BDG Remove'],
                          dictValues['BDG Add'], dictValues['BDG Stay']]
-    elif dictValues['FINRA?'] != False:
+    elif not dictValues['FINRA?']:
         att_paths = [dictValues['File Path'], dictValues['No CRD'], dictValues['FINRA Ambiguous'],
                      dictValues['Review Path']]
     else:
@@ -93,7 +102,8 @@ def valuesForEmail(dictValues):
 
     total = dictValues['Total Records']
     fileName = splitname(dictValues['File Path'])
-    num_foundInSFDC = dictValues['Found in SFDC Search #2'] + dictValues['SFDC_Found'] - toCreate
+    # num_foundInSFDC = dictValues['Found in SFDC Search #2'] + dictValues['SFDC_Found'] - toCreate
+    num_foundInSFDC = determine_num_records(dictValues['Found Path'])
     need_Research = total - num_foundInSFDC - toCreate
     received = cleanDate(dictValues['Received Date'])
     ts_received = stringDate(received)

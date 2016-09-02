@@ -172,7 +172,9 @@ class Search:
         self._total_found = 0
         self._num_found_contacts = 0
         self._review_path = ''
+        self._search_list = ''
         self._found_contact_path = ''
+        self._list_type = ''
         self._sec_files = ''
         self._sec_path = 'T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/Individuals/processed_data/' + self._today + '/'
 
@@ -347,3 +349,4 @@ class Search:
 #     test_search1 = 'C:/Users/rschools/Desktop/search_class_test.xlsx'
 #     search = Search()
 #     print(search.perform_search_one(test_search1, list_type='Account'))
+#     search.perform_search_two(test_search1, found_file_path, )
