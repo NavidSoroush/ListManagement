@@ -41,7 +41,7 @@ def recordStats(values):
     :param values: data to record in stats dataframe
     :return: dictionary items for list processing
     '''
-    df = init_stats_file()
+    df = init_stats_file(statsPath)
     print('\nStep 11. Recording stats from processing.')
     df2 = new_stat_line(values)
     df = df.append(df2, ignore_index=True)

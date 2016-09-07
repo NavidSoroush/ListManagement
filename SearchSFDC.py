@@ -128,7 +128,6 @@ def searchone(path, listType=None, review_path=None):
                 else:
                     Campaign_list.loc[index,"FirstName"]=names_left[0]
                     Campaign_list.loc[index,"LastName"]=names_left[1]
-
     #If we have the information to make LkupName, do so
     if "MailingPostalCode" in headers and "MailingState" in headers:
         
@@ -142,19 +141,20 @@ def searchone(path, listType=None, review_path=None):
                 Campaign_list.loc[index,"MailingPostalCode"]=row["MailingPostalCode"][:4]
 
         if np.mean(Campaign_list['MailingState'].str.len()) > 2:
-            import us_state_abbr
+            from us_state_abbr import us_state_abbrev
             print 'MailingState column needs to be transformed.'
             for index, row in Campaign_list.iterrows():
                 try:
-                    state = us.states.lookup(Campaign_list.loc[index,"MailingState"])
-                    Campaign_list.loc[index,"MailingState"] = str(state.abbr)
+                    state = us_state_abbrev[(Campaign_list.loc[index,"MailingState"])]
+                    Campaign_list.loc[index,"MailingState"] = state
                 except:
                     pass
 
         #Format name as necessary
         #Split FullName if given, cleanup first/last name, create lkup name
+        headers = Campaign_list.columns.values
         if "FirstName" in headers and "LastName" in headers:        
-            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]
+            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]#.str[:-2]
             print Campaign_list.head()
             headers = Campaign_list.columns.values
         else:
@@ -200,7 +200,7 @@ def searchone(path, listType=None, review_path=None):
                 print 'Found %s on %s search.' % (found,header)
                 for rField in returnFields:
                     del Campaign_list[rField]
-    if 'CRD Provided by List' in headers and to_FINRA == False:
+    if 'CRD Provided by List' in headers and to_FINRA == False: #THIS PROCESS EXISTS TO ADDRESS THE SITUATION IN WHICH A CONTACT RECORD EXISTS IN SFDC WITH NO CRD. WE DO NOT CREATE A DUPLICATE RECORD.
         contacts_to_review = contacts_to_review.append(Campaign_list,ignore_index = True)
         review_path = review_contact_path(path)
         contacts_to_review.to_excel(review_path)
@@ -237,7 +237,7 @@ def CRDsearch(list_df, advisor_df, n, obj=None):
             headerandIDs = advisor_df[j_headers]
             print headerandIDs.head()
             list_df = list_df.merge(headerandIDs, how='left', on = header)
-            print list_df.head()
+            #print list_df.head()
             list_df = list_df.fillna('')
             print list_df.head()
             found_contacts = found_contacts.append(list_df[list_df['ContactID']!=''], ignore_index = True)

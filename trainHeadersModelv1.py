@@ -190,6 +190,8 @@ def training(list_file_path, objName):
     ##this if, else statement helps to better organize the data so that uploads (updates and creation)
     ##in SFDC is 'cleaner' when transitioning from the list tool to Andrew's data updater.
     if 'MailingStreet1' in testPredict.columns.values and 'MailingStreet2' in testPredict.columns.values:
+        #testPredict['MailingStreet1'].str.encode('ascii','ignore')
+        #testPredict['MailingStreet2'].str.encode('ascii','ignore')
         testPredict.MailingStreet1 = testPredict.MailingStreet1.astype(str)
         testPredict.MailingStreet2 = testPredict.MailingStreet2.astype(str)
         testPredict.fillna('NaN')

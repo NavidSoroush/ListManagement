@@ -48,8 +48,7 @@ if __name__== "__main__":
                                            var_list['Found Path']))
                 if var_list['SFDC_Found'] + \
                             var_list['FINRA_Found'] <var_list['Total Records']:
-                    var_list.update(searchsec(var_list['No CRD'],
-                                              var_list['FINRA_SEC Found']))
+                    var_list.update(searchsec(var_list['No CRD'], var_list['FINRA_SEC Found']))
                             
                 else:
                     print strings_to_print[0]
