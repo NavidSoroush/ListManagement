@@ -110,8 +110,9 @@ def searchone(path, listType=None, review_path=None):
                     row["FirstName"]=row["FullName"].split(' ')[0]
                     row["LastName"]=row["FullName"].split(' ')[1][:-1]
                 else: #Comma before space. Assume Last, First orientation
-                    row["LastName"]=row["FullName"].split(',')[0]
-                    row["FirstName"]=row["FullName"].split(' ')[1]#Assumes space after ','
+                    names = row["FullName"].split()
+                    Campaign_list.loc[index,"FirstName"] = names[-1]
+                    Campaign_list.loc[index, "LastName"] = names[0][:-1]
                     
             else: #Assume first last/middle last/suffix order
                 names = row["FullName"].split()
