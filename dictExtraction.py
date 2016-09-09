@@ -33,7 +33,7 @@ def stringDate(value):
 def determine_num_records(path):
     df = pd.read_excel(path)
     if 'found' in path:
-        num = len(df[df['ContactID' != '']])
+        num = len(df[df['ContactID'] != ''])
     del df
     return num
 
