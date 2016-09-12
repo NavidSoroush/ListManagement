@@ -8,7 +8,6 @@ from pyEmailComplete import newListReceived_notifyOriginator
 from testing_DL_script import list_download
 
 
-
 ################################################################
 ##These functions should be used to process file names and paths
 
@@ -125,7 +124,7 @@ def listInfoParser(bodyStr, lookingFor, lookingFor2=None, n=None):
         n = 2
 
     if lookingFor == 'Campaign Link: ' or lookingFor == 'Attachment Link: ':
-        incr = 27
+        incr = 40
     else:
         incr = 1
 

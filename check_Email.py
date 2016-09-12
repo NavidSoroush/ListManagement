@@ -16,7 +16,7 @@ Object_Check = ['Campaign', 'BizDev Group']
 payload = {
     'action': 'login',
     'username': sfuser,
-    'pw': sfpw
+    'pw': password
 }
 
 
@@ -89,5 +89,5 @@ def checkForLists():
     else:
         print "ERROR: Unable to open mailbox ", rv
 
-##for testing
-##checkForLists()
+# for testing
+# checkForLists()
