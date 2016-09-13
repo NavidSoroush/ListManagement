@@ -87,7 +87,7 @@ def valuesForEmail(dictValues):
 
     obj = dictValues['Object']
     if obj == 'BizDev Group':
-        if dictValues['FINRA?'] == False:
+        if not dictValues['FINRA?']:
             att_paths = [dictValues['File Path'], dictValues['Review Path'], dictValues['BDG Remove'],
                          dictValues['BDG Add'], dictValues['BDG Stay']]
         else:
@@ -103,7 +103,7 @@ def valuesForEmail(dictValues):
     total = dictValues['Total Records']
     fileName = splitname(dictValues['File Path'])
     # num_foundInSFDC = dictValues['Found in SFDC Search #2'] + dictValues['SFDC_Found'] - toCreate
-    num_foundInSFDC = determine_num_records(dictValues['Found Path'])
+    num_foundInSFDC = determine_num_records(dictValues['Found Path']) - toCreate
     need_Research = total - num_foundInSFDC - toCreate
     received = cleanDate(dictValues['Received Date'])
     ts_received = stringDate(received)
