@@ -99,7 +99,7 @@ def sourceChannel(path, recordName, objId, obj, aid=None):
             for index, row in list_df.iterrows():
                 list_df.loc[index, 'Phone'] = clean_phoneNumber(row['Phone'])
         except:
-            print "Can't clean up phone numbers due to %s." % (Exception)
+            print "Can't clean up phone numbers due to %s." % (Exception.message)
 
     if 'Fax' in list_df.columns.values:
         try:
@@ -108,7 +108,7 @@ def sourceChannel(path, recordName, objId, obj, aid=None):
             for index, row in list_df.iterrows():
                 list_df.loc[index, 'Fax'] = clean_phoneNumber(row['Fax'])
         except:
-            print "Can't clean up fax numbers due to %s." % (Exception)
+            print "Can't clean up fax numbers due to %s." % (Exception.message)
 
     list_df.to_excel(path, index=False)
     return {'Next Step': 'Parse Out Advisors Updates'

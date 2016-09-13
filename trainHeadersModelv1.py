@@ -3,6 +3,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 import os, re
+import string
 
 username = os.environ.get("USERNAME")
 
@@ -51,7 +52,6 @@ def lowerHeadVal(lname):
     :param lname: value
     :return: returns lower-case format of value.
     '''
-
     tmp = []
     for i in lname:
         i = splitByUppers(i)
@@ -88,6 +88,7 @@ def training(list_file_path, objName):
     print '\nStep 3:\nMatching and processing headers.'
     ###This imports the training data set and extracts the features needed
     ###to train the model
+    confidence = .96
     filename = 'T:/Shared/FS2 Business Operations/Python Search Program/Training Data/Headers_Train.xlsx'
     train = pd.read_excel(filename)
     train_DUP = pd.read_excel(filename)
@@ -122,6 +123,7 @@ def training(list_file_path, objName):
     pFileName = path_leaf(predictFile)
     testPredict = pd.read_excel(predictFile)
     tpHeaders = testPredict.columns.values
+    # tpHeaders = [re.sub('[^A-Za-z0-9]+', '', t) for t in tpHeaders]
     print "Here are the headers in the '%s' file: \n\n %s \n" % (pFileName, tpHeaders)
     ###This applies the preprocessing fucntions to the headers
     ###in the list file makes predicitons on them
@@ -130,6 +132,12 @@ def training(list_file_path, objName):
     p_test_features = vectorizer.transform(lower_p_headers)
     p_test_features = p_test_features.toarray()
     result = forest.predict(p_test_features)
+    result_prob = forest.predict_proba(p_test_features)
+    probs =[np.max(rp)/np.sum(rp) for rp in result_prob]
+    #
+    # for r in range(len(result)):
+    #     print "Prediction: '%s' - %s confident" % (result[r], probs[r])
+
     ###This just gives us the oob_score of the model based on
     ###the training data that we gave it.
 
@@ -137,6 +145,7 @@ def training(list_file_path, objName):
     output = pd.DataFrame(data={"1. Header": tpHeaders,
                                 "3. Prediction": result})  # ,"2. Expected":tpHeaders})#,"4. Match?":matches})#,"Prob":tmp})
     ###This gives us the list of the unique classes that the model knows
+
     uniqueExpections = train['Class'].unique()
     uniqueExpections.sort()
     ###This section creates a data frame which will
@@ -150,35 +159,42 @@ def training(list_file_path, objName):
     ###Based on the users inputs this section will also
     ###update the headers of the original file.
     ### W_I_R stands for 'Was I Right'.
-    print "Here are my predictions:\n"
+    print("Here are the predictions that I'm less than %s sure on:\n" % "{0:.0f}%".format(confidence*100))
     trainingAppends = []
     for index, row in predictions_to_validate.iterrows():
-        print "Header given: '%s'\nMy prediction: '%s'." % (str(row['Header Value']), str(row['Class']))
-        W_I_R = ""
-        while W_I_R.lower not in ('y', 'n'):
-            W_I_R = raw_input("Was I right? Please just put 'Y' or 'N'.\n")
-            if W_I_R.lower() == 'y':
-                tmp = (row['Header Value'], row['Class'])
-                trainingAppends.append(tmp)
-                print "Thanks. Updating your file and my training data.\n"
-                break
-            elif W_I_R.lower() == 'n':
-                expected = ""
-                while expected not in uniqueExpections:
-                    print "Can you tell me what it should have been?\n"
-                    expected = raw_input("\n".join(uniqueExpections) + '\n\n')
-                    if expected in uniqueExpections:
-                        tmp = (row['Header Value'], expected)
-                        trainingAppends.append(tmp)
-                        print "Thanks. Updating your file and my training data.\n"
-                        break
-                    else:
-                        print "Sorry, I think you typed a value wrong."
-                break
-            else:
-                print "I don't think you typed 'Y' or 'N', can you try again?"
+        if probs[index] >= confidence:
+            tmp = (row['Header Value'], row['Class'])
+            trainingAppends.append(tmp)
+            testPredict.rename(columns={tpHeaders[index]: trainingAppends[index][1]}, inplace=True)
+        else:
+            print("Header given: '%s'\nMy prediction: '%s'\nConfidence: %s." % (str(row['Header Value']),
+                                                                                str(row['Class']),
+                                                                                "{0:.0f}%".format(probs[index] * 100)))
+            W_I_R = ""
+            while W_I_R.lower not in ('y', 'n'):
+                W_I_R = raw_input("Was I right? Please just put 'Y' or 'N'.\n")
+                if W_I_R.lower() == 'y':
+                    tmp = (row['Header Value'], row['Class'])
+                    trainingAppends.append(tmp)
+                    print("Thanks. Updating your file and my training data.\n")
+                    break
+                elif W_I_R.lower() == 'n':
+                    expected = ""
+                    while expected not in uniqueExpections:
+                        print("Can you tell me what it should have been?\n")
+                        expected = raw_input("\n".join(uniqueExpections) + '\n\n')
+                        if expected in uniqueExpections:
+                            tmp = (row['Header Value'], expected)
+                            trainingAppends.append(tmp)
+                            print("Thanks. Updating your file and my training data.\n")
+                            break
+                        else:
+                            print("Sorry, I think you typed a value wrong.")
+                    break
+                else:
+                    print("I don't think you typed 'Y' or 'N', can you try again?")
 
-        testPredict = testPredict.rename(columns={tpHeaders[index]: trainingAppends[index][1]})
+            testPredict.rename(columns={tpHeaders[index]: trainingAppends[index][1]}, inplace=True)
     ###This section takes the users inputs and adds
     ###the headers (value) and correct class (key) of
     ###the header and updates the training file
