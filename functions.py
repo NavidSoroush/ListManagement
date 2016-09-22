@@ -191,7 +191,7 @@ def process_list_email(email_data, M):
                                   listUploadStr[2])
     obj_rec_Link = listInfoParser(decodedBody, listUploadStr[3],
                                   listUploadStr[4])
-
+    
     attLink = listInfoParser(decodedBody, listUploadStr[4])
 
     if obj == 'Campaign':
@@ -199,9 +199,9 @@ def process_list_email(email_data, M):
     elif obj == 'BizDev Group':
         obj_rec_Link = listInfoParser(decodedBody, listUploadStr[5],
                                       listUploadStr[4])
-        obj_rec_Link = obj_rec_Link[26:44]
+        obj_rec_Link = obj_rec_Link[40:58]
     else:
-        obj_rec_Link = obj_rec_Link[26:44]
+        obj_rec_Link = obj_rec_Link[40:58]
     filePath, startDate, pre_orPost, aName, aID = list_download([attLink[:18]],
                                                                 obj,
                                                                 obj_rec_Link)

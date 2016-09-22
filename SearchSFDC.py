@@ -155,7 +155,7 @@ def searchone(path, listType=None, review_path=None):
         #Split FullName if given, cleanup first/last name, create lkup name
         headers = Campaign_list.columns.values
         if "FirstName" in headers and "LastName" in headers:        
-            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"]#.str[:-2]
+            Campaign_list["LkupName"]=Campaign_list["FirstName"].str[:3] + Campaign_list["LastName"] + Campaign_list["Account"].str[:10] + Campaign_list["MailingState"] + Campaign_list["MailingPostalCode"].str[:-2]
             print Campaign_list.head()
             headers = Campaign_list.columns.values
         else:
