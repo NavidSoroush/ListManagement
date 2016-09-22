@@ -26,17 +26,14 @@ def run():
     pw = password
     lkup_strings = ['first name', 'last name', 'account name',
                     'mailing state/province', 'mailing zip/postal code']
-    updateCols = ['last meeting or call', 'chg date - email', 'chg date - mailing address',
-                  'chg date - phone', 'chg date - broker dealer']
+    updateCols = ['last meeting/event', 'last sp', 'most recent sale',]
     repHeaders = ['LkupName', 'First Name', 'Last Name', 'Contact Name',
                   'Account', 'AccountId', 'AMPF MBR ID', 'Office Name',
                   'BizDev Group', 'Email', 'Mailing Address 1',
                   'Mailing City', 'Mailing State', 'Mailing Zip', 'Phone',
-                  'CRD', 'ContactID', 'Last Meeting/Event', 'Rating',
+                  'CRD', 'ContactID', 'Rating',
                   'Products Used', 'Licenses', 'SourceChannel',
-                  'Last Meeting or Call', 'Chg Date - Email',
-                  'Chg Date - Mailing Address', 'Chg Date - Phone',
-                  'Chg Date - Broker Dealer', 'Needs Info Updated?']
+                  'Last Meeting/Event', 'Last SP', 'Most Recent Sale', 'Needs Info Updated?']
 
     # Setting save path
     savePath2 = 'T:/Shared/FS2 Business Operations/Search Program/Salesforce Data Files/'
@@ -73,7 +70,7 @@ def run():
     # saving file, and closing sql connection
     df = pd.read_sql_query(list_SQL, conn)
     df.insert(0, 'LkupName', lkupName(df, lkup_strings))
-    df.insert(len(df.columns), 'Needs info updated?', needsUpdate(df[df.columns[-5:]], updateCols, 180))
+    df.insert(len(df.columns), 'Needs info updated?', needsUpdate(df[df.columns[-3:]], updateCols, 180, 90))
     df.columns = repHeaders
     logger.info('Saving to FS shared drive.')
     df.rename(columns={'CRD': 'CRDNumber'}, inplace=True)

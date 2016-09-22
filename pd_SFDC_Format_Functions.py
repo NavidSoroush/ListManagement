@@ -21,24 +21,28 @@ def lkupName(df, jstr):
     return var
 
 #create function to evalute last time an advisor was contact / updated
-def needsUpdate(dFrame, colHeaders, timeRange):
+def needsUpdate(dFrame, colHeaders, Activityrange, Salerange):
     df2 = cleanDates(dFrame,colHeaders)
-    d = pd.tslib.Timestamp.now() - pd.tslib.Timedelta(days=timeRange)
-    max = len(dFrame.columns)
-    count=0
+    activ_day = pd.tslib.Timestamp.now() - pd.tslib.Timedelta(days=Activityrange)
+    sale_day = pd.tslib.Timestamp.now() - pd.tslib.Timedelta(days=Salerange)
     var=[]
-    word=[]
     for ind, val in df2.iterrows():
+        colcount = 0
+        count = 0
         for v in val:
             word=str(type(v))
-            if v < d or 'NaTType' in word:
-                count+=1
-        if count>3:
-            var.append('Y')
+            if colcount < 2:
+                if v > activ_day and 'NaTType' not in word:
+                    count += 1
+                colcount += 1
+            else:
+                if v > sale_day and 'NaTType' not in word:
+                    count += 1
+                colcount+=1
+        if count>0:
+            var.append('N')
         else:
-            var.append('N')    
-        count = 0
-        word=[]
+            var.append('Y')
     return var
 
 #this function will coerce the dates from an object format to datetime 

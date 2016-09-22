@@ -56,7 +56,7 @@ def df_column_preprocessing(df):
         if df[col].dtype not in ('int64', 'float64','object'):
             #print count, df[col].dtype, df[col]
             for cell in xrange(0,len(df[col])):
-                df[cell][count]=df[cell][count].encode('utf-8','ignore')
+                df[cell][count]=df[cell][count].encode('utf-8')
         else:
             count +=1
     return df
@@ -98,7 +98,7 @@ def searchone(path, listType=None, review_path=None):
     Campaign_list = Campaign_list[keepCols]
     Campaign_list = Campaign_list.fillna('')
 
-    Campaign_list = df_column_preprocessing(Campaign_list)
+    #Campaign_list = df_column_preprocessing(Campaign_list)
 
     if "FullName" in headers:
         Campaign_list.insert(0,"LastName","")
