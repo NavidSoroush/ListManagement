@@ -33,7 +33,7 @@ def stringDate(value):
 def determine_num_records(path):
     df = pd.read_excel(path)
     if 'found' in path:
-        num = len(df[df['ContactID']!=''])
+        num = df['ContactID'].count()
     del df
     return num
 
@@ -98,7 +98,7 @@ def valuesForEmail(dictValues):
         att_paths = [dictValues['File Path'], dictValues['No CRD'], dictValues['FINRA Ambiguous'],
                      dictValues['Review Path']]
     else:
-        att_paths = [dictValues['File Path'],dictValues['Review Path']]
+        att_paths = [dictValues['File Path'], dictValues['Review Path']]
 
     total = dictValues['Total Records']
     fileName = splitname(dictValues['File Path'])

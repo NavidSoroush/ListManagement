@@ -159,7 +159,7 @@ def training(list_file_path, objName):
     ###Based on the users inputs this section will also
     ###update the headers of the original file.
     ### W_I_R stands for 'Was I Right'.
-    print("Here are the predictions that I'm less than %s sure on:\n" % "{0:.0f}%".format(confidence*100))
+    print("\nHere are the predictions that I'm less than %s sure on:\n" % "{0:.0f}%".format(confidence*100))
     trainingAppends = []
     for index, row in predictions_to_validate.iterrows():
         if probs[index] >= confidence:
