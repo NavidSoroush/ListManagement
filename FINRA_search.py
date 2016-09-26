@@ -105,7 +105,7 @@ def fin_search(path, foundPath, chromedriver = "C:/Python27/selenium/Chrome/chro
 ##  Reference to an output dataframe from step 2. Create list of search texts
     for index, row in Campaign_list.iterrows():
         try:
-            search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account'][:12]
+            search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account'][:-6]
         except:
             search_name = 'Error converting row %s to string' % index
         to_be_searched = to_be_searched + [search_name]
