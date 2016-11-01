@@ -63,12 +63,21 @@ def finra_ambiguous_path(path):
 
 
 def read_excel(path):
+    '''
+    reads string path into pandas data frame
+    :param path: file path
+    :return: pandas data frame of file
+    '''
     return pd.read_excel(path, sheet=0, encoding='utf-8')
 
 
 def find_chrome_driver_location(filename='chromedriver'):
+    '''
+    finds the file path location of the 'chromedriver' on the local machine
+    :param filename: default='chromedriver'
+    :return: file path string
+    '''
     path = os.path.join(os.path.dirname(sys._getframe(1).f_code.co_filename), filename) + '/'
-    print path
     return path
 
 class finraScraping:
@@ -100,17 +109,38 @@ class finraScraping:
         self._license_enabled = False
 
     def __init_selenium_components(self):
+        '''
+        private method.
+
+        initiates the components needed for selenium to funciton.
+        :return: self
+        '''
         self._sel = webdriver.Chrome(self._chrome_driver)
         self._wait = WebDriverWait(self._sel, 1)
         return self
 
     def __create_finra_search_output_paths(self, path):
+        '''
+        private method.
+
+        creates the relevant output file names where processed
+        lists that have been search in finra will be saved to
+        :param path: string file path
+        :return: self
+        '''
         self._finra_sec_found_path = found_finra_sec_path(path)
         self._no_crd_fname = no_crd_path(path)
         self._uncertain_path = finra_ambiguous_path(path)
         return self
 
     def __data_preparations(self):
+        '''
+        private method.
+
+        creates what will be searched in finra during list processing to find
+        advisor CRD numbers.
+        :return: list of all items to_be_searched
+        '''
         self._search_list['FirstName'].apply(strip_unicode_chars)
         self._search_list['LastName'].apply(strip_unicode_chars)
         self._search_list['Account'].apply(strip_unicode_chars)
@@ -123,15 +153,30 @@ class finraScraping:
         return self
 
     def __refreshing(self):
+        '''
+        private method for refreshing the selenium web browser
+        :return: n/a
+        '''
         self._sel.refresh()
         self._refresh_count += 1
         print('refreshing...%s' % self._refresh_count)
 
     def __close_selenium_components(self):
+        '''
+        private method to close and quit selenium
+        :return: updated self
+        '''
         self._sel.close(), self._sel.quit()
         return self
 
     def __crd_only_search_functionality(self, elements=[]):
+        '''
+        private method.
+
+        is the actual guts of the CRD only search.
+        :param elements: html elements to look for
+        :return: updated self, has all finra searched meta data
+        '''
         if len(elements) > 0:
             self._elements = elements
         while self._attempted_search_count < len(self._to_be_searched):
@@ -179,12 +224,24 @@ class finraScraping:
         return self
 
     def __save_outputs(self):
+        '''
+        private method.
+
+        saves the files that were created by the finra search program
+        :return: updated self
+        '''
         self._no_crd.to_excel(self._no_crd_fname, index=False)
         self._finra_ambiguity.to_excel(self._uncertain_path, index=False)
         self._found_df.to_excel(self._finra_sec_found_path, index=False)
         return self
 
     def __data_output_prep(self):
+        '''
+        private method.
+
+        inserts the data / metadata from the FINRA search into the excel data file.
+        :return: updated self
+        '''
         self._search_list.insert(len(self._search_list.columns),
                                  'CRDNumber', self._to_be_added)
         self._search_list.insert(len(self._search_list.columns),
@@ -203,6 +260,15 @@ class finraScraping:
         return self
 
     def __init_crd_metadata(self, path, url):
+        '''
+        private method.
+
+        initiates the metadata needed for list processing.
+
+        :param path: file path string - required.
+        :param url: url to finra search site
+        :return: updated self.
+        '''
         if url != '':
             self._finra_site = url
 
@@ -215,6 +281,14 @@ class finraScraping:
         return self
 
     def crd_check(self, path=None, url=''):
+        '''
+        public method.
+
+        utilizes all of the private methods to actually perform the CRD search
+        :param path: string file path -- required
+        :param url: url to FINRA site -- optional
+        :return: dictionary of stats and next steps
+        '''
         print('\nStep 5:\nScraping FINRA data.')
         self.__init_crd_metadata(path, url)
 
@@ -234,6 +308,13 @@ class finraScraping:
         return ret_item
 
     def __init_license_metadata(self, path):
+        '''
+        private method.
+
+        creates the necessary information that will be utilized by the license search method.
+        :param path: file path name to excel file that will be searched.
+        :return: updated self
+        '''
         self._url = 'http://brokercheck.finra.org/Individual/Summary/'
         self._elements = ['col-md-3']
         self._search_list = read_excel(path)
@@ -241,15 +322,34 @@ class finraScraping:
         return self
 
     def __clean_licenses(self):
+        '''
+        private method.
+
+        cleans the FINRA scraped licenses so that format is SFDC compatible.
+        :return: updated self
+        '''
         self._search_list[self._attempted_search_count, ['Licenses']] = ';'.join(self._licenses)
         self._attempted_search_count += 1
         del self._licenses
         return self
 
     def __save_license_output(self, path):
+        '''
+        private method.
+
+        saves the output of the FINRA license search
+        :param path: file path name
+        :return: n/a
+        '''
         self._search_list.to_excel(path, index=False)
 
     def __license_finra_search(self):
+        '''
+        private method.
+
+        actual guts of the FINRA license search.
+        :return: n/a
+        '''
         while self._attempted_search_count < len(self._search_list['CRDNumber']):
             if self._search_list['CRDNumber'][self._attempted_search_count] != '':
                 if self._attempts < 2:
@@ -281,6 +381,13 @@ class finraScraping:
         self.__close_selenium_components()
 
     def license_check(self, path):
+        '''
+        public method.
+
+        utilizes all of the private methods to actually perform the license search
+        :param path: string file name -- required
+        :return: dicitonary - next step for list program
+        '''
         self.__init_license_metadata(path)
         print('Pulling licenses from FINRA for %s advisors.' % (
             len(self._search_list[self._search_list['CRDNumber'].notnull()].index)))
@@ -290,6 +397,13 @@ class finraScraping:
         return {'BDG Finra Scrape': 'Success'}
 
     def __str_or_int(self, search_input):
+        '''
+        private method.
+
+        used to determine if data type of the search input string or int
+        :param search_input: input data
+        :return: updated self
+        '''
         if type(search_input) is int:
             self._crd_enabled = True
             self._license_enabled = True
@@ -302,6 +416,16 @@ class finraScraping:
         return self
 
     def __input_type(self, search_input):
+        '''
+        private method.
+
+        used to determine if what is passed is a list or individual variable.
+        regardless of data type, it is passed to __str_or_int method to determine
+        the data type to enable / disable certain FINRA search capabilities.
+
+        :param search_input:
+        :return: updated self
+        '''
         if type(search_input) is list:
             self.__str_or_int(search_input[0])
             self._search_data = search_input
@@ -316,11 +440,26 @@ class finraScraping:
         return self
 
     def __init_input_metadata(self, search_input):
+        '''
+        initiates the metadata for the standard, one-off search functionality
+        :param search_input: variable -- required
+        :return: updated self
+        '''
         self.__input_type(search_input)
         self._to_be_searched = self._search_data
         return self
 
     def __determine_search_method(self, search_input, crd, licenses):
+        '''
+        private method.
+
+        used to determine if FINRA processing can be handled in the 'one-off'
+        search based on the input of the user.
+        :param search_input: variable -- required
+        :param crd: boolean
+        :param licenses: boolean
+        :return: updated self.
+        '''
         if not self._crd_enabled and crd:
             print('CRD is not possible to search for given the data type of input %s.' % (
                 search_input
@@ -345,6 +484,12 @@ class finraScraping:
         return self
 
     def __advisor_crd_search(self):
+        '''
+        private method.
+
+        used to perform one-off / ad-hoc searches in FIRNA
+        :return: n/a
+        '''
         self.__init_selenium_components()
         self._sel.get(self._finra_site)
         self.__crd_only_search_functionality()
@@ -352,13 +497,48 @@ class finraScraping:
             print("CRD search for '%s' returned: '%s'" % (self._to_be_searched[search], self._to_be_added[search]))
 
     def advisor_search(self, search_input, crd=True, licenses=False):
+        '''
+        public method.
+
+        allows users to pass in lists or individual names / crds that
+        they want to search in FINRA.
+
+        based on whether CRD = True and/or Licenses = True, and the data type of the input,
+        will determine what search can / may be performed.
+
+        :param search_input: list or individual items to search for -- required
+        :param crd: default = True -- optional
+        :param licenses: default = False -- optional
+        :return:
+        '''
         self.__init_input_metadata(search_input)
         self.__determine_search_method(search_input, crd, licenses)
         self.__advisor_crd_search()
+        # need to build out actual search method for this.
+
+# if __name__ == '__main__':
+
+    # how to create a variable to interact with the
+    # FINRA scraping object.
+    # fin = finraScraping()
+
+    # this class has 3 methods through which the user can currently interact with.
 
 
-# need to build out actual search method for this.
+    # 1. CRD Search - Used by List program
+    # example of how to call / interact
 
-if __name__ == '__main__':
-    fin = finraScraping()
-    fin.advisor_search('Lance Murphy')
+    # fin.crd_check(path='path_to_excel_file.xlsx')
+
+
+    # 2. License Search - Used by the List Program
+    # example of how to call / interact
+
+    # fin.license_check(path='path_to_excel_file.xlsx')
+
+    # 3. Advisor Search - Used Ad Hoc by User
+    # example of how to call / interact
+    # Note - this method still needs to be further built out to
+    # fully capture the initial intent of the method.
+
+    # fin.advisor_search('Lance Murphy')

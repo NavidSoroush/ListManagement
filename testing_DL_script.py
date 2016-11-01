@@ -26,6 +26,8 @@ def splitname(pathtosplit):
     '''
     import os
     name = os.path.split(os.path.abspath(pathtosplit))
+    if name[1][-1] == ' ':
+        name[1] = name[1][:-1]
     return name[1]
 
 
@@ -47,7 +49,8 @@ def drivepresent(fname, paths):
                 pass
             else:
                 raise
-
+    if fname[0][-1] == ' ':
+        fname[0] = fname[0][:-1]
     shutil.copy(fname[0], paths)
 
 
