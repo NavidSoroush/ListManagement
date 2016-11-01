@@ -88,7 +88,7 @@ def training(list_file_path, objName):
     print '\nStep 3:\nMatching and processing headers.'
     ###This imports the training data set and extracts the features needed
     ###to train the model
-    confidence = .96
+    confidence = 1.0
     filename = 'T:/Shared/FS2 Business Operations/Python Search Program/Training Data/Headers_Train.xlsx'
     train = pd.read_excel(filename)
     train_DUP = pd.read_excel(filename)

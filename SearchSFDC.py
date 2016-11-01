@@ -154,6 +154,15 @@ def searchone(path, listType=None, review_path=None):
         #Format name as necessary
         #Split FullName if given, cleanup first/last name, create lkup name
         headers = Campaign_list.columns.values
+        if "MailingCity" in headers:
+            Campaign_list["MailingCity"] = map(lambda x: x.title(), Campaign_list["MailingCity"])
+        if "MailingStreet" in headers:
+            Campaign_list["MailingStreet"] = map(lambda x: x.title(), Campaign_list["MailingStreet"])
+        if "MailingStreet2" in headers:
+            Campaign_list["MailingStreet2"] = map(lambda x: x.title(), Campaign_list["MailingStreet2"])
+        if "Email" in headers:
+            Campaign_list["Email"] = map(lambda x: x.lower(), Campaign_list["Email"])
+
         if "FirstName" in headers and "LastName" in headers:
             Campaign_list["FirstName"] = map(lambda x: x.title(), Campaign_list["FirstName"])
             Campaign_list["LastName"] = map(lambda x: x.title(), Campaign_list["LastName"])
