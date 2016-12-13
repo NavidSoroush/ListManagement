@@ -171,7 +171,7 @@ def searchone(path, listType=None, review_path=None):
             headers = Campaign_list.columns.values
         else:
             print "Advisor name or account information missing"
-
+    print Campaign_list.head()
     #Search through the 3 fields we want to try to match by       
     searchfields = ['AMPFMBRID','Email','LkupName']
     returnFields=['AccountId','SourceChannel','Needs Info Updated?','ContactID', 'CRDNumber','BizDev Group']

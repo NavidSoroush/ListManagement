@@ -10,14 +10,14 @@ import pandas as pd
 finra_site = 'http://brokercheck.finra.org/Individual/Summary/'
 chromedriver = "C:/Python27/selenium/Chrome/chromedriver"
 os.environ["webdriver.chrome.driver"] = chromedriver
-elements = ['col-md-3']
+elements = ['.md-body-1.ng-binding.flex-gt-xs-80']
 
 
 ##path='C:/Users/rschools/Desktop/CRD_Test.xlsx'
 
 def licenseSearch(path, attempted_search_count=0, attempts=0):
     '''
-
+<div class="md-body-1 ng-binding flex-gt-xs-80" flex-gt-xs="80">Series 65 - Uniform Investment Adviser Law Examination</div>
     :param path: file path for list of advisors to scrape FINRA licenses
     :param attempted_search_count:
     :param attempts:
@@ -33,16 +33,15 @@ def licenseSearch(path, attempted_search_count=0, attempts=0):
             if attempts < 2:
                 try:
                     crd = df['CRDNumber'][attempted_search_count]
-
                     url = finra_site + str(crd)
                     sel.get(url)
                     lic = []
-
-                    license_code = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, elements[0])))
-                    reg_info = sel.find_elements_by_class_name(elements[0])
+                    wait
+                    reg_info = sel.find_elements_by_css_selector(elements[0])
                     for reg in reg_info:
                         if reg.text[:6] == 'Series':
-                            lic.append(int(reg.text[7:]))
+                            split=reg.text.split()
+                            lic.append(int(split[1]))
                     lic.sort()
                     lic = ['Series {0}'.format(l) for l in lic]
                     df.loc[attempted_search_count, ['Licenses']] = ';'.join(lic)

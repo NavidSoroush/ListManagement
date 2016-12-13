@@ -6,6 +6,7 @@ def copy_toBulkProcessing(srcPath):
     move file from original location to directory for bulk processing.
     :param srcPath: orignal file location
     :return: N/A
+    '\\sc12-fsphl-01\BulkImports\'
     '''
     print '\nStep 10. Dropping in bulk processing path.'
     destPath='//sc12-fsphl-01/BulkImports/'
