@@ -183,7 +183,7 @@ def last_list_uploaded(objId, obj, success=False, attempts=0, s=0):
         if obj == 'Account':
             session.update('Account', ['Last_Rep_List_Upload__c'], [items])
         elif obj == 'BizDev Group':
-            session.update('BizDev_Group__c', ['Last_Rep_List_Upload__c'], [items])
+            session.update('BizDev_Group__c', ['Last_Upload_Date__c'], [items])
         success = True
         print "Successfully updated the last list uploaded field on the %s's page." % obj
     except Exception, e:

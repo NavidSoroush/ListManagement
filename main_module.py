@@ -93,8 +93,8 @@ if __name__ == "__main__":
                                               var_list['ObjectId'],
                                               var_list['Object']))
                 if var_list['Move To Bulk']:
-                    # copy_toBulkProcessing(var_list['Update Path'])
-                    print 'Would move to bulk processing.'
+                    copy_toBulkProcessing(var_list['Update Path'])
+
                 else:
                     print strings_to_print[2]
 
