@@ -80,6 +80,7 @@ def find_chrome_driver_location(filename='chromedriver'):
     path = os.path.join(os.path.dirname(sys._getframe(1).f_code.co_filename), filename) + '/'
     return path
 
+
 class finraScraping:
     def __init__(self):
         self._chrome_driver = "C:/Python27/selenium/Chrome/chromedriver"
@@ -315,9 +316,10 @@ class finraScraping:
         :param path: file path name to excel file that will be searched.
         :return: updated self
         '''
-        self._url = 'http://brokercheck.finra.org/Individual/Summary/'
-        self._elements = ['col-md-3']
+        self._url = 'https://brokercheck.finra.org/individual/summary/'
+        self._elements = ['md-body-1 ng-binding flex-gt-xs-80']
         self._search_list = read_excel(path)
+        self._search_list['Licenses'] = ''
         self.__init_selenium_components()
         return self
 
@@ -328,7 +330,9 @@ class finraScraping:
         cleans the FINRA scraped licenses so that format is SFDC compatible.
         :return: updated self
         '''
-        self._search_list[self._attempted_search_count, ['Licenses']] = ';'.join(self._licenses)
+        print self._search_list
+        print self._licenses
+        self._search_list.ix[self._attempted_search_count, 'Licenses'] = ';'.join(self._licenses)
         self._attempted_search_count += 1
         del self._licenses
         return self
@@ -350,17 +354,18 @@ class finraScraping:
         actual guts of the FINRA license search.
         :return: n/a
         '''
+        element = self._elements[0]
         while self._attempted_search_count < len(self._search_list['CRDNumber']):
             if self._search_list['CRDNumber'][self._attempted_search_count] != '':
                 if self._attempts < 2:
                     try:
                         crd = self._search_list['CRDNumber'][self._attempted_search_count]
-                        url = self._finra_site + str(crd)
+                        url = self._license_site + str(crd)
                         self._sel.get(url)
 
                         self._licenses = []
-                        self._wait.until(EC.visibility_of_element_located((By.CLASS_NAME, self._elements[0])))
-                        reg_info = self._sel.find_elements_by_class_name(self._elements[0])
+                        self._wait.until(EC.visibility_of_element_located((By.CLASS_NAME, element)))
+                        reg_info = self._sel.find_elements_by_class_name(element)
                         for reg in reg_info:
                             if reg.text[:6] == 'Series':
                                 self._licenses.append(int(reg.text[7:]))
@@ -516,7 +521,7 @@ class finraScraping:
         self.__advisor_crd_search()
         # need to build out actual search method for this.
 
-# if __name__ == '__main__':
+    # if __name__ == '__main__':
 
     # how to create a variable to interact with the
     # FINRA scraping object.
