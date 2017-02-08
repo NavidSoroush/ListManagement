@@ -330,8 +330,6 @@ class finraScraping:
         cleans the FINRA scraped licenses so that format is SFDC compatible.
         :return: updated self
         '''
-        print self._search_list
-        print self._licenses
         self._search_list.ix[self._attempted_search_count, 'Licenses'] = ';'.join(self._licenses)
         self._attempted_search_count += 1
         del self._licenses
