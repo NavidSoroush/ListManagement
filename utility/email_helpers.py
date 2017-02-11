@@ -1,4 +1,4 @@
-import email_handler
+import email
 import time
 import datetime
 import base64
@@ -6,6 +6,7 @@ import imaplib
 import sys
 from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 from sf.sf_wrapper import SFPlatform
+from email_handler.email_wrapper import Email
 
 sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token)
 _objects = ['Campaign', 'BizDev Group', 'Account']
@@ -32,8 +33,8 @@ def get_msg_part(msg_part, array):
     :param array: items to parse
     :return: decoded text of email_handler message
     """
-    msg = email_handler.message_from_string(array[1])
-    decode = email_handler.Header.decode_header(msg[msg_part])[0]
+    msg = email.message_from_string(array[1])
+    decode = email.Header.decode_header(msg[msg_part])[0]
     tmp = unicode(decode[0], 'utf-8')
     return tmp
 
@@ -90,7 +91,7 @@ def decode_mailitem(mail_data):
     :param mail_data: coded mail body text (required)
     :return: decoded body text
     """
-    msg = email_handler.message_from_string(mail_data)
+    msg = email.message_from_string(mail_data)
     encodedBody = body_parse(msg, _list_notification_elements[0])
     body = msg.get_payload()
     decodedBody = base64.b64decode(body)
@@ -197,29 +198,32 @@ def process_list_email(email_data, m):
     sender_name = email_parser(sent_from, ' <')
     sent_from = email_parser(sent_from, '<', '>')
 
-    obj_rec__name = info_parser(decoded_body, _list_notification_elements[1],
-                                _list_notification_elements[2])
+    obj_rec_name = info_parser(decoded_body, _list_notification_elements[1],
+                               _list_notification_elements[2])
     obj_rec_link = info_parser(decoded_body, _list_notification_elements[3],
                                _list_notification_elements[4])
 
-    att_link = info_parser(decoded_body, _list_notification_elements[4])
+    att_link = info_parser(decoded_body, _list_notification_elements[4])[-20:-2]
 
     if obj == 'Campaign':
         obj_rec_link = obj_rec_link[-18:]
     elif obj == 'BizDev Group':
         obj_rec_link = info_parser(decoded_body, _list_notification_elements[5],
                                    _list_notification_elements[4])
-        obj_rec_link = obj_rec_link[39:58]
+
+        obj_rec_link = obj_rec_link[26:44]
     else:
-        obj_rec_link = obj_rec_link[39:58]
-    file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(id=[att_link[:18]], obj=obj,
+        obj_rec_link = obj_rec_link[26:44]
+
+    file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=[att_link], obj=obj,
                                                                                  obj_url=obj_rec_link)
 
     try:
-        print('move this to somewhere else.')
-        # newListReceived_notifyOriginator(sent_from, sender_name,
-        #                                  obj_rec__name, obj)
-        # newListReceived_notifyListMGMT(sender_name, cmpgnName, cmpLink, obj)
+        _subject = "LMA Notification: %s list received." % obj_rec_name
+        _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \
+                'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
+                                                                                               obj_rec_name)
+        Email(subject=_subject, to=sent_from, body=_body)
     except:
         pass
     m.copy(num, 'INBOX/Auto Processed Lists')
@@ -227,7 +231,7 @@ def process_list_email(email_data, m):
     m.expunge()
     ts = time.time()
     pstart = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-    Items = [ReturnDict('Object', obj), ReturnDict('Record Name', obj_rec__name),
+    Items = [ReturnDict('Object', obj), ReturnDict('Record Name', obj_rec_name),
              ReturnDict('Sender Email', sent_from), ReturnDict('Sender Name', sender_name),
              ReturnDict('Received Date', rec_date), ReturnDict('File Path', file_path),
              ReturnDict('Campaign Start Date', start_date), ReturnDict('Next Step', 'Pre-processing'),

@@ -10,7 +10,7 @@ class HeaderPredictions:
         self.brain = 'T:/Shared/FS2 Business Operations/Python Search Program/Training Data/Headers_Train.xlsx'
         self.predict_path = predict_path
         self.obj = obj
-        self.vectorizer = self._init_vecotrizer()
+        self.vectorizer = self._init_vectorizer()
         self.features, self.train_class = self.data_preprocessing()
         self.classifier = self._init_and_train_classifier()
         self.predict_file_name, self.p_df, self.p_headers, self.p_features = self._init_predict_meta_data()
@@ -18,10 +18,10 @@ class HeaderPredictions:
 
     def data_preprocessing(self):
         train_df = read_df(self.brain)
-        train_df.rename(columns={'Header Value': 'headers'})
+        train_df.rename(columns={'Header Value': 'headers'}, inplace=True)
         headers = train_df['headers'].str.lower()
         train_class = train_df['Class']
-        features = self.create_training_features(headers)
+        features = self.create_training_features(headers.values)
         return features, train_class
 
     def _init_vectorizer(self):

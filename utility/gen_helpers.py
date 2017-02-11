@@ -1,6 +1,7 @@
 import os
 import re
 import parser
+import time
 import datetime
 import shutil
 import errno
@@ -14,7 +15,7 @@ userPhone = userPhone
 user = os.environ.get("USERNAME")
 today = datetime.datetime.strftime(datetime.datetime.now(), '%m_%d_%Y')
 m_d_y = format(datetime.datetime.now(), '%m-%d-%y')
-time_now = datetime.datetime.fromtimestamp(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S')
+time_now = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 yyyy_mm = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m')
 _accepted_cols = [
     'CRDNumber', 'FirstName', 'LastName', 'AccountId'
@@ -115,7 +116,7 @@ def create_dir_move_file(path):
     '''
     og_path = path[0]
     name = split_name(path[0])
-    ext_len = determine_ext(name)
+    ext_len, file_ext = determine_ext(name)
     new_path = og_path[:-int(ext_len)]
     if not os.path.isdir(new_path):
         try:

@@ -19,8 +19,10 @@ class SFPlatform:
         self.session.logout()
         SQLForce.SQLForceServer.killServer()
 
-    def download_attachments(self, id, obj, obj_url):
-        attachment = AttachmentReader.exportByAttachmentIds(self.session, id, self._save_dir, createSubDirs=False)
+    def download_attachments(self, att_id, obj, obj_url):
+        attachment = AttachmentReader.exportByAttachmentIds(session=self.session, attachmentIds=att_id,
+                                                            outputDir=self._save_dir, createSubDirs=False)
+        print(att_id)
 
         e_date = None
         pre_or_post = None
@@ -49,7 +51,6 @@ class SFPlatform:
     def last_list_uploaded(self, obj_id, obj, success=False):
         from datetime import datetime
         today = datetime.utcnow().isoformat()
-        print "Instantiating SFDC session for %s's Last Rep List Upload Updated." % obj
         items = [obj_id, today]
         for i in items:
             print '%s: %s' % (i, type(i))
