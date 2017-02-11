@@ -25,8 +25,9 @@ _accepted_cols = [
 _necessary_cols = _accepted_cols[:8]
 _bdg_accepted_cols = ['ContactID', 'BizDev Group', 'Licenses']
 _cmp_accepted_cols = ['ContactID', 'CampaignId', 'Status']
-_new_path_names = ['_nocrd.xlsx', '_finrasec_found.xlsx', '_FINRA_ambiguous.xlsx',
-                   '_review_contacts.xlsx', '_foundcontacts.xlsx']
+_new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
+                   '_review_contacts', '_foundcontacts', 'cmp_to_create',
+                   'cmp_upload', 'no_updates', 'to_update', 'to_create', 'bdg_update']
 
 
 def split_dir_name(full_path):
@@ -263,7 +264,7 @@ def create_path_name(path, new_name):
         raise TypeError('%s is not valid. Must be in %s.' % (new_name, ', '.join(_new_path_names)))
     name = split_dir_name(path)
     root = path[:len(path) - len(name)]
-    name = name[:-5] + new_name
+    name = name[:-5] + new_name + '.xlsx'
     return root + name
 
 
@@ -303,7 +304,3 @@ def timedelta_to_processing_str(duration):
     minutes = (seconds % 3600) // 60
     seconds = (seconds % 60)
     return '{} days {} hours {} minutes {} seconds'.format(days, hours, minutes, seconds)
-
-
-
-

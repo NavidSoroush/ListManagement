@@ -45,3 +45,24 @@ class SFPlatform:
         attachment = create_dir_move_file(path=attachment)
         print('Successfully downloaded file from SF here:\n   - %s' % attachment)
         return attachment, e_date, pre_or_post, account_name, account_id
+
+    def last_list_uploaded(self, obj_id, obj, success=False):
+        from datetime import datetime
+        today = datetime.utcnow().isoformat()
+        print "Instantiating SFDC session for %s's Last Rep List Upload Updated." % obj
+        items = [obj_id, today]
+        for i in items:
+            print '%s: %s' % (i, type(i))
+        try:
+            if obj == 'Account':
+                self.session.update('Account', ['Last_Rep_List_Upload__c'], [items])
+            elif obj == 'BizDev Group':
+                self.session.update('BizDev_Group__c', ['Last_Upload_Date__c'], [items])
+            success = True
+            print "Successfully updated the last list uploaded field on the %s's page." % obj
+        except Exception, e:
+            print Exception, e
+            success = False
+
+        finally:
+            return success

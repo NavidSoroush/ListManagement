@@ -4,6 +4,78 @@ from email_handler.email_wrapper import Email
 from pandas_helper import read_df, save_df, determine_num_records
 
 
+def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
+    """
+    parses the list into new files based on the current biz dev, campaign, or account list.
+    :param path: path to original list of advisors
+    :param l_type: SFDC object (campaign or biz dev group)
+    :param pre_or_post: if object is Campaign, pre or post
+    :return: updated dictionary values for the main_module list processing.
+    """
+    dict_elements = {
+        'cmp_upload': None, 'to_create': None, 'to_update': None, 'bdg_update': None,
+        'no_update': None, 'n_cmp_upload': 0, 'n_to_create': 0, 'n_to_update': 0, 'n_bdg_update': 0,
+        'n_no_update': 0, 'cmp_status': None, 'no_update_path': None, 'update_path': None,
+        'to_create_path': None, 'cmp_upload_path': None, 'bdg_update_path': None, 'Next Step': 'Data prep.'
+    }
+    df = read_df(path=path)
+
+    if l_type == 'Campaign':
+        if pre_or_post == 'Post':
+            dict_elements['cmp_status'] = 'Needs Follow-Up'
+        else:
+            dict_elements['cmp_status'] = 'Invited'
+
+        dict_elements['to_create_path'] = create_path_name(path, 'cmp_to_create')
+        dict_elements['cmp_upload_path'] = create_path_name(path, 'cmp_upload')
+
+        cmp_upload_df = df[df['AccountId'].notnull()]
+        to_create_df = df[df['AccountId'].isnull()]
+
+        dict_elements['n_cmp_upload'] = len(cmp_upload_df.index)
+        dict_elements['n_to_create'] = len(to_create_df.index)
+        cmp_upload_df['Status'] = dict_elements['cmp_status']
+
+        save_df(df=cmp_upload_df, path=dict_elements['cmp_upload_path'])
+        save_df(df=to_create_df, path=dict_elements['to_create_path'])
+
+    elif l_type == 'Account':
+        dict_elements['no_update_path'] = create_path_name(path, 'no_updates')
+        dict_elements['update_path'] = create_path_name(path, 'to_update')
+
+        no_update_df = df[df['Needs Info Updated?'] == 'N']
+        to_update_df = df[df['Needs Info Updated?'] != 'N']
+
+        dict_elements['n_no_update'] = len(no_update_df.index)
+        dict_elements['n_to_update'] = len(to_update_df.index)
+
+        save_df(df=no_update_df, path=dict_elements['no_update_path'])
+        save_df(df=to_update_df, path=dict_elements['update_path'])
+
+    elif l_type == 'BizDev Group':
+        dict_elements['no_update_path'] = create_path_name(path=path, new_name='no_updates')
+        dict_elements['update_path'] = create_path_name(path=path, new_name='to_updates')
+        dict_elements['to_create_path'] = create_path_name(path=path, new_name='to_create')
+        dict_elements['bdg_update_path'] = create_path_name(path=path, new_name='bdg_update')
+
+        no_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] == 'N')]
+        to_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] != 'N')]
+        to_create_df = df[df['AccountId'].isnull()]
+        bdg_update_df = df[(df['AccountId'].notnull()) & (df['Licenses'].str.contains('Series 7|Series 22'))]
+
+        dict_elements['n_no_update'] = len(no_update_df.index)
+        dict_elements['n_to_update'] = len(to_update_df.index)
+        dict_elements['n_to_create'] = len(to_create_df.index)
+        dict_elements['n_bdg_update'] = len(bdg_update_df.index)
+
+        save_df(df=no_update_df, path=dict_elements['no_update_path'])
+        save_df(df=to_update_df, path=dict_elements['update_path'])
+        save_df(df=to_create_df, path=dict_elements['to_create_path'])
+        save_df(df=bdg_update_df, path=dict_elements['bdg_update_path'])
+
+    return dict_elements
+
+
 def source_channel(path, record_name, obj_id, obj, aid=None):
     '''
     prepares the list for SFDC /upload and contact creation.
@@ -100,15 +172,15 @@ def extract_dictionary_values(dict_data):
     :return: stats for record keeping
     '''
     if dict_data['Object'] == 'Campaign':
-        to_update = dict_data['Num Campaign Upload']
-        to_create = dict_data['Num to Create Cmp']
+        to_update = dict_data['n_cmp_upload']
+        to_create = dict_data['n_to_create']
         obj_to_add = dict_data['Num Adding']
         obj_to_remove = dict_data['Num Removing']
         obj_to_update = dict_data['Num Updating/Staying']
 
     else:
-        to_update = dict_data['Num To Update']
-        to_create = dict_data['Create']
+        to_update = dict_data['n_to_update']
+        to_create = dict_data['n_to_create']
         obj_to_add = dict_data['Num Adding']
         obj_to_remove = dict_data['Num Removing']
         obj_to_update = dict_data['Num Updating/Staying']
@@ -147,7 +219,7 @@ def extract_dictionary_values(dict_data):
     processing_string = timedelta_to_processing_str(processing_time)
     obj_name = dict_data['Record Name']
     obj = dict_data['Object']
-    num_not_updating = dict_data['Num Not Updating']
+    num_not_updating = dict_data['n_no_update']
     sender_name = dict_data['Sender Name']
     sender_email = dict_data['Sender Email']
     match_rate = (num_found_in_sfdc + to_create) / float(total)

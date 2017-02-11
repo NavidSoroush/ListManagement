@@ -2,7 +2,12 @@ import email_handler
 import time
 import datetime
 import base64
+import imaplib
+import sys
+from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
+from sf.sf_wrapper import SFPlatform
 
+sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token)
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [
     'An upload list has been added'
@@ -101,11 +106,79 @@ def body_parse(message, s_string):
     return mailBody
 
 
-def process_list_email(email_data, M):
+def check_for_new_lists():
+    '''
+    Instantiates the Mailbox object. Receives the list data from
+    process_mailbox and returns it to the main_module.
+
+    :return: dictionary of data used to guide list processing
+    '''
+    _email_account = outlook_userEmail + '/Lists'
+    _email_folder = 'INBOX/Auto Lists From SFDC/'
+
+    m = imaplib.IMAP4_SSL('outlook.office365.com')
+    try:
+        rv, data = m.login(_email_account, password)
+    except imaplib.IMAP4.error:
+        print "LOGIN FAILED!!! "
+        sys.exit(1)
+
+    print 'Mailbox: ', rv, data
+
+    rv, data = m.select(_email_folder)
+    if rv == 'OK':
+        print "\nStep 1:\nLooking for list uploads."
+        var_list = process_mailbox(m)
+
+        if not lists_in_queue(var_list):
+            var_list.update(close_mailbox_connection(m))
+
+        else:
+            print 'There are %s lists to process.' % var_list['Lists_In_Queue']
+            var_list.update({'Mailbox': m})
+
+        return var_list
+    else:
+        print "ERROR: Unable to open mailbox ", rv
+
+
+def process_mailbox(m, list_queue=[]):
+    '''
+    Process mail identifies new list requests and returns
+    the data to the main_module so all can be properly processed.
+
+    :param m: Mailbox object
+    :param list_queue: stores email data for all pending lists
+    :return: dictionary of data used to guide list processing
+    '''
+    rv, data = m.search(None, "ALL")
+    if rv != 'OK':
+        print "No messages found!"
+        return
+
+    for num in data[0].split():
+        rv, data = m.fetch(num, '(RFC822)')
+        if rv != 'OK':
+            print "ERROR getting message", num
+            return
+        else:
+            subject = get_msg_part('Subject', data[0])
+            if _list_notification_elements[0] in subject:
+                decoded = decode_mailitem(data[0][1])
+                list_queue.append([data[0], decoded, num])
+
+    items = {'Lists_In_Queue': len(list_queue),
+             'Num_Processed': 0,
+             'Lists_Data': list_queue}
+
+    return items
+
+
+def process_list_email(email_data, m):
     """
     creates initial meta data required for list processing.
     :param email_data: email_handler string
-    :param M: mailbox object
+    :param m: mailbox object
     :return: dictionary of values needed for list processing.
     """
     data = email_data[0]
@@ -126,22 +199,21 @@ def process_list_email(email_data, M):
 
     obj_rec__name = info_parser(decoded_body, _list_notification_elements[1],
                                 _list_notification_elements[2])
-    obj_rec__link = info_parser(decoded_body, _list_notification_elements[3],
-                                _list_notification_elements[4])
+    obj_rec_link = info_parser(decoded_body, _list_notification_elements[3],
+                               _list_notification_elements[4])
 
-    attLink = info_parser(decoded_body, _list_notification_elements[4])
+    att_link = info_parser(decoded_body, _list_notification_elements[4])
 
     if obj == 'Campaign':
-        obj_rec__link = obj_rec__link[-18:]
+        obj_rec_link = obj_rec_link[-18:]
     elif obj == 'BizDev Group':
-        obj_rec__link = info_parser(decoded_body, _list_notification_elements[5],
-                                    _list_notification_elements[4])
-        obj_rec__link = obj_rec__link[39:58]
+        obj_rec_link = info_parser(decoded_body, _list_notification_elements[5],
+                                   _list_notification_elements[4])
+        obj_rec_link = obj_rec_link[39:58]
     else:
-        obj_rec__link = obj_rec__link[39:58]
-    filePath, startDate, pre_orPost, aName, aID = list_download([attLink[:18]],
-                                                                obj,
-                                                                obj_rec__link)
+        obj_rec_link = obj_rec_link[39:58]
+    file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(id=[att_link[:18]], obj=obj,
+                                                                                 obj_url=obj_rec_link)
 
     try:
         print('move this to somewhere else.')
@@ -150,20 +222,21 @@ def process_list_email(email_data, M):
         # newListReceived_notifyListMGMT(sender_name, cmpgnName, cmpLink, obj)
     except:
         pass
-    M.copy(num, 'INBOX/Auto Processed Lists')
-    M.store(num, '+FLAGS', r'(\Deleted)')
-    M.expunge()
+    m.copy(num, 'INBOX/Auto Processed Lists')
+    m.store(num, '+FLAGS', r'(\Deleted)')
+    m.expunge()
     ts = time.time()
     pstart = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
     Items = [ReturnDict('Object', obj), ReturnDict('Record Name', obj_rec__name),
              ReturnDict('Sender Email', sent_from), ReturnDict('Sender Name', sender_name),
-             ReturnDict('Received Date', rec_date), ReturnDict('File Path', filePath),
-             ReturnDict('Campaign Start Date', startDate), ReturnDict('Next Step', 'Pre-processing'),
-             ReturnDict('Found Path', None), ReturnDict('ObjectId', obj_rec__link),
-             ReturnDict('Pre_or_Post', pre_orPost), ReturnDict('processStart', pstart),
-             ReturnDict('CmpAccountName', aName), ReturnDict('CmpAccountID', aID),
+             ReturnDict('Received Date', rec_date), ReturnDict('File Path', file_path),
+             ReturnDict('Campaign Start Date', start_date), ReturnDict('Next Step', 'Pre-processing'),
+             ReturnDict('Found Path', None), ReturnDict('ObjectId', obj_rec_link),
+             ReturnDict('Pre_or_Post', pre_or_post), ReturnDict('processStart', pstart),
+             ReturnDict('CmpAccountName', a_name), ReturnDict('CmpAccountID', a_id),
              ReturnDict('Found in SFDC Search #2', 0), ReturnDict('Num Adding', 0),
-             ReturnDict('Num Removing', 0), ReturnDict('Num Updating/Staying', 0)]
+             ReturnDict('Num Removing', 0), ReturnDict('Num Updating/Staying', 0),
+             ReturnDict('SFDC Session', sfdc)]
     ret_items = dict([(i.item, i.emailVar) for i in Items])
     return ret_items
 
@@ -238,4 +311,3 @@ def craft_notification_email(items):
                                                 items[16], items[17],
                                                 items[18])
     return body
-
