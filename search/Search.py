@@ -236,10 +236,10 @@ class Search:
 
         if 'CRD Provided by List' in self._headers and not self._to_finra:
             self._contacts_to_review = self._contacts_to_review.append(self._search_list, ignore_index=True)
-            self._review_path = create_path_name(path=searching_list_path, new_name='_review_contacts.xlsx')
+            self._review_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
             save_df(df=self._contacts_to_review, path=self._review_path)
 
-        self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts.xlsx')
+        self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
         save_df(df=self._found_contacts, path=self._found_contact_path)
         save_df(df=self._search_list, path=searching_list_path)
 

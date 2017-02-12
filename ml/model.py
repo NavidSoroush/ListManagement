@@ -1,8 +1,9 @@
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.ensemble import RandomForestClassifier
 from utility.pandas_helper import read_df
-from utility.gen_helpers import path_leaf
+from utility.gen_helpers import path_leaf, lower_head_values
 import numpy as np
+import sys
 
 
 class HeaderPredictions:
@@ -19,9 +20,10 @@ class HeaderPredictions:
     def data_preprocessing(self):
         train_df = read_df(self.brain)
         train_df.rename(columns={'Header Value': 'headers'}, inplace=True)
-        headers = train_df['headers'].str.lower()
+        train_df.dropna(axis=0, inplace=True)
+        headers = lower_head_values(train_df['headers'])
         train_class = train_df['Class']
-        features = self.create_training_features(headers.values)
+        features = self.create_training_features(headers)
         return features, train_class
 
     def _init_vectorizer(self):
@@ -43,7 +45,7 @@ class HeaderPredictions:
     def _init_predict_meta_data(self):
         predict_file_name = path_leaf(self.predict_path)
         predict_df = read_df(self.predict_path)
-        headers = map(str.lower, predict_df.columns.values)
+        headers = lower_head_values(predict_df.columns.values)
         p_features = self.create_training_features(headers, t_type='predict')
         return predict_file_name, predict_df, headers, p_features
 

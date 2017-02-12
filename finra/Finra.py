@@ -4,8 +4,8 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from utility.finra_helpers import strip_unicode_chars  # , find_chrome_driver_location
+from selenium.webdriver.support import expected_conditions as ec
+from utility.finra_helpers import strip_unicode_chars
 from utility.gen_helpers import create_path_name
 from utility.pandas_helper import read_df, save_df
 
@@ -13,7 +13,6 @@ from utility.pandas_helper import read_df, save_df
 class FinraScraping:
     def __init__(self):
         self._chrome_driver = "C:/Python27/selenium/Chrome/chromedriver"
-        # self._chrome_driver = find_chrome_driver_location()
         os.environ["webdriver.chrome.driver"] = self._chrome_driver
         self._finra_site = 'http://www.finra.org/'
         self._elements = ['finra_pc_search_box', 's4_item-field', 's4_suggestion']
@@ -59,9 +58,9 @@ class FinraScraping:
         :param path: string file path
         :return: self
         '''
-        self._finra_sec_found_path = create_path_name(path=path, new_name='_finrasec_found.xlsx')
-        self._no_crd_fname = create_path_name(path, new_name='_nocrd.xlsx')
-        self._uncertain_path = create_path_name(path, new_name='_FINRA_ambiguous.xlsx')
+        self._finra_sec_found_path = create_path_name(path=path, new_name='_finrasec_found')
+        self._no_crd_fname = create_path_name(path, new_name='_nocrd')
+        self._uncertain_path = create_path_name(path, new_name='_FINRA_ambiguous')
         return self
 
     def __data_preparations(self):
@@ -117,7 +116,7 @@ class FinraScraping:
                     search_bar = self._sel.find_element_by_id(self._elements[0])
                     search_bar.send_keys(self._to_be_searched[self._attempted_search_count])
                     try:
-                        code = self._wait.until(EC.visibility_of_element_located((By.CLASS_NAME,
+                        code = self._wait.until(ec.visibility_of_element_located((By.CLASS_NAME,
                                                                                   self._elements[1])))
                         s_text = code.text.split()
                         suggestion_code = self._sel.page_source

@@ -1,7 +1,7 @@
 from utility.pandas_helper import read_df, make_df, save_df, concat_dfs
 from ml.model import HeaderPredictions
 
-_confidence = .97
+_confidence = .99
 
 
 def predict_headers_and_pre_processing(path, obj):
@@ -10,7 +10,6 @@ def predict_headers_and_pre_processing(path, obj):
     output = make_df(data={"1. Header": model.p_headers, "3. Prediction": model.predictions})
 
     expected_inputs = model.train_class.unique().sort()
-    expected_inputs.sort()
 
     need_validation = output[['1. Header', '3. Prediction']]
     need_validation = need_validation.rename(columns={'1. Header': 'Header Value', '3. Prediction': 'Class'})
@@ -25,8 +24,8 @@ def predict_headers_and_pre_processing(path, obj):
         else:
             print("Header given: '%s'"
                   "\nMy prediction: '%s'"
-                  "\nConfidence: %s." % (str(row['Header Value']), str(row['Class']),
-                                         "{0:.0f}%".format(model.probability[index] * 100)))
+                  "\nMy confidence: %s." % (str(row['Header Value']), str(row['Class']),
+                                            "{0:.0f}%".format(model.probability[index] * 100)))
             was_i_right = ""
             while was_i_right.lower not in ('y', 'n'):
                 was_i_right = raw_input("Was I right? Please just put 'Y' or 'N'.\n")

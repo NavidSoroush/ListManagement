@@ -1,7 +1,6 @@
 # should be able to access all objects
 # should be able to delete, update, create records in sfdc
 # should be able to identify current members of a campaign
-
 import SQLForce
 from SQLForce import AttachmentReader
 from utility.gen_helpers import convert_unicode_to_date, create_dir_move_file
@@ -9,8 +8,9 @@ from utility.gen_helpers import convert_unicode_to_date, create_dir_move_file
 
 class SFPlatform:
     def __init__(self, user, pw, token):
-        self.session = self._auth(user, pw, token)
         self._save_dir = 'T:/Shared/FS2 Business Operations/Python Search Program/New Lists/'
+        self._custom_domain = 'fsinvestments.my.salesforce.com:'
+        self.session = self._auth(user, pw, token)
 
     def _auth(self, user, pw, token, instance='Production'):
         return SQLForce.Session(instance, user, pw, token)
@@ -22,7 +22,6 @@ class SFPlatform:
     def download_attachments(self, att_id, obj, obj_url):
         attachment = AttachmentReader.exportByAttachmentIds(session=self.session, attachmentIds=att_id,
                                                             outputDir=self._save_dir, createSubDirs=False)
-        print(att_id)
 
         e_date = None
         pre_or_post = None

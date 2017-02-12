@@ -1,8 +1,8 @@
 from search.Search import Search
 from finra.Finra import FinraScraping
-from ml.header_predictions import HeaderPredictions
 from stats.record_stats import record_processing_stats
 from utility.gen_helpers import drop_in_bulk_processing
+from ml.header_predictions import predict_headers_and_pre_processing
 from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values
 from utility.email_helpers import check_for_new_lists, lists_in_queue, process_list_email, close_mailbox_connection
 
@@ -29,10 +29,11 @@ if lists_in_queue(var_list=var_list):
 
                 if var_list['Object'] != 'Account':
 
-                    var_list.update(HeaderPredictions(var_list['File Path'], var_list['CmpAccountName']))
+                    var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
+                                                                       var_list['CmpAccountName']))
 
                 else:
-                    var_list.update(HeaderPredictions(var_list['File Path'], var_list['Record Name']))
+                    var_list.update(predict_headers_and_pre_processing(var_list['File Path'], var_list['Record Name']))
 
                 var_list.update(s.perform_search_one(var_list['File Path'], var_list['Object']))
 
