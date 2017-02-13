@@ -40,7 +40,7 @@ if lists_in_queue(var_list=var_list):
                 if var_list['SFDC_Found'] < var_list['Total Records'] and \
                         var_list['FINRA?']:
 
-                    var_list.update(fin.crd_check(var_list['File Path'], var_list['Found Path']))
+                    var_list.update(fin.crd_check(path=var_list['File Path']))
                     if (var_list['SFDC_Found'] + var_list['FINRA_Found']) < var_list['Total Records']:
                         var_list.update(s.perform_sec_search(var_list['No CRD'], var_list['FINRA_SEC Found']))
 

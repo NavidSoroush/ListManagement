@@ -216,6 +216,7 @@ class Search:
                     else:
                         search_list.loc[index, "FirstName"] = names_left[0]
                         search_list.loc[index, "LastName"] = names_left[1]
+        print(search_list.head())
         return search_list
 
     def perform_search_one(self, searching_list_path, list_type):

@@ -113,6 +113,7 @@ class FinraScraping:
             try:
                 page_source = self._sel.page_source
                 if self._elements[0] in page_source:
+                    print("Can't find %s web element on this webpage: %s" % self._elements[0], self._finra_site)
                     search_bar = self._sel.find_element_by_id(self._elements[0])
                     search_bar.send_keys(self._to_be_searched[self._attempted_search_count])
                     try:
@@ -189,8 +190,8 @@ class FinraScraping:
         self.__save_outputs()
         return self
 
-    def __init_crd_metadata(self, path, url):
-        '''
+    def __init_crd_metadata(self, path):
+        """
         private method.
 
         initiates the metadata needed for list processing.
@@ -198,10 +199,7 @@ class FinraScraping:
         :param path: file path string - required.
         :param url: url to finra search site
         :return: updated self.
-        '''
-        if url != '':
-            self._finra_site = url
-
+        """
         self.__init_selenium_components()
 
         if path is not None:
@@ -210,7 +208,7 @@ class FinraScraping:
             self.__data_preparations()
         return self
 
-    def crd_check(self, path=None, url=''):
+    def crd_check(self, path=None):
         '''
         public method.
 
@@ -219,7 +217,7 @@ class FinraScraping:
         :param url: url to FINRA site -- optional
         :return: dictionary of stats and next steps
         '''
-        self.__init_crd_metadata(path, url)
+        self.__init_crd_metadata(path)
         self._sel.get(self._finra_site)
         print('Attempting to get CRDs from FINRA for %s names.' % len(self._to_be_searched))
 

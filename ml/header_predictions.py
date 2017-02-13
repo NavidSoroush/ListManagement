@@ -6,8 +6,9 @@ _confidence = .99
 
 def predict_headers_and_pre_processing(path, obj):
     model = HeaderPredictions(predict_path=path, obj=obj)
-    print("Here are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, model.p_headers))
-    output = make_df(data={"1. Header": model.p_headers, "3. Prediction": model.predictions})
+    headers = model.p_df.columns.values
+    print("Here are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, headers))
+    output = make_df(data={"1. Header": headers, "3. Prediction": model.predictions})
 
     expected_inputs = model.train_class.unique().sort()
 
@@ -17,10 +18,10 @@ def predict_headers_and_pre_processing(path, obj):
 
     new_headers = []
     for index, row in need_validation.iterrows():
-        if model.probability[index] >= _confidence:
-            tmp = (row['Header Value'], row['Class'])
+        if model.probability[index] > _confidence:
+            tmp = [row['Header Value'], row['Class']]
             new_headers.append(tmp)
-            model.p_df.rename(columns={model.p_headers[index]: new_headers[index][1]}, inplace=True)
+            model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
         else:
             print("Header given: '%s'"
                   "\nMy prediction: '%s'"
@@ -30,7 +31,7 @@ def predict_headers_and_pre_processing(path, obj):
             while was_i_right.lower not in ('y', 'n'):
                 was_i_right = raw_input("Was I right? Please just put 'Y' or 'N'.\n")
                 if was_i_right.lower() == 'y':
-                    tmp = (row['Header Value'], row['Class'])
+                    tmp = [row['Header Value'], row['Class']]
                     new_headers.append(tmp)
                     print("Thanks. Updating your file and my training data.\n")
                     break
@@ -40,7 +41,7 @@ def predict_headers_and_pre_processing(path, obj):
                         print("Can you tell me what it should have been?\n")
                         expected = raw_input("\n".join(expected_inputs) + '\n\n')
                         if expected in expected_inputs:
-                            tmp = (row['Header Value'], expected)
+                            tmp = [row['Header Value'], expected]
                             new_headers.append(tmp)
                             print("Thanks. Updating your file and my training data.\n")
                             break
@@ -50,7 +51,7 @@ def predict_headers_and_pre_processing(path, obj):
                 else:
                     print("I don't think you typed 'Y' or 'N', can you try again?")
 
-            model.p_df.rename(columns={model.p_headers[index]: new_headers[index][1]}, inplace=True)
+            model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
 
     model.p_df = pre_processing(df=model.p_df, obj=obj)
 
@@ -60,9 +61,8 @@ def predict_headers_and_pre_processing(path, obj):
     new_brain = concat_dfs(read_df(model.brain), new_data)
     save_df(new_brain, model.brain)
     save_df(df=model.p_df, path=path)
-    ret_item = {'Next Step': 'Matching', 'Total Records': num_records, 'Headers': model.p_df.columns.values}
 
-    return ret_item
+    return {'Next Step': 'Matching', 'Total Records': num_records, 'Headers': model.p_df.columns.values}
 
 
 def pre_processing(df, obj):
