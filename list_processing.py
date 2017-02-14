@@ -14,7 +14,6 @@ _dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox'
 s = Search()
 fin = FinraScraping()
 
-
 var_list = check_for_new_lists()
 
 if lists_in_queue(var_list=var_list):
@@ -45,19 +44,18 @@ if lists_in_queue(var_list=var_list):
                         var_list.update(s.perform_sec_search(var_list['No CRD'], var_list['FINRA_SEC Found']))
 
                     else:
-                        print _steps[0]
+                        print(_steps[0])
 
                     var_list.update(s.perform_search_two(var_list['FINRA_SEC Found'], var_list['Found Path'],
-                                                                var_list['Object']))
+                                                         var_list['Object']))
                 else:
-                    print _steps[1]
+                    print(_steps[1])
 
                 if var_list['Object'] == 'BizDev Group':
-
                     var_list.update(fin.license_check(var_list['Found Path']))
 
                 var_list.update(parse_list_based_on_type(var_list['Found Path'], var_list['Object'],
-                                                         var_list['Pre_or_Post'],var_list['ObjectId'],
+                                                         var_list['Pre_or_Post'], var_list['ObjectId'],
                                                          var_list['CmpAccountID']))
 
                 if var_list['Object'] == 'Campaign':
@@ -73,19 +71,20 @@ if lists_in_queue(var_list=var_list):
                         drop_in_bulk_processing(var_list['toCreate'])
 
                     else:
-                        print _steps[2]
+                        print(_steps[2])
 
                 elif var_list['Object'] == 'Account':
                     var_list['SFDC Session'].last_list_uploaded(var_list['ObjectId'], var_list['Object'])
                     var_list.update(source_channel(var_list['Update Path'],
-                                                  var_list['Record Name'],
-                                                  var_list['ObjectId'],
-                                                  var_list['Object']))
+                                                   var_list['Record Name'],
+                                                   var_list['ObjectId'],
+                                                   var_list['Object']))
                     if var_list['Move To Bulk']:
-                        drop_in_bulk_processing(var_list['Update Path'])
+                        # drop_in_bulk_processing(var_list['Update Path'])
+                        print('Would move to bulk processing')
 
                     else:
-                        print _steps[2]
+                        print(_steps[2])
 
                 elif var_list['Object'] == 'BizDev Group':
                     var_list['SFDC Session'].last_list_uploaded(var_list['ObjectId'], var_list['Object'])
@@ -104,8 +103,9 @@ if lists_in_queue(var_list=var_list):
                     var_list.update(extract_dictionary_values(var_list['BDG Update'], var_list['Object']))
 
                     if var_list['Move To Bulk']:
-                        drop_in_bulk_processing(var_list['toCreate'])
-                        drop_in_bulk_processing(var_list['Update Path'])
+                        print('Would move to bulk processing.')
+                        # drop_in_bulk_processing(var_list['toCreate'])
+                        # drop_in_bulk_processing(var_list['Update Path'])
                     else:
                         print _steps[2]
 
@@ -115,7 +115,7 @@ if lists_in_queue(var_list=var_list):
 
                 num_processed += 1
                 var_list.update({'Num_Processed': num})
-                print 'List #%s processed.' % var_list['Num_Processed']
+                print('List #%s processed.' % var_list['Num_Processed'])
                 for k, v in var_list.iteritems():
                     if k not in _dict_keys_to_keep:
                         var_list[k] = None

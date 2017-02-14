@@ -111,10 +111,10 @@ class FinraScraping:
         '''
         self.__init_crd_metadata(path=path)
         self._sel.get(self._finra_site)
-        print('Attempting to get CRDs from FINRA for %s names.' % len(self._to_be_searched))
+        print('\nAttempting to get CRDs from FINRA for %s names.' % len(self._to_be_searched))
 
         self.__crd_only_search_functionality()
-        print('Confidently found %s CRD numbers from FINRA search.' % self._found)
+        print('\nConfidently found %s CRD numbers from FINRA search.' % self._found)
 
         self.__data_output_prep()
 

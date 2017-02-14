@@ -23,6 +23,7 @@ class Search:
 
         self._today = today
         self._SFDC_advisor_list = read_df(_AdvListPath)
+        self.__preprocess_sfdc_list()
         self._search_fields = ['AMPFMBRID', 'Email', 'LkupName']
         self._return_fields = ['AccountId', 'SourceChannel', 'Needs Info Updated?',
                                'ContactID', 'CRDNumber', 'BizDev Group']
@@ -44,6 +45,11 @@ class Search:
         self._headers = self._search_list.columns.values
         self._keep_cols = [c for c in self._headers if c.lower() != 'unknown']
         return self
+
+    def __preprocess_sfdc_list(self):
+        _, i = np.unique(self._SFDC_advisor_list.columns, return_index=True)
+        self._SFDC_advisor_list = self._SFDC_advisor_list.iloc[:, i]
+        self._SFDC_advisor_list['CRDNumber'].astype(str)
 
     def __data_preprocessing(self, additional=False):
         search_list = self._search_list
@@ -76,7 +82,8 @@ class Search:
         joined_headers.append(header)
         for ret_field in self._return_fields:
             joined_headers.append(ret_field)
-        return joined_headers
+        s = set(joined_headers)
+        return list(s)
 
     def __create_meta_data(self, headers=None, search_two=False):
         if not search_two:
@@ -89,6 +96,7 @@ class Search:
                 self._search_list = search_list
                 self._contacts_to_review = to_review
             else:
+                self._search_list['CRDNumber'].astype(str)
                 found_contacts = self._found_contacts
                 search_list = self._search_list
                 found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''],
@@ -113,6 +121,7 @@ class Search:
                 print('Performing search #%s on %s' % (self._num_searches_performed, header))
                 self._joined_headers = self.__join_headers(header)
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
+
                 self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
                 self._search_list = self._search_list.fillna('')
                 self._num_searched_on = len(self._search_list)
@@ -132,7 +141,7 @@ class Search:
 
     def _crd_search(self, search_field=['CRDNumber']):
         self._return_fields = ['AccountId', 'SourceChannel',
-                               'Needs Info Updated?', 'ContactID']
+                               'Needs Info Updated?', 'ContactID', 'BizDev Group']
         self._search_list.fillna('')
         self.__search_and_merge(search_field)
         if self._search_list['CRDNumber'].count() == len(self._search_list):
@@ -265,7 +274,7 @@ class Search:
         self.__check_list_type()
         self.__data_preprocessing()
         print('\nStep 7:\nSearching against SFDC following FINRA/SEC searches.')
-        self.__search_and_merge(self._search_fields, search_two=True)
+        self.__search_and_merge(search_fields=self._search_fields, search_two=True)
         save_df(df=self._found_contacts, path=found_path)
         save_df(df=self._search_list, path=searching_list_path)
 
