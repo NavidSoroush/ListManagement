@@ -218,14 +218,12 @@ def process_list_email(email_data, m):
     file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=[att_link], obj=obj,
                                                                                  obj_url=obj_rec_link)
 
-    try:
-        _subject = "LMA Notification: %s list received." % obj_rec_name
-        _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \
-                'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
-                                                                                               obj_rec_name)
-        Email(subject=_subject, to=sent_from, body=_body)
-    except:
-        pass
+    _subject = "LMA Notification: %s list received." % obj_rec_name
+    _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \
+            'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
+                                                                                           obj_rec_name)
+    Email(subject=_subject, to=[sent_from], body=_body, attachment_path=None)
+
     m.copy(num, 'INBOX/Auto Processed Lists')
     m.store(num, '+FLAGS', r'(\Deleted)')
     m.expunge()

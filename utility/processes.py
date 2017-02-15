@@ -54,7 +54,7 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
 
     elif l_type == 'BizDev Group':
         dict_elements['no_update_path'] = create_path_name(path=path, new_name='no_updates')
-        dict_elements['update_path'] = create_path_name(path=path, new_name='to_updates')
+        dict_elements['update_path'] = create_path_name(path=path, new_name='to_update')
         dict_elements['to_create_path'] = create_path_name(path=path, new_name='to_create')
         dict_elements['bdg_update_path'] = create_path_name(path=path, new_name='bdg_update')
 
@@ -115,7 +115,7 @@ def source_channel(path, record_name, obj_id, obj, aid=None):
 
     elif obj == 'Campaign':
         sc_to_add = 'conference_' + record_name + '_' + yyyy_mm
-        if 'toCreate' in path:
+        if 'to_create_path' in path:
             list_df = drop_unneeded_columns(list_df, obj)
             to_create = 0
             list_df.loc[list_df['AccountId'].isnull(), 'AccountId'] = obj_id
@@ -128,12 +128,12 @@ def source_channel(path, record_name, obj_id, obj, aid=None):
 
     elif obj == 'BizDev Group':
         sc_to_add = 'bdg_' + record_name + '_' + yyyy_mm
-        if 'toCreate' in path:
+        if 'to_create_path' in path:
             list_df = drop_unneeded_columns(list_df, obj)
             to_create = len(list_df.index)
             list_df.loc[list_df['AccountId'].isnull(), 'AccountId'] = aid
             list_df.loc[list_df['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
-        elif 'bdgUpdate' in path:
+        elif 'bdg_update_path' in path:
             list_df = drop_unneeded_columns(list_df, obj, bdg=True)
             to_create = 0
             list_df['BizDev Group'] = obj_id

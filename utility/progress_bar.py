@@ -2,6 +2,8 @@ import sys
 
 
 def myprogressbar(batchsize, totalsize, barlength=25, message='', char="#"):
+    if totalsize == 0:
+        raise ZeroDivisionError('%s division by zero in denominator.' % type(totalsize))
     addtooutput = cmdorgui()
     percent = batchsize / float(totalsize)
     chars = char * int(round(percent * barlength))

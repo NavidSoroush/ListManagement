@@ -54,33 +54,32 @@ if lists_in_queue(var_list=var_list):
                 if var_list['Object'] == 'BizDev Group':
                     var_list.update(fin.license_check(var_list['Found Path']))
 
-                var_list.update(parse_list_based_on_type(var_list['Found Path'], var_list['Object'],
-                                                         var_list['Pre_or_Post'], var_list['ObjectId'],
-                                                         var_list['CmpAccountID']))
+                var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
+                                                         pre_or_post=var_list['Pre_or_Post']))
 
                 if var_list['Object'] == 'Campaign':
-                    var_list.update(source_channel(var_list['Campaign Upload'], var_list['Record Name'],
+                    var_list.update(source_channel(var_list['cmp_upload_path'], var_list['Record Name'],
                                                    var_list['ObjectId'], var_list['Object']))
 
-                    var_list.update(source_channel(var_list['toCreate'], var_list['Record Name'],
+                    var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
                                                    var_list['CmpAccountID'], var_list['Object']))
 
                     var_list.update(extract_dictionary_values(var_list['Campaign Upload'], var_list['Object']))
 
                     if var_list['Move To Bulk']:
-                        drop_in_bulk_processing(var_list['toCreate'])
+                        drop_in_bulk_processing(var_list['to_create_path'])
 
                     else:
                         print(_steps[2])
 
                 elif var_list['Object'] == 'Account':
                     var_list['SFDC Session'].last_list_uploaded(var_list['ObjectId'], var_list['Object'])
-                    var_list.update(source_channel(var_list['Update Path'],
+                    var_list.update(source_channel(var_list['update_path'],
                                                    var_list['Record Name'],
                                                    var_list['ObjectId'],
                                                    var_list['Object']))
                     if var_list['Move To Bulk']:
-                        # drop_in_bulk_processing(var_list['Update Path'])
+                        # drop_in_bulk_processing(var_list['update_path'])
                         print('Would move to bulk processing')
 
                     else:
@@ -88,24 +87,24 @@ if lists_in_queue(var_list=var_list):
 
                 elif var_list['Object'] == 'BizDev Group':
                     var_list['SFDC Session'].last_list_uploaded(var_list['ObjectId'], var_list['Object'])
-                    var_list.update(source_channel(var_list['Update Path'], var_list['Record Name'],
+                    var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
                                                    var_list['ObjectId'], var_list['Object'],
                                                    var_list['CmpAccountID']))
 
-                    var_list.update(source_channel(var_list['toCreate'], var_list['Record Name'],
+                    var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
                                                    var_list['ObjectId'], var_list['Object'],
                                                    var_list['CmpAccountID']))
 
-                    var_list.update(source_channel(var_list['BDG Update'], var_list['Record Name'],
+                    var_list.update(source_channel(var_list['bdg_update_path'], var_list['Record Name'],
                                                    var_list['ObjectId'], var_list['Object'],
                                                    var_list['CmpAccountID']))
 
-                    var_list.update(extract_dictionary_values(var_list['BDG Update'], var_list['Object']))
+                    var_list.update(extract_dictionary_values(dict_data=var_list))
 
                     if var_list['Move To Bulk']:
                         print('Would move to bulk processing.')
-                        # drop_in_bulk_processing(var_list['toCreate'])
-                        # drop_in_bulk_processing(var_list['Update Path'])
+                        # drop_in_bulk_processing(var_list['to_create_path'])
+                        # drop_in_bulk_processing(var_list['update_path'])
                     else:
                         print _steps[2]
 

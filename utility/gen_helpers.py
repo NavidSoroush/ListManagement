@@ -262,7 +262,7 @@ def create_path_name(path, new_name):
     :return: new file name
     """
     if new_name not in _new_path_names:
-        raise TypeError('%s is not valid. Must be in %s.' % (new_name, ', '.join(_new_path_names)))
+        raise TypeError("new_name of '%s' is not valid. Must be in %s." % (new_name, ', '.join(_new_path_names)))
     name = split_dir_name(path)
     root = path[:len(path) - len(name)]
     name = name[:-5] + new_name + '.xlsx'

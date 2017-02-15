@@ -96,7 +96,6 @@ class Search:
                 self._search_list = search_list
                 self._contacts_to_review = to_review
             else:
-                self._search_list['CRDNumber'].astype(str)
                 found_contacts = self._found_contacts
                 search_list = self._search_list
                 found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''],
@@ -125,7 +124,7 @@ class Search:
                 self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
                 self._search_list = self._search_list.fillna('')
                 self._num_searched_on = len(self._search_list)
-                self.__create_meta_data(self._headers)
+                self.__create_meta_data(self._headers, search_two=search_two)
                 self._num_remaining = len(self._search_list)
 
                 if search_two:
@@ -244,7 +243,7 @@ class Search:
         else:
             self.__search_and_merge(self._search_fields)
 
-        if 'CRD Provided by List' in self._headers and not self._to_finra:
+        if 'CRD Provided by List' in self._headers:
             self._contacts_to_review = self._contacts_to_review.append(self._search_list, ignore_index=True)
             self._review_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
             save_df(df=self._contacts_to_review, path=self._review_path)
@@ -264,7 +263,7 @@ class Search:
         self._search_fields = ['CRDNumber']
         self._return_fields = ['AccountId', 'SourceChannel', 'ContactID',
                                'Needs Info Updated?', 'BizDev Group']
-        self._found_contact_path = read_df(found_path)
+        self._found_contacts = read_df(found_path)
 
         self._search_list = read_df(searching_list_path)
         self.__init_list_metadata()
