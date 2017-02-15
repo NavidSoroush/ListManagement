@@ -106,7 +106,6 @@ class Search:
         else:
             self._found_contacts = read_df(self._found_contact_path)
             self._found_contacts.append(self._search_list, ignore_index=True)
-        return self
 
     def __num_found(self, found_df):
         self._num_found_contacts = len(found_df)
@@ -115,12 +114,13 @@ class Search:
 
     def __search_and_merge(self, search_fields, search_two=False):
         for header in search_fields:
+            if header == 'CRDNumber':
+                self._search_list['CRDNumber'].astype(int)
             if header in self._headers:
                 self._num_searches_performed += 1
                 print('Performing search #%s on %s' % (self._num_searches_performed, header))
                 self._joined_headers = self.__join_headers(header)
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
-
                 self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
                 self._search_list = self._search_list.fillna('')
                 self._num_searched_on = len(self._search_list)
@@ -132,11 +132,9 @@ class Search:
                 else:
                     self.__num_found(self._found_contacts)
 
-                print('Found %s on %s search.' % (self._num_found_contacts, header))
+                print('Found %s on %s search.\n' % (self._num_found_contacts, header))
                 for ret_field in self._return_fields:
                     del self._search_list[ret_field]
-
-        return self
 
     def _crd_search(self, search_field=['CRDNumber']):
         self._return_fields = ['AccountId', 'SourceChannel',
@@ -233,6 +231,7 @@ class Search:
         self._list_type = list_type
         self.__check_list_type()
         self.__data_preprocessing(additional=True)
+        self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
 
         if 'CRDNumber' in self._headers:
             self._crd_search()
@@ -248,7 +247,6 @@ class Search:
             self._review_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
             save_df(df=self._contacts_to_review, path=self._review_path)
 
-        self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
         save_df(df=self._found_contacts, path=self._found_contact_path)
         save_df(df=self._search_list, path=searching_list_path)
 

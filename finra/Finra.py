@@ -215,10 +215,8 @@ class FinraScraping:
         inserts the data / metadata from the FINRA search into the excel data file.
         :return: updated self
         '''
-        self._search_list.insert(len(self._search_list.columns),
-                                 'CRDNumber', self._to_be_added)
-        self._search_list.insert(len(self._search_list.columns),
-                                 'NumSuggestions', self._num_suggestions)
+        self._search_list.insert(len(self._search_list.columns), 'CRDNumber', self._to_be_added)
+        self._search_list.insert(len(self._search_list.columns), 'NumSuggestions', self._num_suggestions)
         self._no_crd = self._search_list[self._search_list['CRDNumber'] == 'CRD Not Found']
         self._finra_ambiguity = self._search_list[self._search_list['CRDNumber'] == 'Multiple CRDs Present']
         self._found_df = self._search_list[(self._search_list['CRDNumber'] != 'CRD Not Found') & (

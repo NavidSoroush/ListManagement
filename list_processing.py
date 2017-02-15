@@ -3,7 +3,7 @@ from finra.Finra import FinraScraping
 from stats.record_stats import record_processing_stats
 from utility.gen_helpers import drop_in_bulk_processing
 from ml.header_predictions import predict_headers_and_pre_processing
-from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values
+from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
 from utility.email_helpers import check_for_new_lists, lists_in_queue, process_list_email, close_mailbox_connection
 
 _steps = [
@@ -58,6 +58,8 @@ if lists_in_queue(var_list=var_list):
                                                          pre_or_post=var_list['Pre_or_Post']))
 
                 if var_list['Object'] == 'Campaign':
+                    var_list.update(sfdc_upload(path=var_list['cmp_upload_path'], obj=var_list['Object'],
+                                                session=var_list['SFDC Session']))
                     var_list.update(source_channel(var_list['cmp_upload_path'], var_list['Record Name'],
                                                    var_list['ObjectId'], var_list['Object']))
 
@@ -73,7 +75,7 @@ if lists_in_queue(var_list=var_list):
                         print(_steps[2])
 
                 elif var_list['Object'] == 'Account':
-                    var_list['SFDC Session'].last_list_uploaded(var_list['ObjectId'], var_list['Object'])
+                    var_list['SFDC Session'].last_list_uploaded(obj_id=var_list['ObjectId'], obj=var_list['Object'])
                     var_list.update(source_channel(var_list['update_path'],
                                                    var_list['Record Name'],
                                                    var_list['ObjectId'],
@@ -86,7 +88,8 @@ if lists_in_queue(var_list=var_list):
                         print(_steps[2])
 
                 elif var_list['Object'] == 'BizDev Group':
-                    var_list['SFDC Session'].last_list_uploaded(var_list['ObjectId'], var_list['Object'])
+                    var_list.update(sfdc_upload(path=var_list['bdg_update'], obj=var_list['Object'],
+                                                session=var_list['SFDC Session']))
                     var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
                                                    var_list['ObjectId'], var_list['Object'],
                                                    var_list['CmpAccountID']))
