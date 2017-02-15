@@ -81,8 +81,7 @@ if lists_in_queue(var_list=var_list):
                                                    var_list['ObjectId'],
                                                    var_list['Object']))
                     if var_list['Move To Bulk']:
-                        # drop_in_bulk_processing(var_list['update_path'])
-                        print('Would move to bulk processing')
+                        drop_in_bulk_processing(var_list['update_path'])
 
                     else:
                         print(_steps[2])
@@ -105,9 +104,8 @@ if lists_in_queue(var_list=var_list):
                     var_list.update(extract_dictionary_values(dict_data=var_list))
 
                     if var_list['Move To Bulk']:
-                        print('Would move to bulk processing.')
-                        # drop_in_bulk_processing(var_list['to_create_path'])
-                        # drop_in_bulk_processing(var_list['update_path'])
+                        drop_in_bulk_processing(var_list['to_create_path'])
+                        drop_in_bulk_processing(var_list['update_path'])
                     else:
                         print _steps[2]
 
