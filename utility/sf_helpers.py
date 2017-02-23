@@ -3,7 +3,7 @@ def remove_duplicates(mbr_list):
     return unique_data
 
 
-def split_list(id_in_obj, ids_from_search, obj, col=None, remove=None, remove_unique=None):
+def split_list(id_in_obj, ids_from_search, obj_id, obj, col=None, remove=None, remove_unique=None):
     if obj == 'Campaign':
         insert = [i for i in ids_from_search if i[0] not in id_in_obj]
         update = [i for i in ids_from_search if i[0] in id_in_obj]
@@ -22,9 +22,14 @@ def split_list(id_in_obj, ids_from_search, obj, col=None, remove=None, remove_un
                         new_list.remove(mbr)
                         break
             for up in update:
+                up[1] = obj_id
                 for re in remove:
                     if up[:-1] == re:
                         remove.remove(re)
+
+        for ins in insert:
+            ins[1] = obj_id
+
             remove_unique = remove_duplicates(remove)
     update_unique = remove_duplicates(update)
     insert_unique = remove_duplicates(insert)

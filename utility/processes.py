@@ -90,11 +90,11 @@ def source_channel(path, record_name, obj_id, obj, aid=None):
     '''
     move_to_bulk = False
     if obj == 'Campaign':
-        print '\nStep 9. Data Prep (will be performed twice)'
+        print('\nStep 9. Data Prep (will be performed twice)')
     elif obj == 'BizDev Group':
-        print '\nStep 9. Data Prep (will be performed thrice)'
+        print('\nStep 9. Data Prep (will be performed thrice)')
     else:
-        print '\nStep 9. Data Prep'
+        print('\nStep 9. Data Prep')
     list_df = read_df(path)
 
     if obj == 'Account':
@@ -154,7 +154,7 @@ def source_channel(path, record_name, obj_id, obj, aid=None):
                 for index, row in list_df.iterrows():
                     list_df.loc[index, ph] = clean_phone_number(row[ph])
             except:
-                print "Can't clean up %s numbers due to %s." % (ph, Exception.message)
+                print("Can't clean up %s numbers due to %s." % (ph, Exception.message))
 
     save_df(df=list_df, path=path)
     return {
@@ -195,11 +195,11 @@ def extract_dictionary_values(dict_data):
     if obj == 'BizDev Group':
         if not dict_data['FINRA?']:
             att_paths = [dict_data['File Path'], dict_data['Review Path'], dict_data['BDG Remove'],
-                         dict_data['BDG Add'], dict_data['BDG Stay']]
+                         dict_data['BDG Add'], dict_data['BDG Stay'], dict_data['Current Members']]
         else:
             att_paths = [dict_data['No CRD'], dict_data['FINRA Ambiguous'],
-                         dict_data['Review Path'], dict_data['BDG Remove'],
-                         dict_data['BDG Add'], dict_data['BDG Stay']]
+                         dict_data['BDG Remove'], dict_data['BDG Add'],
+                         dict_data['BDG Stay'], dict_data['Current Members']]
     elif dict_data['FINRA?']:
         att_paths = [dict_data['File Path'], dict_data['No CRD'], dict_data['FINRA Ambiguous'],
                      dict_data['Review Path']]
@@ -242,12 +242,14 @@ def extract_dictionary_values(dict_data):
 
     subject = "ALM Notification: %s list processed." % obj_name
 
-    Email(subject=subject, to=sender_email, body=body_string, attachment_path=att_paths)
+    Email(subject=subject, to=[sender_email], body=body_string, attachment_path=att_paths)
     return {'Next Step': 'Record Stats',
             'Stats Data': items_for_stats}
 
 
-def sfdc_upload(path, obj, session):
+def sfdc_upload(path, obj, obj_id, session):
+    paths = ['', '', '', '']
+    stats = ['', '', '']
     col_nums = []
     df = read_df(path=path)
     if obj == 'BizDev Group':
@@ -260,39 +262,40 @@ def sfdc_upload(path, obj, session):
     df_headers = df.columns.values.tolist()
 
     if obj == 'Campaign':
-        paths, stats = upload(session, df_headers, df_values, obj)
+        paths, stats = upload(session, df_headers, df_values, obj_id, obj)
 
     elif obj == 'BizDev Group':
-        paths, stats = upload(session, df_headers, df_values, obj, col_nums, path)
+        paths, stats = upload(session, df_headers, df_values, obj_id, obj, col_nums, path)
 
     return {'Next Step': 'Send Email',
             'BDG Remove': paths[0],
             'BDG Add': paths[1],
             'BDG Stay': paths[2],
+            'Current Members': paths[3],
             'Num Removing': stats[0],
             'Num Adding': stats[1],
             'Num Updating/Staying': stats[2]}
 
 
-def upload(session, headers, data, obj, col_num=None, df_path=None):
-    try:
-        if obj == 'Campaign':
-            paths, stats = cmp_upload(session, data, obj)
-            if data[0][2] == 'Needs Follow-Up':
-                session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
-                                       upload_data=[[data[0][1], 'true']])
-        elif obj == 'BizDev Group':
-            headers = headers_clean_up(headers)
-            paths, stats = bdg_upload(session, data, obj, col_num, df_path)
-    except Exception, e:
-        print e
+def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
+    # try:
+    if obj == 'Campaign':
+        paths, stats = cmp_upload(session, data, obj_id, obj)
+        if data[0][2] == 'Needs Follow-Up':
+            session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
+                                   upload_data=[[data[0][1], 'true']])
+    elif obj == 'BizDev Group':
+        headers = headers_clean_up(headers)
+        paths, stats = bdg_upload(session, data, obj_id, obj, col_num, df_path)
+    # except Exception, e:
+    #     print e
     return paths, stats
 
 
-def cmp_upload(session, data, obj, n_re=0, n_added=0, n_uptd=0):
-    print '\nStep 10. Salesforce Campaign Upload.'
-    sf_c_cmp_members = session.get_current_members(obj_id=data[0][-1], obj=obj)
-    to_insert, to_update, to_remove = split_list(sf_c_cmp_members, data, obj)
+def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
+    print('\nStep 10. Salesforce Campaign Upload.')
+    sf_c_cmp_members = session.get_current_members(obj_id=obj_id, obj=obj)
+    to_insert, to_update, to_remove = split_list(sf_c_cmp_members, data, obj_id, obj)
     n_add = len(to_insert)
     n_up = len(to_update)
     while n_added < n_add:
@@ -302,50 +305,38 @@ def cmp_upload(session, data, obj, n_re=0, n_added=0, n_uptd=0):
     if n_uptd < n_up:
         n_uptd = session.update_records(obj='CampaignMember', fields=['Status', 'CampaignId'],
                                         upload_data=to_update)
-    return ['', '', ''], [n_re, n_add, n_up]
+    return ['', '', '', ''], [n_re, n_add, n_up]
 
 
-def bdg_upload(session, data, obj, col_num, df_path, remove_path=None, add_path=None, update_path=None,
-               n_add=0, n_up=0, n_re=0):
-    print '\nStep 10. Salesforce BizDev Group Upload.'
-    try:
-        print 'Connection successful.'
-        sf_bdg_members = session.get_current_members(obj_id=data[0][col_num[0]], obj=obj)
-        to_insert, to_update, to_remove = split_list(sf_bdg_members, data, obj, col_num[1])
-        print 'Attempting to insert %s in the BizDev Group.' % len(to_insert)
-        if len(to_insert) > 0:
-            df_add = make_df(to_insert, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-            add_path = create_path_name(df_path, 'toAdd')
-            save_df(df=df_add, path=add_path)
-            n_add = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_insert)
+def bdg_upload(session, data, obj_id, obj, col_num, df_path, remove_path=None, add_path=None, update_path=None,
+               curr_memb=None, n_add=0, n_up=0, n_re=0):
+    print('\nStep 10. Salesforce BizDev Group Upload.')
+    sf_bdg_members = session.get_current_members(obj_id=obj_id, obj=obj)
+    to_insert, to_update, to_remove = split_list(sf_bdg_members, data, obj_id, obj, col_num[1])
+    curr_memb = create_path_name(df_path, 'current_bdg_members')
+    sf_bdg_members = [sf_bdg_members[i:i+2] for i in range(0, len(sf_bdg_members), 2)]
+    save_df(df=make_df(data=sf_bdg_members, columns=['Id', 'BizDev_Group__c']), path=curr_memb)
+    print('Attempting to associate %s to the BizDev Group.' % len(to_insert))
+    if len(to_insert) > 0:
+        df_add = make_df(to_insert, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
+        add_path = create_path_name(df_path, 'toAdd')
+        save_df(df=df_add, path=add_path)
+        n_add = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_insert)
 
-        if len(to_update) > 0:
-            print 'Attempting to update Licenses for %s advisors staying in the BizDevGroup.' % len(to_update)
-            df_update = make_df(to_update, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-            update_path = create_path_name(df_path, 'bdg_toStay')
-            save_df(df=df_update, path=update_path)
+    if len(to_update) > 0:
+        print('Attempting to update Licenses for %s advisors staying in the BizDevGroup.' % len(to_update))
+        df_update = make_df(to_update, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
+        update_path = create_path_name(df_path, 'bdg_toStay')
+        save_df(df=df_update, path=update_path)
+        n_up = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_update)
 
-            n_up = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_update)
-            n_up = session.getenv('ROW_COUNT')
+    if to_remove is not None:
+        print('We are not removing contacts by request of Krista Bono.')
+        df_remove = make_df(data=to_remove, columns=['ContactID', 'Previous BizDevGroupID'])
+        remove_path = create_path_name(df_path, 'to_remove')
+        save_df(df=df_remove, path=remove_path)
+        n_re = len(to_remove)
 
-        if len(to_remove) > 0:
-            print 'We are not removing contacts by request of Krista Bono'
-            ###
-            # print 'Attempting to remove %s from the BizDev Group.' % len(to_remove)
-            # df_remove=pd.DataFrame.from_records(to_remove, columns=['ContactID','Previous BizDevGroupID'])
-            # remove_path=path_toUpdate(df_path, 'to_remove')
-            # df_remove.to_excel(remove_path, index=False)
+    session.last_list_uploaded(obj_id=obj_id, obj=obj)
 
-            # to_remove=remove(to_remove,list_ofValues[0][colNum[0]])
-            # session.update('Contact',['BizDev_Group__c'],to_remove)
-            n_re = len(to_remove)
-            # status='Success'
-            ###
-        session.last_list_uploaded(obj_id=data[0][col_num[0]], obj=obj)
-    except Exception, e:
-        print e
-
-    finally:
-        print 'Session and server closed.'
-
-    return [remove_path, add_path, update_path], [n_re, n_add, n_up]
+    return [remove_path, add_path, update_path, curr_memb], [n_re, n_add, n_up]

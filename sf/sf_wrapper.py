@@ -17,7 +17,7 @@ class SFPlatform:
         SQLForce.SQLForceServer.killServer()
 
     def update_records(self, obj, fields, upload_data):
-        print('Attempting to update %s records on the %s object.' % (obj, len(upload_data)))
+        print('Attempting to update %s records on the %s object.' % (len(upload_data), obj))
         try:
             self.session.update(table=obj, columns=fields, data=upload_data)
             n_updated = self.session.getenv('ROW_COUNT')
@@ -26,7 +26,7 @@ class SFPlatform:
             print(Exception, e)
 
     def create_records(self, obj, fields, upload_data):
-        print('Attempting to associate %s records to the %s object.' % (obj, len(upload_data)))
+        print('Attempting to associate %s records to the %s object.' % (len(upload_data), obj))
         try:
             self.session.insert(table=obj, columns=fields, data=upload_data)
             n_inserted = self.session.getenv('ROW_COUNT')
@@ -64,10 +64,9 @@ class SFPlatform:
 
     def last_list_uploaded(self, obj_id, obj, success=False):
         from datetime import datetime
+        print(obj_id)
         today = datetime.utcnow().isoformat()
         items = [obj_id, today]
-        for i in items:
-            print '%s: %s' % (i, type(i))
         try:
             if obj == 'Account':
                 self.session.update('Account', ['Last_Rep_List_Upload__c'], [items])

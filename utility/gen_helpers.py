@@ -1,11 +1,11 @@
 import os
 import re
-import parser
 import time
 import datetime
 import shutil
 import errno
 import ntpath
+from dateutil.parser import parse
 from cred import userPhone, userEmail, userName
 
 userName = userName
@@ -29,7 +29,7 @@ _cmp_accepted_cols = ['ContactID', 'CampaignId', 'Status']
 _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
                    '_review_contacts', '_foundcontacts', 'cmp_to_create',
                    'cmp_upload', 'no_updates', 'to_update', 'to_create', 'bdg_update',
-                   'toAdd', 'bdg_toStay']
+                   'toAdd', 'bdg_toStay', 'current_bdg_members', 'to_remove']
 
 
 def split_dir_name(full_path):
@@ -284,8 +284,8 @@ def clean_date_values(d_value):
     :param d_value: timestamp
     :return: transformed timestamp value
     """
-    d_value = parser.parse(d_value)
-    return d_value.replace(tzinfo=None)
+    d_value = parse(d_value)
+    return d_value
 
 
 def date_to_string(d_value):
@@ -294,7 +294,7 @@ def date_to_string(d_value):
     :param d_value: timestamp
     :return: string value of time stamp
     """
-    return datetime.datetime.strftime(d_value, '%d/%m/%Y %H:%M:%S')
+    return datetime.datetime.strftime(d_value, '%m/%d/%Y %H:%M:%S')
 
 
 def timedelta_to_processing_str(duration):

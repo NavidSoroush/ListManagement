@@ -1,3 +1,4 @@
+import sqlalchemy
 from utility.pandas_helper import read_df, save_df, new_stat_line
 
 _stats_file_path = 'T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
@@ -13,6 +14,8 @@ def record_processing_stats(values):
     df = read_df(_stats_file_path)
     print('\nStep 11. Recording stats from processing.')
     df2 = new_stat_line(values)
+    engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
+    df2.to_sql(name='SearchStats', con=engine, if_exists='append', index=False)
     df = df.append(df2, ignore_index=True)
     save_df(df=df, path=_stats_file_path)
     del df
