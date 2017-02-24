@@ -6,14 +6,15 @@ import sys
 from cred import outlook_userEmail, password
 import pandas as pd
 import sqlalchemy
-from progress_bar_test import myprogressbar
+from progress_bar import myprogressbar
 from email_handler.email_wrapper import Email
 
-_acceptable_types = ['lsx', 'pdf', 'csv', 'xls', 'zip', 'ocx']
+_acceptable_types = ['lsx', 'pdf', 'csv', 'xls', 'zip', 'ocx', 'txt']
 _email_account = outlook_userEmail + '/Lists'
-_email_folder = 'INBOX/New Lists/'
-
-_elements = []
+_email_folder = [['INBOX/New Lists/', 'ReceivedLists'],
+                 ['INBOX/Auto Processed Lists/', 'ProcessedLists'],
+                 ['INBOX/Salesforce Contact Creation Logs/', 'ContactCreationResponses']
+                 ]
 
 
 def get_msg_part(msg_part, array):
@@ -80,55 +81,61 @@ try:
 except imaplib.IMAP4.error:
     print("LOGIN FAILED!!! ")
     sys.exit(1)
+print('Mailbox: %s, %s' % (rv, data))
 
-print('Mailbox: ', rv, data)
-
-rv, data = m.select(_email_folder)
-if rv == 'OK':
-    rv, data = m.search(None, "(UNSEEN)")
+for ef in _email_folder:
+    _elements = []
+    print()
+    rv, data = m.select(ef[0])
     if rv == 'OK':
-        num_emails = len(data[0].split())
-        count = 1
-        for i in data[0].split():
-            myprogressbar(count, num_emails, message='List Request Extraction')
-            tmp_dict = {}
-            rv, data = m.fetch(i, '(RFC822)')
-            if rv != 'OK':
-                print("ERROR getting message", i)
-                sys.exit()
-            else:
-                tmp_dict['Id'] = i
-                tmp_dict['Subject'] = get_msg_part('Subject', data[0])
-                tmp_dict['ReceivedDate'] = get_msg_part('date', data[0])
-                tmp_dict['SenderEmail'] = get_msg_part('From', data[0])
-                tmp_dict['SenderName'] = email_parser(tmp_dict['SenderEmail'], ' <')
-                tmp_dict['SenderEmail'] = email_parser(tmp_dict['SenderEmail'], '<', '>')
-                e_item = email.message_from_string(data[0][1])
-                attachments = []
-                for part in e_item.walk():
-                    file_name = None
-                    if part.get_content_maintype() == 'multipart': continue
-                    if part.get('Content-Disposition') is None: continue
-                    attachments.append(part.get_filename())
-                if len(attachments) > 0:
-                    attachments = [a for a in attachments if a[-3:].lower() in _acceptable_types]
-                    for a in range(0, len(attachments)):
-                        k = 'AttachmentName' + str(a + 1)
-                        tmp_dict[k] = attachments[a]
-                _elements.append(tmp_dict)
-            del e_item
-            del tmp_dict
-            del attachments
-            count += 1
-            m.store(i, '+FLAGS', r'(\SEEN)')
-if num_emails > 0:
-    engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
-    notification = '\nWriting %s records to the ListManagement DB in DPHL-PROPSCORE.' % num_emails
-    print(notification)
-    df = pd.DataFrame(data=_elements)
-    cols = df.columns.values.tolist()
-    cols = cols[-5:] + cols[:-5]
-    df = df[cols]
-    df.to_sql(name='ReceivedLists', con=engine, index=False, if_exists='append')
-    Email(subject='LMA: New List Request', to=['ricky.schools@fsinvestments.com'], body=notification,
-          attachment_path=None)
+        rv, data = m.search(None, "(UNSEEN)")
+        if rv == 'OK':
+            num_emails = len(data[0].split())
+            count = 1
+            for i in data[0].split():
+                myprogressbar(count, num_emails, message='%s Extraction' % ef[1])
+                tmp_dict = {}
+                rv, data = m.fetch(i, '(RFC822)')
+                if rv != 'OK':
+                    print("ERROR getting message", i)
+                    sys.exit()
+                else:
+                    tmp_dict['Id'] = i
+                    tmp_dict['Subject'] = get_msg_part('Subject', data[0])
+                    tmp_dict['InboxFolder'] = ef[0]
+                    tmp_dict['ReceivedDate'] = get_msg_part('date', data[0])
+                    tmp_dict['SenderEmail'] = get_msg_part('From', data[0])
+                    tmp_dict['SenderName'] = email_parser(tmp_dict['SenderEmail'], ' <')
+                    tmp_dict['SenderEmail'] = email_parser(tmp_dict['SenderEmail'], '<', '>')
+                    e_item = email.message_from_string(data[0][1])
+                    attachments = []
+                    for part in e_item.walk():
+                        file_name = None
+                        if part.get_content_maintype() == 'multipart': continue
+                        if part.get('Content-Disposition') is None: continue
+                        attachments.append(part.get_filename())
+                    if len(attachments) > 0:
+                        attachments = [a for a in attachments if a[-3:].lower() in _acceptable_types]
+                        for a in range(0, len(attachments)):
+                            k = 'AttachmentName' + str(a + 1)
+                            tmp_dict[k] = attachments[a]
+                    _elements.append(tmp_dict)
+                del e_item
+                del tmp_dict
+                del attachments
+                count += 1
+                m.store(i, '+FLAGS', r'(\SEEN)')
+    if num_emails > 0:
+        engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
+        notification = "\nWriting %s records to the '%s' table in the ListManagement DB." % (num_emails, ef[1])
+        print(notification)
+        df = pd.DataFrame(data=_elements)
+        cols = df.columns.values.tolist()
+        cols = cols[-6:] + cols[:-6]
+        df = df[cols]
+        df.to_sql(name=ef[1], con=engine, index=False, if_exists='append')
+        Email(subject='LMA: New %s' % ef[1], to=['ricky.schools@fsinvestments.com'], body=notification,
+              attachment_path=None)
+    del _elements
+    del df
+    del cols
