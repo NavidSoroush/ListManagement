@@ -85,7 +85,7 @@ print('Mailbox: %s, %s' % (rv, data))
 
 for ef in _email_folder:
     _elements = []
-    print()
+    print
     rv, data = m.select(ef[0])
     if rv == 'OK':
         rv, data = m.search(None, "(UNSEEN)")
@@ -136,6 +136,6 @@ for ef in _email_folder:
         df.to_sql(name=ef[1], con=engine, index=False, if_exists='append')
         Email(subject='LMA: New %s' % ef[1], to=['ricky.schools@fsinvestments.com'], body=notification,
               attachment_path=None)
-    del _elements
-    del df
-    del cols
+        del _elements
+        del df
+        del cols
