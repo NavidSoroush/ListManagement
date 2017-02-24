@@ -7,6 +7,7 @@ from cred import outlook_userEmail, password
 import pandas as pd
 import sqlalchemy
 from progress_bar_test import myprogressbar
+from email_handler.email_wrapper import Email
 
 _acceptable_types = ['lsx', 'pdf', 'csv', 'xls', 'zip', 'ocx']
 _email_account = outlook_userEmail + '/Lists'
@@ -89,7 +90,7 @@ if rv == 'OK':
         num_emails = len(data[0].split())
         count = 1
         for i in data[0].split():
-            myprogressbar(count, num_emails,message='List Request Extraction')
+            myprogressbar(count, num_emails, message='List Request Extraction')
             tmp_dict = {}
             rv, data = m.fetch(i, '(RFC822)')
             if rv != 'OK':
@@ -112,7 +113,7 @@ if rv == 'OK':
                 if len(attachments) > 0:
                     attachments = [a for a in attachments if a[-3:].lower() in _acceptable_types]
                     for a in range(0, len(attachments)):
-                        k = 'AttachmentName' + str(a+1)
+                        k = 'AttachmentName' + str(a + 1)
                         tmp_dict[k] = attachments[a]
                 _elements.append(tmp_dict)
             del e_item
@@ -122,9 +123,12 @@ if rv == 'OK':
             m.store(i, '+FLAGS', r'(\SEEN)')
 if num_emails > 0:
     engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
-    print('\nWriting %s records to the ListManagement DB in DPHL-PROPSCORE.' % num_emails)
+    notification = '\nWriting %s records to the ListManagement DB in DPHL-PROPSCORE.' % num_emails
+    print(notification)
     df = pd.DataFrame(data=_elements)
     cols = df.columns.values.tolist()
     cols = cols[-5:] + cols[:-5]
     df = df[cols]
     df.to_sql(name='ReceivedLists', con=engine, index=False, if_exists='append')
+    Email(subject='LMA: New List Request', to=['ricky.schools@fsinvestments.com'], body=notification,
+          attachment_path=None)
