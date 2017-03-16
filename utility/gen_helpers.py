@@ -99,7 +99,7 @@ def convert_unicode_to_date(date_string):
     :param date_string: string of a date value.
     :return: variable, is the list pre or post.
     '''
-    date_string = parser.parse(date_string)
+    date_string = parse(date_string)
     today = datetime.datetime.now()
     diff = today - date_string
     if diff.days > 0:

@@ -21,7 +21,7 @@ if lists_in_queue(var_list=var_list):
         num_processed = var_list['Num_Processed']
         num = var_list['Num_Processed'] + 1
 
-        var_list.update(process_list_email(var_list['Lists_Data'][num], var_list['Mailbox']))
+        var_list.update(process_list_email(var_list['Lists_Data'][num_processed], var_list['Mailbox']))
 
         if var_list['Object'] != 'Account':
 
@@ -33,8 +33,7 @@ if lists_in_queue(var_list=var_list):
 
         var_list.update(s.perform_search_one(var_list['File Path'], var_list['Object']))
 
-        if var_list['SFDC_Found'] < var_list['Total Records'] and \
-                var_list['FINRA?']:
+        if var_list['SFDC_Found'] < var_list['Total Records'] and var_list['FINRA?']:
 
             var_list.update(fin.crd_check(path=var_list['File Path']))
             if (var_list['SFDC_Found'] + var_list['FINRA_Found']) < var_list['Total Records']:
@@ -55,15 +54,17 @@ if lists_in_queue(var_list=var_list):
                                                  pre_or_post=var_list['Pre_or_Post']))
 
         if var_list['Object'] == 'Campaign':
-            var_list.update(sfdc_upload(path=var_list['cmp_upload_path'], obj=var_list['Object'],
-                                        obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
+
             var_list.update(source_channel(var_list['cmp_upload_path'], var_list['Record Name'],
                                            var_list['ObjectId'], var_list['Object']))
 
             var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
                                            var_list['CmpAccountID'], var_list['Object']))
 
-            var_list.update(extract_dictionary_values(var_list['Campaign Upload'], var_list['Object']))
+            var_list.update(sfdc_upload(path=var_list['cmp_upload_path'], obj=var_list['Object'],
+                                        obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
+
+            var_list.update(extract_dictionary_values(dict_data=var_list))
 
             if var_list['Move To Bulk']:
                 drop_in_bulk_processing(var_list['to_create_path'])
@@ -114,6 +115,6 @@ if lists_in_queue(var_list=var_list):
         print('List #%s processed.' % var_list['Num_Processed'])
         for k, v in var_list.iteritems():
             if k not in _dict_keys_to_keep:
-                del var_list[k]
+                del var_list[v]
     var_list['SFDC Session'].close_session()
     var_list.update(close_mailbox_connection(var_list['Mailbox']))

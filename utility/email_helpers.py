@@ -7,6 +7,7 @@ import sys
 from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 from sf.sf_wrapper import SFPlatform
 from email_handler.email_wrapper import Email
+import lxml.html
 
 sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token)
 _objects = ['Campaign', 'BizDev Group', 'Account']
@@ -188,6 +189,8 @@ def process_list_email(email_data, m):
     """
     data = email_data[0]
     decoded_body = email_data[1]
+    decoded_body = lxml.html.document_fromstring(decoded_body)
+    decoded_body = decoded_body.text_content()
     num = email_data[2]
 
     if _objects[0] in decoded_body:
@@ -206,8 +209,8 @@ def process_list_email(email_data, m):
                                _list_notification_elements[2])
     obj_rec_link = info_parser(decoded_body, _list_notification_elements[3],
                                _list_notification_elements[4])
-
-    att_link = info_parser(decoded_body, _list_notification_elements[4])[-20:-2]
+    att_link = info_parser(decoded_body, _list_notification_elements[4])[-24:-6]
+    print att_link
 
     if obj == 'Campaign':
         obj_rec_link = obj_rec_link[-18:]
@@ -218,7 +221,7 @@ def process_list_email(email_data, m):
         obj_rec_link = obj_rec_link[39:57]
     else:
         obj_rec_link = obj_rec_link[39:57]
-
+    print obj_rec_link
     file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=[att_link], obj=obj,
                                                                                  obj_url=obj_rec_link)
 

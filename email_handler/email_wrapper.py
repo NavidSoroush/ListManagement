@@ -33,7 +33,7 @@ class Email:
         :return: updated mail message
         '''
         for att in att_paths:
-            if att is not None:
+            if att is not None and len(att)>0:
                 with open(str(att), 'rb') as f:
                     part = MIMEBase('application', 'vnd.openxmlformats-officedocument.spreadsheetml.sheet')
                     part.set_payload(f.read())

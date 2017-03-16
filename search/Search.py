@@ -31,6 +31,7 @@ class Search:
         self._contacts_to_review = make_df()
         self._keep_cols = []
         self._to_finra = True
+        self._is_crd_check = False
         self._num_searches_performed = 0
         self._total_found = 0
         self._num_found_contacts = 0
@@ -87,22 +88,40 @@ class Search:
 
     def __create_meta_data(self, headers=None, search_two=False):
         if not search_two:
-            if 'CRD Provided by List' in headers:
+            if self._is_crd_check == True and 'CRD Provided by List' not in self._headers:
+                found_contacts = self._found_contacts
                 search_list = self._search_list
                 to_review = self._contacts_to_review
-
-                to_review = to_review.append(search_list[search_list['ContactID'] != ''], ignore_index=True)
-                search_list = search_list[search_list['ContactID'] == '']
-                self._search_list = search_list
-                self._contacts_to_review = to_review
+                found_contacts = found_contacts.append(search_list[search_list['ContactID'] != ''],ignore_index=True)
+                self._found_contacts = found_contacts
+                #print found_contacts.head()
+                if self._search_list['CRDNumber'].count() == len(self._search_list):
+                    if len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list):
+                        self._to_finra = False
+                        self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+                if self._to_finra == False:
+                    to_review = to_review.append(search_list[search_list['ContactID'] == ''], ignore_index=True)
+                    self._contacts_to_review = to_review
+                    self._search_list = make_df()
+                    self._found_contact_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
+                    print 'CRD Info provided for all contacts. Will not search FINRA.'
+                else:
+                    search_list = search_list[search_list['ContactID'] == '']
+                    self._search_list = search_list
+                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+                self._headers = self._search_list.columns.values
+                #print search_list.head()
             else:
                 found_contacts = self._found_contacts
                 search_list = self._search_list
-                found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''],
-                                                       ignore_index=True)
+                print search_list.head()
+                search_list.fillna('')
+                found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''], ignore_index=True)
                 search_list = search_list[search_list['CRDNumber'] == '']
                 self._search_list = search_list
                 self._found_contacts = found_contacts
+            for r_field in self._return_fields:
+                del search_list[r_field]
         else:
             self._found_contacts = read_df(self._found_contact_path)
             self._found_contacts.append(self._search_list, ignore_index=True)
@@ -114,8 +133,8 @@ class Search:
 
     def __search_and_merge(self, search_fields, search_two=False):
         for header in search_fields:
-            if header == 'CRDNumber':
-                self._search_list['CRDNumber'].astype(int)
+            #if header == 'CRDNumber':
+                #self._search_list['CRDNumber']
             if header in self._headers:
                 self._num_searches_performed += 1
                 print('Performing search #%s on %s' % (self._num_searches_performed, header))
@@ -133,18 +152,14 @@ class Search:
                     self.__num_found(self._found_contacts)
 
                 print('Found %s on %s search.\n' % (self._num_found_contacts, header))
-                for ret_field in self._return_fields:
-                    del self._search_list[ret_field]
 
     def _crd_search(self, search_field=['CRDNumber']):
+        self._is_crd_check = True
         self._return_fields = ['AccountId', 'SourceChannel',
                                'Needs Info Updated?', 'ContactID', 'BizDev Group']
         self._search_list.fillna('')
         self.__search_and_merge(search_field)
-        if self._search_list['CRDNumber'].count() == len(self._search_list):
-            if len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list):
-                self._to_finra = False
-        self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+        print self._search_list.head()
         return self
 
     def _lkup_name_address_processing(self, headers, search_list):
@@ -233,18 +248,17 @@ class Search:
         self.__data_preprocessing(additional=True)
         self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
 
-        if 'CRDNumber' in self._headers:
+        if 'CRDNumber' in self._headers and self._is_crd_check == False:
             self._crd_search()
 
         if not self._to_finra:
             print('CRD Info provided for all contacts. Will not search FINRA.')
 
         else:
+            self._return_fields = ['AccountId', 'SourceChannel', 'Needs Info Updated?', 'ContactID', 'CRDNumber', 'BizDev Group']
             self.__search_and_merge(self._search_fields)
 
-        if 'CRD Provided by List' in self._headers:
-            self._contacts_to_review = self._contacts_to_review.append(self._search_list, ignore_index=True)
-            self._review_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
+        if self._to_finra == False:
             save_df(df=self._contacts_to_review, path=self._review_path)
 
         save_df(df=self._found_contacts, path=self._found_contact_path)
