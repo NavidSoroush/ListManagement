@@ -11,9 +11,8 @@ def predict_headers_and_pre_processing(path, obj):
     print("Here are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, headers))
     output = make_df(data={"1. Header": headers, "3. Prediction": model.predictions})
 
-    expected_inputs = model.train_class.unique().sort()
-    print expected_inputs
-    sys.exit()
+    expected_inputs = model.train_class.unique().tolist()
+    expected_inputs.sort()
 
     need_validation = output[['1. Header', '3. Prediction']]
     need_validation = need_validation.rename(columns={'1. Header': 'Header Value', '3. Prediction': 'Class'})
