@@ -1,5 +1,6 @@
 from utility.pandas_helper import read_df, make_df, save_df, concat_dfs
 from ml.model import HeaderPredictions
+import sys
 
 _confidence = .99
 
@@ -11,6 +12,8 @@ def predict_headers_and_pre_processing(path, obj):
     output = make_df(data={"1. Header": headers, "3. Prediction": model.predictions})
 
     expected_inputs = model.train_class.unique().sort()
+    print expected_inputs
+    sys.exit()
 
     need_validation = output[['1. Header', '3. Prediction']]
     need_validation = need_validation.rename(columns={'1. Header': 'Header Value', '3. Prediction': 'Class'})

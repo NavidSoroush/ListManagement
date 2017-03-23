@@ -201,8 +201,7 @@ def extract_dictionary_values(dict_data):
                          dict_data['BDG Remove'], dict_data['BDG Add'],
                          dict_data['BDG Stay'], dict_data['Current Members']]
     elif dict_data['FINRA?']:
-        att_paths = [dict_data['File Path'], dict_data['No CRD'], dict_data['FINRA Ambiguous'],
-                     dict_data['Review Path']]
+        att_paths = [dict_data['File Path'], dict_data['No CRD'], dict_data['FINRA Ambiguous']]
     else:
         att_paths = [dict_data['File Path'], dict_data['Review Path']]
 
