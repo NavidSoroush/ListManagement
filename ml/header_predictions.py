@@ -1,6 +1,5 @@
 from utility.pandas_helper import read_df, make_df, save_df, concat_dfs
 from ml.model import HeaderPredictions
-import sys
 
 _confidence = .99
 
