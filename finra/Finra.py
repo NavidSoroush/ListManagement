@@ -78,7 +78,7 @@ class FinraScraping:
         self._search_list['Account'].apply(strip_unicode_chars)
         for index, row in self._search_list.iterrows():
             try:
-                search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account'][:10]
+                search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account'][:14]
             except ValueError:
                 search_name = 'Error converting row %s to string' % index
             self._to_be_searched.append([search_name])

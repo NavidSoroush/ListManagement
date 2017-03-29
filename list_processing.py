@@ -78,6 +78,8 @@ if lists_in_queue(var_list=var_list):
                                            var_list['Record Name'],
                                            var_list['ObjectId'],
                                            var_list['Object']))
+            var_list.update(extract_dictionary_values(dict_data=var_list))
+
             if var_list['Move To Bulk']:
                 drop_in_bulk_processing(var_list['update_path'])
 

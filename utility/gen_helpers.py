@@ -274,6 +274,7 @@ def create_path_name(path, new_name):
 
 def drop_in_bulk_processing(path):
     dest = '//sc12-fsphl-01/BulkImports/'
+    #\\sc12-fsphl-01\BulkImports\
     name = shorten_fname_to_95chars(split_name(path=path))
     shutil.copy(path, dest + name)
 

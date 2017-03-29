@@ -28,7 +28,7 @@ def run():
                     'mailing state/province', 'mailing zip/postal code']
     updateCols = ['last meeting/event', 'last sp', 'most recent sale',]
     repHeaders = ['LkupName', 'First Name', 'Last Name', 'Contact Name',
-                  'Account', 'AccountId', 'AMPF MBR ID', 'Office Name',
+                  'Account', 'AccountId', 'AMPFMBRID', 'Office Name',
                   'BizDev Group', 'Email', 'Mailing Address 1',
                   'Mailing City', 'Mailing State', 'Mailing Zip', 'Phone',
                   'CRD', 'ContactID', 'Rating',
