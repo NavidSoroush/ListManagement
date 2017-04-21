@@ -5,7 +5,7 @@ _confidence = .99
 
 
 def predict_headers_and_pre_processing(path, obj):
-    model = HeaderPredictions(predict_path=path, obj=obj)
+    model = HeaderPredictions().predict(predict_path=path, obj=obj)
     headers = model.p_df.columns.values
     print("Here are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, headers))
     output = make_df(data={"1. Header": headers, "3. Prediction": model.predictions})
