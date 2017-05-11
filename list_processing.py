@@ -4,7 +4,8 @@ from stats.record_stats import record_processing_stats
 from utility.gen_helpers import drop_in_bulk_processing
 from ml.header_predictions import predict_headers_and_pre_processing
 from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
-from utility.email_helpers import check_for_new_lists, lists_in_queue, process_list_email, close_mailbox_connection
+from utility.email_helpers import lists_in_queue, close_mailbox_connection
+from utility.email_reader import MailBoxReader
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
@@ -13,15 +14,16 @@ _steps = [
 _dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox', 'SFDC Session']
 s = Search()
 fin = FinraScraping()
+mb = MailBoxReader()
 
-var_list = check_for_new_lists()
+var_list = mb.pending_lists
 
 if lists_in_queue(var_list=var_list):
     while var_list['Num_Processed'] < var_list['Lists_In_Queue']:
         num_processed = var_list['Num_Processed']
         num = var_list['Num_Processed'] + 1
 
-        var_list.update(process_list_email(var_list['Lists_Data'][num_processed], var_list['Mailbox']))
+        var_list.update(mb.iterative_processing(mb.pending_lists['Lists_Data'][num_processed]))
 
         if var_list['Object'] != 'Account':
 
