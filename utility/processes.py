@@ -3,6 +3,7 @@ from email_helpers import craft_notification_email
 from email_handler.email_wrapper import Email
 from pandas_helper import read_df, save_df, make_df, determine_num_records
 from sf_helpers import *
+import datetime
 
 
 def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
@@ -215,6 +216,7 @@ def extract_dictionary_values(dict_data):
     process_start = dict_data['process_start']
 
     completed = time_now
+    processing_completed = datetime.utcnow().isoformat()
     processing_time = clean_date_values(completed) - clean_date_values(process_start)
     processing_string = timedelta_to_processing_str(processing_time)
     obj_name = dict_data['Record Name']
@@ -238,6 +240,16 @@ def extract_dictionary_values(dict_data):
         , 'Unable to Find': need_research, 'Last Search Date': completed
         , 'Match Rate': match_rate, 'Processing Time': processing_string
     }
+
+    listobj_cols = ['Status__c', 'Advisors_on_List__c', 'Contacts_Added_to_Related_Record__c',
+                    'Contacts_Created__c', 'Contacts_Found_in_SF__c', 'Contacts_Not_Found__c',
+                    'Contacts_to_Research__c', 'Contacts_Updated__c', 'Match_Rate__c', 'List_Process_Completed_At__c',
+                    'Processed_By__c']
+
+    listobj_data = [dict_data['ListObjId'], 'Process Completed', total, obj_to_add, to_create, num_found_in_sfdc,
+                    need_research, need_research, to_update, processing_completed, sf_uid]
+
+    dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=listobj_data)
 
     subject = "ALM Notification: %s list processed." % obj_name
 
@@ -345,9 +357,9 @@ def id_preprocessing_needs(path):
     # should be comprised of three steps.
     # 1. Evaluate path extension type.
     # 2. If file is of appropriate type - check if:
-        # a. top row is blank
-        # b. remove any random blank rows
-        # c. identify if there is a bad header row
+    # a. top row is blank
+    # b. remove any random blank rows
+    # c. identify if there is a bad header row
     # 3. Notify user of needs / actions performed
 
     _accepted_file_ext = ['.xlsx', '.xls', '.csv']

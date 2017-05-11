@@ -6,7 +6,7 @@ import shutil
 import errno
 import ntpath
 from dateutil.parser import parse
-from cred import userPhone, userEmail, userName
+from cred import userPhone, userEmail, userName, sf_uid
 
 userName = userName
 userEmail = userEmail
