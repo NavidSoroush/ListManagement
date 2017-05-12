@@ -6,6 +6,7 @@ from ml.header_predictions import predict_headers_and_pre_processing
 from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
 from utility.email_helpers import lists_in_queue, close_mailbox_connection
 from utility.email_reader import MailBoxReader
+from email_handler.email_wrapper import Email
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
@@ -25,100 +26,115 @@ if lists_in_queue(var_list=var_list):
 
         var_list.update(mb.iterative_processing(mb.pending_lists['Lists_Data'][num_processed]))
 
-        if var_list['Object'] != 'Account':
-
-            var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
-                                                               var_list['CmpAccountName']))
+        if var_list['ExtensionType'] in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
+            if var_list['CmpAccountName'] is None:
+                obj_name = var_list['Record Name']
+            else:
+                obj_name = var_list['CmpAccountName']
+            sub = 'LMA: Unable to Process List Attached to %s' % obj_name
+            msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
+                  'List Management App.' % (obj_name, var_list['ExtensionType'])
+            print(msg)
+            Email(subject=sub, to=[var_list['Sender Email']], body=msg, attachment_path=None)
+            var_list['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
+                                                    upload_data=[[var_list['ListObjId'], 'Unable to Process']])
 
         else:
-            var_list.update(predict_headers_and_pre_processing(var_list['File Path'], var_list['Record Name']))
 
-        var_list.update(s.perform_search_one(var_list['File Path'], var_list['Object']))
+            if var_list['Object'] != 'Account':
 
-        if var_list['SFDC_Found'] < var_list['Total Records'] and var_list['FINRA?']:
-
-            var_list.update(fin.crd_check(path=var_list['File Path']))
-            if (var_list['SFDC_Found'] + var_list['FINRA_Found']) < var_list['Total Records']:
-                var_list.update(s.perform_sec_search(var_list['No CRD'], var_list['FINRA_SEC Found']))
+                var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
+                                                                   var_list['CmpAccountName']))
 
             else:
-                print(_steps[0])
+                var_list.update(predict_headers_and_pre_processing(var_list['File Path'], var_list['Record Name']))
 
-            var_list.update(s.perform_search_two(var_list['FINRA_SEC Found'], var_list['Found Path'],
-                                                 var_list['Object']))
-        else:
-            print(_steps[1])
+            var_list.update(s.perform_search_one(var_list['File Path'], var_list['Object']))
 
-        if var_list['Object'] == 'BizDev Group':
-            var_list.update(fin.license_check(var_list['Found Path']))
+            if var_list['SFDC_Found'] < var_list['Total Records'] and var_list['FINRA?']:
 
-        var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
-                                                 pre_or_post=var_list['Pre_or_Post']))
+                var_list.update(fin.crd_check(path=var_list['File Path']))
+                if (var_list['SFDC_Found'] + var_list['FINRA_Found']) < var_list['Total Records']:
+                    var_list.update(s.perform_sec_search(var_list['No CRD'], var_list['FINRA_SEC Found']))
 
-        if var_list['Object'] == 'Campaign':
+                else:
+                    print(_steps[0])
 
-            var_list.update(source_channel(var_list['cmp_upload_path'], var_list['Record Name'],
-                                           var_list['ObjectId'], var_list['Object']))
-
-            var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
-                                           var_list['CmpAccountID'], var_list['Object']))
-
-            var_list.update(sfdc_upload(path=var_list['cmp_upload_path'], obj=var_list['Object'],
-                                        obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
-
-            var_list.update(extract_dictionary_values(dict_data=var_list))
-
-            if var_list['Move To Bulk']:
-                drop_in_bulk_processing(var_list['to_create_path'])
-
+                var_list.update(s.perform_search_two(var_list['FINRA_SEC Found'], var_list['Found Path'],
+                                                     var_list['Object']))
             else:
-                print(_steps[2])
+                print(_steps[1])
 
-        elif var_list['Object'] == 'Account':
-            var_list['SFDC Session'].last_list_uploaded(obj_id=var_list['ObjectId'], obj=var_list['Object'])
-            var_list.update(source_channel(var_list['update_path'],
-                                           var_list['Record Name'],
-                                           var_list['ObjectId'],
-                                           var_list['Object']))
-            var_list.update(extract_dictionary_values(dict_data=var_list))
+            if var_list['Object'] == 'BizDev Group':
+                var_list.update(fin.license_check(var_list['Found Path']))
 
-            if var_list['Move To Bulk']:
-                drop_in_bulk_processing(var_list['update_path'])
+            var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
+                                                     pre_or_post=var_list['Pre_or_Post']))
 
-            else:
-                print(_steps[2])
+            if var_list['Object'] == 'Campaign':
 
-        elif var_list['Object'] == 'BizDev Group':
-            var_list.update(sfdc_upload(path=var_list['bdg_update_path'], obj=var_list['Object'],
-                                        obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
-            var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
-                                           var_list['ObjectId'], var_list['Object'],
-                                           var_list['CmpAccountID']))
+                var_list.update(source_channel(var_list['cmp_upload_path'], var_list['Record Name'],
+                                               var_list['ObjectId'], var_list['Object']))
 
-            var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
-                                           var_list['ObjectId'], var_list['Object'],
-                                           var_list['CmpAccountID']))
+                var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
+                                               var_list['CmpAccountID'], var_list['Object']))
 
-            var_list.update(source_channel(var_list['bdg_update_path'], var_list['Record Name'],
-                                           var_list['ObjectId'], var_list['Object'],
-                                           var_list['CmpAccountID']))
+                var_list.update(sfdc_upload(path=var_list['cmp_upload_path'], obj=var_list['Object'],
+                                            obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
 
-            var_list.update(extract_dictionary_values(dict_data=var_list))
+                var_list.update(extract_dictionary_values(dict_data=var_list))
 
-            if var_list['Move To Bulk']:
-                # drop_in_bulk_processing(var_list['to_create_path'])
-                # drop_in_bulk_processing(var_list['update_path'])
-                print('Would move to bulk processing.')
-            else:
-                print _steps[2]
+                if var_list['Move To Bulk']:
+                    drop_in_bulk_processing(var_list['to_create_path'])
 
-        var_list.update(record_processing_stats(var_list['Stats Data']))
+                else:
+                    print(_steps[2])
 
-        num_processed += 1
-        var_list.update({'Num_Processed': num})
-        print('List #%s processed.' % var_list['Num_Processed'])
-        for k, v in var_list.iteritems():
-            if k not in _dict_keys_to_keep:
-                del var_list[v]
+            elif var_list['Object'] == 'Account':
+                var_list['SFDC Session'].last_list_uploaded(obj_id=var_list['ObjectId'], obj=var_list['Object'])
+                var_list.update(source_channel(var_list['update_path'],
+                                               var_list['Record Name'],
+                                               var_list['ObjectId'],
+                                               var_list['Object']))
+                var_list.update(extract_dictionary_values(dict_data=var_list))
+
+                if var_list['Move To Bulk']:
+                    drop_in_bulk_processing(var_list['update_path'])
+
+                else:
+                    print(_steps[2])
+
+            elif var_list['Object'] == 'BizDev Group':
+                var_list.update(sfdc_upload(path=var_list['bdg_update_path'], obj=var_list['Object'],
+                                            obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
+                var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
+                                               var_list['ObjectId'], var_list['Object'],
+                                               var_list['CmpAccountID']))
+
+                var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
+                                               var_list['ObjectId'], var_list['Object'],
+                                               var_list['CmpAccountID']))
+
+                var_list.update(source_channel(var_list['bdg_update_path'], var_list['Record Name'],
+                                               var_list['ObjectId'], var_list['Object'],
+                                               var_list['CmpAccountID']))
+
+                var_list.update(extract_dictionary_values(dict_data=var_list))
+
+                if var_list['Move To Bulk']:
+                    # drop_in_bulk_processing(var_list['to_create_path'])
+                    # drop_in_bulk_processing(var_list['update_path'])
+                    print('Would move to bulk processing.')
+                else:
+                    print _steps[2]
+
+            var_list.update(record_processing_stats(var_list['Stats Data']))
+
+            num_processed += 1
+            var_list.update({'Num_Processed': num})
+            print('List #%s processed.' % var_list['Num_Processed'])
+            for k, v in var_list.iteritems():
+                if k not in _dict_keys_to_keep:
+                    var_list[k] = None
     var_list['SFDC Session'].close_session()
-    var_list.update(close_mailbox_connection(var_list['Mailbox']))
+    var_list.update(mb.close_mailbox())

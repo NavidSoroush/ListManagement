@@ -6,7 +6,7 @@ import shutil
 import errno
 import ntpath
 from dateutil.parser import parse
-from cred import userPhone, userEmail, userName
+from cred import userPhone, userEmail, userName, sf_uid
 
 userName = userName
 userEmail = userEmail
@@ -43,22 +43,18 @@ def split_dir_name(full_path):
 
 
 def determine_ext(f_name):
-    '''
+    """
     determines the extension type of the file.
 
     :param f_name: original file name (required)
-    :return: tuple of shorten file name and file extension
-    '''
+    :return: tuple of shorten extension length and file extension
+    """
     filename, file_ext = os.path.splitext(f_name)
-    if file_ext == '.csv' or file_ext == '.pdf' or file_ext == '.xls':
-        ext_len = 4
-    elif file_ext == '.xlsx':
-        ext_len = 5
-    else:
-        raise BaseException('No file name was passed. A variable could have been referenced before it was assigned.')
+    if file_ext.lower() not in ['.csv', '.pdf', '.xls', '.gif', '.png', '.jpg', '.doc', '.xlsx', '.docx']:
+        raise BaseException('No file name, or an unknown file type,  was passed to the program.')
 
     del filename
-    return ext_len, file_ext
+    return len(file_ext), file_ext.lower()
 
 
 def shorten_fname_to_95chars(f_name):
@@ -274,7 +270,7 @@ def create_path_name(path, new_name):
 
 def drop_in_bulk_processing(path):
     dest = '//sc12-fsphl-01/BulkImports/'
-    #\\sc12-fsphl-01\BulkImports\
+    # \\sc12-fsphl-01\BulkImports\
     name = shorten_fname_to_95chars(split_name(path=path))
     shutil.copy(path, dest + name)
 
