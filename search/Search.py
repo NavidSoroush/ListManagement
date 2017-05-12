@@ -25,7 +25,7 @@ class Search:
         self._SFDC_advisor_list = read_df(_AdvListPath)
         self.__preprocess_sfdc_list()
         self._search_fields = ['AMPFMBRID', 'Email', 'LkupName']
-        self._return_fields = ['CRDNumber','AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?',
+        self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?',
                                'BizDev Group']
 
         self._found_contacts = make_df()
@@ -57,6 +57,7 @@ class Search:
         search_list = self._search_list
         search_list = search_list[self._keep_cols]
         search_list = search_list.fillna('')
+        search_list.dropna(axis=0, thresh=3, inplace=True)
         if additional:
             search_list = self._name_preprocessing(self._headers, search_list)
             search_list = self._lkup_name_address_processing(self._headers, search_list)
@@ -96,7 +97,7 @@ class Search:
             if self._is_crd_check == True and 'CRD Provided by List' not in self._headers:
                 found_contacts = self._found_contacts
                 search_list = self._search_list
-                found_contacts = found_contacts.append(search_list[search_list['ContactID'] != ''],ignore_index=True)
+                found_contacts = found_contacts.append(search_list[search_list['ContactID'] != ''], ignore_index=True)
                 self._found_contacts = found_contacts
                 if self._search_list['CRDNumber'].count() == len(self._search_list):
                     if len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list):
@@ -112,14 +113,20 @@ class Search:
                     self._search_list = search_list
                     self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
                 self._headers = self._search_list.columns.values
-                #print search_list.head()
+                # print search_list.head()
             else:
                 found_contacts = self._found_contacts
                 search_list = self._search_list
                 print search_list.head()
                 search_list.fillna('')
-                found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''], ignore_index=True)
-                search_list = search_list[search_list['CRDNumber'] == '']
+                if "CRD Provided by List" in self._headers:
+                    found_contacts = found_contacts.append(search_list[search_list['ContactID'] != ''],
+                                                           ignore_index=True)
+                    search_list = search_list[search_list['ContactID'] == '']
+                else:
+                    found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''],
+                                                           ignore_index=True)
+                    search_list = search_list[search_list['CRDNumber'] == '']
                 self._search_list = search_list
                 self._found_contacts = found_contacts
             for r_field in self._return_fields:
@@ -129,6 +136,7 @@ class Search:
             finra_matched_to_sf = self._search_list[self._search_list['ContactID'] != '']
             print 'Matched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf)
             self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True)
+
     def __num_found(self, found_df):
         self._num_found_contacts = len(found_df)
         self._total_found += self._num_found_contacts
@@ -136,8 +144,6 @@ class Search:
 
     def __search_and_merge(self, search_fields, search_two=False):
         for header in search_fields:
-            #if header == 'CRDNumber':
-                #self._search_list['CRDNumber']
             if header in self._headers:
                 self._num_searches_performed += 1
                 print('Performing search #%s on %s' % (self._num_searches_performed, header))
@@ -266,7 +272,7 @@ class Search:
         else:
             self.__search_and_merge(self._search_fields)
 
-        if self._to_finra == False:
+        if not self._to_finra:
             save_df(df=self._contacts_to_review, path=self._review_contact_path)
 
         save_df(df=self._found_contacts, path=self._found_contact_path)
