@@ -216,7 +216,7 @@ def extract_dictionary_values(dict_data):
     process_start = dict_data['process_start']
 
     completed = time_now
-    processing_completed = datetime.utcnow().isoformat()
+    processing_completed = datetime.datetime.utcnow().isoformat()
     processing_time = clean_date_values(completed) - clean_date_values(process_start)
     processing_string = timedelta_to_processing_str(processing_time)
     obj_name = dict_data['Record Name']
@@ -247,9 +247,9 @@ def extract_dictionary_values(dict_data):
                     'Processed_By__c']
 
     listobj_data = [dict_data['ListObjId'], 'Process Completed', total, obj_to_add, to_create, num_found_in_sfdc,
-                    need_research, need_research, to_update, processing_completed, sf_uid]
+                    need_research, need_research, to_update, match_rate * 100, processing_completed, sf_uid]
 
-    dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=listobj_data)
+    dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
 
     subject = "ALM Notification: %s list processed." % obj_name
 

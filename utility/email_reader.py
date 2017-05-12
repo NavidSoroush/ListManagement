@@ -6,6 +6,7 @@ from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 from lxml.html import fromstring
 from sf.sf_wrapper import SFPlatform
 from email_handler.email_wrapper import Email
+from utility.gen_helpers import determine_ext
 
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [
@@ -100,14 +101,15 @@ class MailBoxReader:
         sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token)
         file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=[att_link], obj=obj,
                                                                                      obj_url=obj_rec_link)
+        ext_len, ext = determine_ext(f_name=file_path)
 
         self._move_received_list_to_processed_folder(num=msg_id)
 
-        _subject = "LMA Notification: %s list received." % obj_rec_name
-        _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \
-                'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
-                                                                                               obj_rec_name)
-        Email(subject=_subject, to=[sent_from], body=_body, attachment_path=None)
+        # _subject = "LMA Notification: %s list received." % obj_rec_name
+        # _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \
+        #         'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
+        #                                                                                        obj_rec_name)
+        # Email(subject=_subject, to=[sent_from], body=_body, attachment_path=None)
 
         pstart = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         Items = [ReturnDict('Object', obj), ReturnDict('Record Name', obj_rec_name),
@@ -120,7 +122,8 @@ class MailBoxReader:
                  ReturnDict('Found in SFDC Search #2', 0), ReturnDict('Num Adding', 0),
                  ReturnDict('Num Removing', 0), ReturnDict('Num Updating/Staying', 0),
                  ReturnDict('Review Path', None), ReturnDict('SFDC Session', sfdc),
-                 ReturnDict('AttachmentId', att_link), ReturnDict('ListObjId', list_obj)]
+                 ReturnDict('AttachmentId', att_link), ReturnDict('ListObjId', list_obj),
+                 ReturnDict('ExtensionType', ext)]
 
         return dict([(i.item, i.email_var) for i in Items])
 
@@ -204,6 +207,9 @@ class MailBoxReader:
             decode = email.Header.decode_header(msg)[0]
         tmp = unicode(decode[0], 'utf-8')
         return tmp
+
+    def close_mailbox(self):
+        self.mailbox.logout()
 
 
 # m = MailBoxReader()
