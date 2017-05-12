@@ -48,13 +48,13 @@ class ListProcessing:
                 self.vars.update(self.mb.iterative_processing(self.mb.pending_lists['Lists_Data'][np]))
                 if not self.is_bad_extension():
                     if self.vars['Object'] == 'Campaign':
-                        self.campaign_processing()
+                        self.campaign_processing(self.vars)
 
                     elif self.vars['Object'] == 'Account':
-                        self.account_processing()
+                        self.account_processing(self.vars)
 
                     elif self.vars['Object'] == 'BizDev Group':
-                        self.bizdev_processing()
+                        self.bizdev_processing(self.vars)
 
                     self.vars.update(record_processing_stats(self.vars['Stats Data']))
 
@@ -65,8 +65,8 @@ class ListProcessing:
                     if k not in _dict_keys_to_keep:
                         self.vars[k] = None
 
-        self.vars['SFDC Session'].close_session()
-        self.vars.update(self.mb.close_mailbox())
+            self.vars['SFDC Session'].close_session()
+            self.mb.close_mailbox()
 
     def is_bad_extension(self):
         """
