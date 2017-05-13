@@ -1,5 +1,5 @@
 import SQLForce
-from SQLForce import AttachmentReader
+from SQLForce import AttachmentReader, AttachmentWriter
 from utility.gen_helpers import convert_unicode_to_date, create_dir_move_file
 
 
@@ -61,6 +61,11 @@ class SFPlatform:
         attachment = create_dir_move_file(path=attachment)
         print('Successfully downloaded file from SF here:\n   - %s' % attachment)
         return attachment, e_date, pre_or_post, account_name, account_id
+
+    def upload_attachments(self, obj_id, attachments):
+        for att in attachments:
+            print('Attaching %s to %s list record.' % (att, obj_id))
+            AttachmentWriter(session=self.session, obj=obj_id, path=att)
 
     def last_list_uploaded(self, obj_id, obj, success=False):
         from datetime import datetime
