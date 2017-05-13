@@ -293,7 +293,8 @@ class FinraScraping:
         '''
         element = self._xpath
         while self._attempted_search_count < len(self._search_list['CRDNumber']):
-            myprogressbar(self._attempted_search_count + 1, len(self._to_be_searched), message='License progress:')
+            myprogressbar(self._attempted_search_count + 1, len(self._search_list['CRDNumber']),
+                          message='License progress:')
             if self._search_list['CRDNumber'][self._attempted_search_count] != '':
                 if self._attempts < 2:
                     try:

@@ -217,7 +217,7 @@ def extract_dictionary_values(dict_data):
 
     completed = time_now
     processing_completed = datetime.datetime.utcnow().isoformat()
-    processing_time = clean_date_values(completed) - clean_date_values(process_start)
+    processing_time = clean_date_values(process_start) - clean_date_values(completed)
     processing_string = timedelta_to_processing_str(processing_time)
     obj_name = dict_data['Record Name']
     obj = dict_data['Object']

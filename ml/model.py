@@ -5,6 +5,7 @@ from utility.pandas_helper import read_df
 from utility.gen_helpers import path_leaf, lower_head_values
 import numpy as np
 
+
 class HeaderPredictions:
     def __init__(self):
         self.brain = 'T:/Shared/FS2 Business Operations/Python Search Program/Training Data/Headers_Train.xlsx'
@@ -33,11 +34,15 @@ class HeaderPredictions:
 
     def _init_and_train_classifier(self):
         train_size = int(len(self.features) * 0.8)
-        train_feat, train_class, test_feat, test_class = self.features[:train_size], self.train_class[:train_size], self.features[train_size:], self.train_class[train_size:]
+        train_feat, train_class, test_feat, test_class = self.features[:train_size], self.train_class[
+                                                                                     :train_size], self.features[
+                                                                                                   train_size:], self.train_class[
+                                                                                                                 train_size:]
         f = RandomForestClassifier(n_estimators=1000, n_jobs=-1, oob_score=True)
         f.fit(train_feat, train_class)
         test_results = f.predict(test_feat)
-        print('Current RFC Model Accuracy: %s' % metrics.accuracy_score(test_class, test_results))
+        print('Current RFC Model Accuracy: %s' % "{0:.0f}%".format(
+            metrics.accuracy_score(test_class, test_results)) * 100)
         return f.fit(self.features, self.train_class)
 
     def create_training_features(self, headers, t_type='train'):
@@ -64,4 +69,3 @@ class HeaderPredictions:
         r_prob = self.classifier.predict_proba(self.p_features)
         prob = [np.max(rp) / np.sum(rp) for rp in r_prob]
         self.predictions, self.probability = r, prob
-

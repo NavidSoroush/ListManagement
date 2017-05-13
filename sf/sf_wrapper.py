@@ -6,7 +6,7 @@ from utility.gen_helpers import convert_unicode_to_date, create_dir_move_file
 class SFPlatform:
     def __init__(self, user, pw, token):
         self._save_dir = 'T:/Shared/FS2 Business Operations/Python Search Program/New Lists/'
-        self._custom_domain = 'https://www.fsinvestments.my.salesforce.com:'
+        self._custom_domain = 'https://fsinvestments.my.salesforce.com:'
         self.session = self._auth(user, pw, token)
 
     def _auth(self, user, pw, token, instance='Production'):
