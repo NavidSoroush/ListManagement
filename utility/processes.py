@@ -250,6 +250,8 @@ def extract_dictionary_values(dict_data):
                     need_research, need_research, to_update, match_rate * 100, processing_completed, sf_uid]
 
     dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
+    if len(att_paths) > 0:
+        dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
 
     subject = "ALM Notification: %s list processed." % obj_name
 
