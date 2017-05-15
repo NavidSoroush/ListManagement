@@ -65,7 +65,7 @@ class SFPlatform:
     def upload_attachments(self, obj_id, attachments):
         for att in attachments:
             print('Attaching %s to %s list record.' % (att, obj_id))
-            AttachmentWriter(session=self.session, obj=obj_id, path=att)
+            AttachmentWriter(session=self.session, parentId=obj_id, filename=att)
 
     def last_list_uploaded(self, obj_id, obj, success=False):
         from datetime import datetime
