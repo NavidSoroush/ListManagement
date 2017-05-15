@@ -1,6 +1,8 @@
 import SQLForce
 from SQLForce import AttachmentReader, AttachmentWriter
-from utility.gen_helpers import convert_unicode_to_date, create_dir_move_file
+from utility.gen_helpers import convert_unicode_to_date, create_dir_move_file, split_name
+import os
+import shutil
 
 
 class SFPlatform:
@@ -8,6 +10,7 @@ class SFPlatform:
         self._save_dir = 'T:/Shared/FS2 Business Operations/Python Search Program/New Lists/'
         self._custom_domain = 'https://fsinvestments.my.salesforce.com:'
         self.session = self._auth(user, pw, token)
+        self.__att_drive__ = 'C:/SFDC_Uploads/'
 
     def _auth(self, user, pw, token, instance='Production'):
         return SQLForce.Session(instance, user, pw, token)
@@ -64,8 +67,11 @@ class SFPlatform:
 
     def upload_attachments(self, obj_id, attachments):
         for att in attachments:
+            if len(att) >= 120:
+                att = self.__manage_attachements__(att=att)
             print('Attaching %s to %s list record.' % (att, obj_id))
-            AttachmentWriter(session=self.session, parentId=obj_id, filename=att)
+            AttachmentWriter.attachFile(session=self.session, parentId=obj_id, filename=att)
+        self.__clean_up_attachments__()
 
     def last_list_uploaded(self, obj_id, obj, success=False):
         from datetime import datetime
@@ -104,3 +110,17 @@ class SFPlatform:
         except:
             print 'No advisors in %s object.' % obj
         return members
+
+    def __manage_attachements__(self, att):
+        if not os.path.isdir(self.__att_drive__):
+            os.mkdir(self.__att_drive__)
+        file_name_list = split_name(att).replace('-', ' ').replace('_', ' ').split(' ')
+        new_name = self.__att_drive__ + ' '.join(file_name_list[:2]) + ' ' + ' '.join(file_name_list[-2:])
+        shutil.copy(att, new_name)
+        return new_name
+
+    def __clean_up_attachments__(self):
+        if os.path.isdir(self.__att_drive__):
+            shutil.rmtree(self.__att_drive__)
+
+
