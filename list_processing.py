@@ -6,6 +6,7 @@ from ml.header_predictions import predict_headers_and_pre_processing
 from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
 from utility.email_helper import lists_in_queue
 from utility.email_reader import MailBoxReader
+from utility.log_helper import ListManagementLogger
 from email_handler.email_wrapper import Email
 
 _steps = [
@@ -23,7 +24,8 @@ class ListProcessing:
         """
         self.s = Search()
         self.fin = FinraScraping()
-        self.mb = MailBoxReader()
+        self.log = ListManagementLogger()
+        self.mb = MailBoxReader(log_obj=self.log)
         self.vars = self.mb.pending_lists
         self.main_contact_based_processing()
 
@@ -110,7 +112,7 @@ class ListProcessing:
         :return: n/a
         """
         var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
-                                                           var_list['CmpAccountName']))
+                                                           var_list['CmpAccountName'], self.log))
         var_list.update(self.s.perform_search_one(var_list['File Path'], var_list['Object']))
         self.finra_search_and_search_two(var_list)
         var_list.update(self.fin.license_check(var_list['Found Path']))
