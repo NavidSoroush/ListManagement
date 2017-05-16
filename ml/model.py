@@ -2,7 +2,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 from utility.pandas_helper import read_df
-from utility.gen_helpers import path_leaf, lower_head_values
+from utility.gen_helper import path_leaf, lower_head_values
 import numpy as np
 
 

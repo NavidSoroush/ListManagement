@@ -6,7 +6,7 @@ from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 from lxml.html import fromstring
 from sf.sf_wrapper import SFPlatform
 from email_handler.email_wrapper import Email
-from utility.gen_helpers import determine_ext
+from utility.gen_helper import determine_ext
 
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [

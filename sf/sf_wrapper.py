@@ -1,6 +1,6 @@
 import SQLForce
 from SQLForce import AttachmentReader, AttachmentWriter
-from utility.gen_helpers import convert_unicode_to_date, create_dir_move_file, split_name
+from utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name
 import os
 import shutil
 

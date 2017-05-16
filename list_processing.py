@@ -1,10 +1,10 @@
-from search.Search import Search
-from finra.Finra import FinraScraping
+from search.search import Search
+from finra.finra import FinraScraping
 from stats.record_stats import record_processing_stats
-from utility.gen_helpers import drop_in_bulk_processing
+from utility.gen_helper import drop_in_bulk_processing
 from ml.header_predictions import predict_headers_and_pre_processing
 from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
-from utility.email_helpers import lists_in_queue
+from utility.email_helper import lists_in_queue
 from utility.email_reader import MailBoxReader
 from email_handler.email_wrapper import Email
 

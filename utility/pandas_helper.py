@@ -1,5 +1,5 @@
 import pandas as pd
-from gen_helpers import determine_ext
+from gen_helper import determine_ext
 
 
 def read_df(path):

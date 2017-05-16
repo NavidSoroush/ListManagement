@@ -1,8 +1,8 @@
-from gen_helpers import *
-from email_helpers import craft_notification_email
+from gen_helper import *
+from email_helper import craft_notification_email
 from email_handler.email_wrapper import Email
 from pandas_helper import read_df, save_df, make_df, determine_num_records
-from sf_helpers import *
+from sf_helper import *
 import datetime
 
 
