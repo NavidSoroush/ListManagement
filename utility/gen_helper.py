@@ -21,7 +21,7 @@ _accepted_cols = [
     'CRDNumber', 'FirstName', 'LastName', 'AccountId'
     , 'MailingStreet', 'MailingCity', 'MailingState', 'MailingPostalCode'
     , 'SourceChannel', 'Email', 'Website', 'AUM', 'GDC', 'Fax'
-    , 'HomePhone', 'MobilePhone', 'Phone', 'toAlternatives', 'toAdvisory'
+    , 'HomePhone', 'MobilePhone', 'Phone'
 ]
 _necessary_cols = _accepted_cols[:8]
 _bdg_accepted_cols = ['ContactID', 'BizDev Group', 'Licenses']
@@ -269,10 +269,11 @@ def create_path_name(path, new_name):
 
 
 def drop_in_bulk_processing(path):
-    dest = '//sc12-fsphl-01/BulkImports/'
-    # \\sc12-fsphl-01\BulkImports\
-    name = shorten_fname_to_95chars(split_name(path=path))
-    shutil.copy(path, dest + name)
+    if path is not None:
+        dest = '//sc12-fsphl-01/BulkImports/'
+        # \\sc12-fsphl-01\BulkImports\
+        name = shorten_fname_to_95chars(split_name(path=path))
+        shutil.copy(path, dest + name)
 
 
 def clean_date_values(d_value):

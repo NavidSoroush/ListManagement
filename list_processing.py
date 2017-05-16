@@ -22,7 +22,7 @@ class ListProcessing:
         declare and set global objects that are leveraged through the
         actually processing of lists.
         """
-        self.log = ListManagementLogger()
+        self.log = ListManagementLogger().logger
         self.s = Search(log=self.log)
         self.fin = FinraScraping(log=self.log)
         self.mb = MailBoxReader(log=self.log)
@@ -62,7 +62,7 @@ class ListProcessing:
 
                 np += 1
                 self.vars.update({'Num_Processed': n})
-                print('List #%s processed.' % self.vars['Num_Processed'])
+                self.log.info('List #%s processed.' % self.vars['Num_Processed'])
                 for k, v in self.vars.iteritems():
                     if k not in _dict_keys_to_keep:
                         self.vars[k] = None
@@ -87,7 +87,7 @@ class ListProcessing:
             sub = 'LMA: Unable to Process List Attached to %s' % obj_name
             msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
                   'List Management App.' % (obj_name, self.vars['ExtensionType'])
-            print(msg)
+            self.log.warning(msg)
             Email(subject=sub, to=[self.vars['Sender Email']], body=msg, attachment_path=None)
             self.vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
                                                      upload_data=[[self.vars['ListObjId'], 'Unable to Process']])

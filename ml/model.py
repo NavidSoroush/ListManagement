@@ -44,8 +44,8 @@ class HeaderPredictions:
         f = RandomForestClassifier(n_estimators=1000, n_jobs=-1, oob_score=True)
         f.fit(train_feat, train_class)
         test_results = f.predict(test_feat)
-        self.log.info('Current RFC Model Accuracy: %s' % "{0:.0f}%".format(
-            metrics.accuracy_score(test_class, test_results)) * 100)
+        accuracy = metrics.accuracy_score(test_class, test_results) * 100
+        self.log.info('Current RFC Model Accuracy: %s' % ("{0:.0f}%".format(accuracy)))
         return f.fit(self.features, self.train_class)
 
     def create_training_features(self, headers, t_type='train'):

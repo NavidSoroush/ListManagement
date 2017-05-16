@@ -52,7 +52,7 @@ class MailBoxReader:
                 if _list_notification_elements[0] in subject:
                     msg, msg_body = self.get_decoded_email_body(f_data[0][1])
                     list_queue.append([msg, msg_body, num])
-        self.log.info('Found %s lists pending in the queue.')
+        self.log.info('Found %s lists pending in the queue.' % len(list_queue))
         item = {'Lists_In_Queue': len(list_queue),
                 'Num_Processed': 0,
                 'Lists_Data': list_queue}
@@ -79,7 +79,8 @@ class MailBoxReader:
                                         _list_notification_elements[2])
         obj_rec_name = obj_rec_name[:obj_rec_name.index(_list_notification_elements[2])]
 
-        self.log.info("\nProcessing begins on %s's list attached to %s on the %s object" % sender_name, obj_rec_name, obj)
+        self.log.info(
+            "Processing begins on %s's list attached to %s on the %s object" % (sender_name, obj_rec_name, obj))
 
         obj_rec_link = self.info_parser(msg_body, _list_notification_elements[3],
                                         _list_notification_elements[4])
@@ -115,7 +116,7 @@ class MailBoxReader:
         #         'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
         #                                                                                        obj_rec_name)
         # Email(subject=_subject, to=[sent_from], body=_body, attachment_path=None)
-        self.log.info('Combining all meta data from %s list for processing.')
+        self.log.info('Combining all meta data from %s list for processing.' % obj)
         pstart = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         Items = [ReturnDict('Object', obj), ReturnDict('Record Name', obj_rec_name),
                  ReturnDict('Sender Email', sent_from), ReturnDict('Sender Name', sender_name),
@@ -130,7 +131,10 @@ class MailBoxReader:
                  ReturnDict('AttachmentId', att_link), ReturnDict('ListObjId', list_obj),
                  ReturnDict('ExtensionType', ext)]
 
-        return dict([(i.item, i.email_var) for i in Items])
+        vars_list = dict([(i.item, i.email_var) for i in Items])
+        self.log.info('Current vars list: \n%s' % vars_list)
+
+        return vars_list
 
     def _move_received_list_to_processed_folder(self, num):
         self.mailbox.copy(num, 'INBOX/Auto Processed Lists')

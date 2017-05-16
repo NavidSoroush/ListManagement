@@ -8,7 +8,7 @@ def predict_headers_and_pre_processing(path, obj, log):
     model = HeaderPredictions(log=log)
     model.predict(predict_path=path, obj=obj)
     headers = model.p_df.columns.values
-    log.info("Here are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, headers))
+    log.info("\nHere are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, headers))
     output = make_df(data={"1. Header": headers, "3. Prediction": model.predictions})
 
     expected_inputs = model.train_class.unique().tolist()
@@ -17,7 +17,7 @@ def predict_headers_and_pre_processing(path, obj, log):
     need_validation = output[['1. Header', '3. Prediction']]
     need_validation = need_validation.rename(columns={'1. Header': 'Header Value', '3. Prediction': 'Class'})
     if len(need_validation) > 0:
-        log.info("\nHere are the predictions that I'm less than %s sure on:\n" % "{0:.0f}%".format(_confidence * 100))
+        log.info("Here are the predictions that I'm less than %s sure on:\n" % "{0:.0f}%".format(_confidence * 100))
 
     new_headers = []
     for index, row in need_validation.iterrows():
@@ -26,7 +26,7 @@ def predict_headers_and_pre_processing(path, obj, log):
             new_headers.append(tmp)
             model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
         else:
-            log.info("Header given: '%s'"
+            log.info("\nHeader given: '%s'"
                      "\nMy prediction: '%s'"
                      "\nMy confidence: %s." % (str(row['Header Value']), str(row['Class']),
                                                "{0:.0f}%".format(model.probability[index] * 100)))

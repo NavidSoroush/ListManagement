@@ -238,6 +238,7 @@ def extract_dictionary_values(dict_data, log=None):
                       obj_to_remove, need_research, received, process_start,
                       completed, processing_string, create_advisors_note]
     body_string = craft_notification_email(items_to_email)
+    log.info('Processed Vars Dictionary: \n\n%s' % '\n'.join(dict_data))
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
