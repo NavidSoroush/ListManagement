@@ -2,7 +2,7 @@ import os
 import time
 import numpy as np
 from legacy.get_sf_adv_list import run
-from utility.gen_helpers import create_path_name, today
+from utility.gen_helper import create_path_name, today
 from utility.pandas_helper import read_df, save_df, make_df
 
 _AdvListPath = 'T:/Shared/FS2 Business Operations/Search Program/Salesforce Data Files/SFDC Advisor List as of ' \

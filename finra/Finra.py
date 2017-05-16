@@ -5,8 +5,8 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
-from utility.finra_helpers import strip_unicode_chars
-from utility.gen_helpers import create_path_name
+from utility.finra_helper import strip_unicode_chars
+from utility.gen_helper import create_path_name
 from utility.pandas_helper import read_df, save_df
 from utility.progress_bar import myprogressbar
 
