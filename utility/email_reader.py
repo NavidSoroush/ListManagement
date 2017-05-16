@@ -26,8 +26,8 @@ class ReturnDict(object):
 
 
 class MailBoxReader:
-    def __init__(self, log_obj):
-        self.log = log_obj
+    def __init__(self, log):
+        self.log = log
         self._email_account = outlook_userEmail + '/Lists'
         self._email_folder = 'INBOX/Auto Lists From SFDC/'
         self.mailbox = imaplib.IMAP4_SSL('outlook.office365.com')

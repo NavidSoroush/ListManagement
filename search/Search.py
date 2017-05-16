@@ -19,11 +19,11 @@ if not os.path.exists(_AdvListPath):
 
 
 class Search:
-    def __init__(self):
+    def __init__(self, log=None):
         """
         declare instance variables for the search class and child methods.
         """
-
+        self.log = log
         self._today = today
         self._SFDC_advisor_list = read_df(_AdvListPath)
         self.__preprocess_sfdc_list()
@@ -142,7 +142,7 @@ class Search:
                     to_review = self._contacts_to_review
                     to_review = to_review.append(search_list[search_list['ContactID'] == ''], ignore_index=True)
                     self._contacts_to_review = to_review
-                    print 'CRD Info provided for all contacts. Will not search FINRA.'
+                    self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
 
                 else:
                     search_list = search_list[search_list['ContactID'] == '']
@@ -153,7 +153,7 @@ class Search:
             else:
                 found_contacts = self._found_contacts
                 search_list = self._search_list
-                print search_list.head()
+                self.log.info(search_list.head())
                 search_list.fillna('')
 
                 if "CRD Provided by List" in self._headers:
@@ -174,7 +174,7 @@ class Search:
         else:
             self._found_contacts = read_df(self._found_contact_path)
             finra_matched_to_sf = self._search_list[self._search_list['ContactID'] != '']
-            print '\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf)
+            self.log.info('\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf))
             self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True)
 
     def __num_found(self, found_df):
@@ -203,7 +203,7 @@ class Search:
         for header in search_fields:
             if header in self._headers:
                 self._num_searches_performed += 1
-                print('Performing search #%s on %s' % (self._num_searches_performed, header))
+                self.log.info('Performing search #%s on %s' % (self._num_searches_performed, header))
                 self._joined_headers = self.__join_headers(header)
 
                 self._headers_and_ids = make_df()
@@ -220,7 +220,7 @@ class Search:
                 else:
                     self.__num_found(self._found_contacts)
 
-                print('Found %s on %s search.\n' % (self._num_found_contacts, header))
+                self.log.info('Found %s on %s search.\n' % (self._num_found_contacts, header))
 
     def _crd_search(self, search_field=['CRDNumber']):
         """
@@ -268,7 +268,7 @@ class Search:
 
             if np.mean(search_list['MailingState'].str.len()) > 2:
                 import us
-                print('MailingState column needs to be transformed.')
+                self.log.info('MailingState column needs to be transformed.')
                 for index, row in search_list.iterrows():
                     try:
                         state = us.states.lookup(search_list.loc[index, "MailingState"])
@@ -284,7 +284,7 @@ class Search:
                                           search_list["MailingState"] + search_list["MailingPostalCode"]
 
             else:
-                print("Advisor name or account information missing")
+                self.log.info("Advisor name or account information missing")
         return search_list
 
     def _clean_comma_and_space(self, row):
@@ -355,6 +355,7 @@ class Search:
         return search_list
 
     def perform_search_one(self, searching_list_path, list_type):
+        self.log.info('Implementing search_one method on the %s list. Search 1 pre-processing begins.' % list_type)
         self._search_list = read_df(searching_list_path)
         self.__init_list_metadata()
         self._list_type = list_type
@@ -364,13 +365,15 @@ class Search:
         self._review_contact_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
 
         if 'CRDNumber' in self._headers and not self._is_crd_check:
+            self.log.info("Performing a CRD search, as 'CRDNumber' is present.")
             self._crd_search()
 
         else:
+            self.log.info("Performing standard search, as 'CRDNumber' is not present.")
             self.__search_and_merge(self._search_fields)
 
         if not self._to_finra:
-            print('CRD Info provided for all contacts. Will not search FINRA.')
+            self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
             save_df(df=self._contacts_to_review, path=self._review_contact_path)
 
         save_df(df=self._found_contacts, path=self._found_contact_path)
@@ -384,6 +387,7 @@ class Search:
         return ret_item
 
     def perform_search_two(self, searching_list_path, found_path, list_type):
+        self.log.info('Implementing search_two method on the %s list. Search 2 pre-processing begins.' % list_type)
         self._search_fields = ['CRDNumber']
         self._return_fields = ['AccountId', 'SourceChannel', 'ContactID',
                                'Needs Info Updated?', 'BizDev Group']
@@ -396,7 +400,7 @@ class Search:
 
         self.__check_list_type()
         self.__data_preprocessing()
-        print('\nStep 7:\nSearching against SFDC following FINRA/SEC searches.')
+        self.log.info('Searching against SFDC following FINRA/SEC searches.')
         self.__search_and_merge(search_fields=self._search_fields, search_two=True)
         save_df(df=self._found_contacts, path=found_path)
         save_df(df=self._search_list, path=searching_list_path)
@@ -407,11 +411,11 @@ class Search:
 
     def perform_sec_search(self, searching_list_path, found_path):
         if not os.path.exists(self._sec_path):
-            print("Skipping SEC Search. Today's files could not be found in the listed directory.")
+            self.log.info("Skipping SEC Search. Today's files could not be found in the listed directory.")
             ret_item = {'Next Step': 'SFDC Search #2', 'SEC_Found': 0}
             return ret_item
 
-        print('\nStep 6:\nSearching against SEC Data.')
+        self.log.info('Searching against SEC Data.')
         self._search_list = read_df(searching_list_path)
         self.__init_list_metadata()
         self._sec_files = os.listdir(self._sec_path)
