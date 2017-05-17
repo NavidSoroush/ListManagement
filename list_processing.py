@@ -6,6 +6,7 @@ from ml.header_predictions import predict_headers_and_pre_processing
 from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
 from utility.email_helper import lists_in_queue
 from utility.email_reader import MailBoxReader
+from utility.log_helper import ListManagementLogger
 from email_handler.email_wrapper import Email
 
 _steps = [
@@ -21,9 +22,10 @@ class ListProcessing:
         declare and set global objects that are leveraged through the
         actually processing of lists.
         """
-        self.s = Search()
-        self.fin = FinraScraping()
-        self.mb = MailBoxReader()
+        self.log = ListManagementLogger().logger
+        self.s = Search(log=self.log)
+        self.fin = FinraScraping(log=self.log)
+        self.mb = MailBoxReader(log=self.log)
         self.vars = self.mb.pending_lists
         self.main_contact_based_processing()
 
@@ -60,7 +62,7 @@ class ListProcessing:
 
                 np += 1
                 self.vars.update({'Num_Processed': n})
-                print('List #%s processed.' % self.vars['Num_Processed'])
+                self.log.info('List #%s processed.' % self.vars['Num_Processed'])
                 for k, v in self.vars.iteritems():
                     if k not in _dict_keys_to_keep:
                         self.vars[k] = None
@@ -85,7 +87,7 @@ class ListProcessing:
             sub = 'LMA: Unable to Process List Attached to %s' % obj_name
             msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
                   'List Management App.' % (obj_name, self.vars['ExtensionType'])
-            print(msg)
+            self.log.warning(msg)
             Email(subject=sub, to=[self.vars['Sender Email']], body=msg, attachment_path=None)
             self.vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
                                                      upload_data=[[self.vars['ListObjId'], 'Unable to Process']])
@@ -110,19 +112,19 @@ class ListProcessing:
         :return: n/a
         """
         var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
-                                                           var_list['CmpAccountName']))
+                                                           var_list['CmpAccountName'], self.log))
         var_list.update(self.s.perform_search_one(var_list['File Path'], var_list['Object']))
         self.finra_search_and_search_two(var_list)
         var_list.update(self.fin.license_check(var_list['Found Path']))
         var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
-                                                 pre_or_post=var_list['Pre_or_Post']))
+                                                 pre_or_post=var_list['Pre_or_Post'], log=self.log))
         var_list.update(source_channel(var_list['cmp_upload_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object']))
+                                       var_list['ObjectId'], var_list['Object'], log=self.log))
         var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
-                                       var_list['CmpAccountID'], var_list['Object']))
+                                       var_list['CmpAccountID'], var_list['Object'], log=self.log))
         var_list.update(sfdc_upload(path=var_list['cmp_upload_path'], obj=var_list['Object'],
-                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
-        var_list.update(extract_dictionary_values(dict_data=var_list))
+                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session'], log=self.log))
+        var_list.update(extract_dictionary_values(dict_data=var_list, log=self.log))
         if var_list['Move To Bulk']:
             drop_in_bulk_processing(var_list['to_create_path'])
         else:
@@ -146,16 +148,17 @@ class ListProcessing:
         :param var_list: list processing metadata 
         :return: n/a
         """
-        var_list.update(predict_headers_and_pre_processing(var_list['File Path'], var_list['Record Name']))
+        var_list.update(predict_headers_and_pre_processing(var_list['File Path'], var_list['Record Name'],
+                                                           log=self.log))
         var_list.update(self.s.perform_search_one(var_list['File Path'], var_list['Object']))
         self.finra_search_and_search_two(var_list)
         var_list.update(self.fin.license_check(var_list['Found Path']))
         var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
-                                                 pre_or_post=var_list['Pre_or_Post']))
+                                                 pre_or_post=var_list['Pre_or_Post'], log=self.log))
         var_list['SFDC Session'].last_list_uploaded(obj_id=var_list['ObjectId'], obj=var_list['Object'])
         var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object']))
-        var_list.update(extract_dictionary_values(dict_data=var_list))
+                                       var_list['ObjectId'], var_list['Object'], log=self.log))
+        var_list.update(extract_dictionary_values(dict_data=var_list, log=self.log))
 
         if var_list['Move To Bulk']:
             drop_in_bulk_processing(var_list['update_path'])
@@ -183,24 +186,24 @@ class ListProcessing:
         :return: n/a
         """
         var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
-                                                           var_list['CmpAccountName']))
+                                                           var_list['CmpAccountName'], log=self.log))
         var_list.update(self.s.perform_search_one(var_list['File Path'], var_list['Object']))
         self.finra_search_and_search_two(var_list)
         var_list.update(self.fin.license_check(var_list['Found Path']))
         var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
-                                                 pre_or_post=var_list['Pre_or_Post']))
+                                                 pre_or_post=var_list['Pre_or_Post'], log=self.log))
         var_list.update(sfdc_upload(path=var_list['bdg_update_path'], obj=var_list['Object'],
-                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session']))
+                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session'], log=self.log))
         var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
                                        var_list['ObjectId'], var_list['Object'],
-                                       var_list['CmpAccountID']))
+                                       var_list['CmpAccountID'], log=self.log))
         var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
                                        var_list['ObjectId'], var_list['Object'],
-                                       var_list['CmpAccountID']))
+                                       var_list['CmpAccountID'], log=self.log))
         var_list.update(source_channel(var_list['bdg_update_path'], var_list['Record Name'],
                                        var_list['ObjectId'], var_list['Object'],
-                                       var_list['CmpAccountID']))
-        var_list.update(extract_dictionary_values(dict_data=var_list))
+                                       var_list['CmpAccountID'], log=self.log))
+        var_list.update(extract_dictionary_values(dict_data=var_list, log=self.log))
 
         if var_list['Move To Bulk']:
             drop_in_bulk_processing(var_list['to_create_path'])

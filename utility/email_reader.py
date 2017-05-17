@@ -26,7 +26,8 @@ class ReturnDict(object):
 
 
 class MailBoxReader:
-    def __init__(self):
+    def __init__(self, log):
+        self.log = log
         self._email_account = outlook_userEmail + '/Lists'
         self._email_folder = 'INBOX/Auto Lists From SFDC/'
         self.mailbox = imaplib.IMAP4_SSL('outlook.office365.com')
@@ -37,13 +38,13 @@ class MailBoxReader:
     def extract_pending_lists(self, mailbox, list_queue=[]):
         s_resp, s_data = mailbox.search(None, 'ALL')
         if s_resp != "OK":
-            print('No new lists found.')
+            self.log.info('No new lists were found in the email queue.')
             return
 
         for num in s_data[0].split():
             f_resp, f_data = mailbox.fetch(num, '(RFC822)')
             if f_resp != 'OK':
-                print('Experienced an issue getting message %s' % num)
+                self.log.info('Experienced an issue getting message %s' % num)
                 return
             else:
 
@@ -51,6 +52,7 @@ class MailBoxReader:
                 if _list_notification_elements[0] in subject:
                     msg, msg_body = self.get_decoded_email_body(f_data[0][1])
                     list_queue.append([msg, msg_body, num])
+        self.log.info('Found %s lists pending in the queue.' % len(list_queue))
         item = {'Lists_In_Queue': len(list_queue),
                 'Num_Processed': 0,
                 'Lists_Data': list_queue}
@@ -77,6 +79,9 @@ class MailBoxReader:
                                         _list_notification_elements[2])
         obj_rec_name = obj_rec_name[:obj_rec_name.index(_list_notification_elements[2])]
 
+        self.log.info(
+            "Processing begins on %s's list attached to %s on the %s object" % (sender_name, obj_rec_name, obj))
+
         obj_rec_link = self.info_parser(msg_body, _list_notification_elements[3],
                                         _list_notification_elements[4])
 
@@ -85,8 +90,8 @@ class MailBoxReader:
 
         list_obj = self.info_parser(msg_body, _list_notification_elements[-2])[-20:-2]
 
-        print('Attachment Id: %s' % att_link)
-        print('List Object Id: %s' % list_obj)
+        self.log.info('Attachment Id: %s' % att_link)
+        self.log.info('List Object Id: %s' % list_obj)
 
         if obj == 'Campaign':
             obj_rec_link = obj_rec_link[-18:]
@@ -96,8 +101,9 @@ class MailBoxReader:
             obj_rec_link = obj_rec_link[39:57]
         else:
             obj_rec_link = obj_rec_link[39:57]
-        print('Object Id: %s' % obj_rec_link)
+        self.log.info('Object Id: %s' % obj_rec_link)
 
+        self.log.info('Downloading attachment from SFDC.')
         sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token)
         file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=[att_link], obj=obj,
                                                                                      obj_url=obj_rec_link)
@@ -110,7 +116,7 @@ class MailBoxReader:
         #         'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
         #                                                                                        obj_rec_name)
         # Email(subject=_subject, to=[sent_from], body=_body, attachment_path=None)
-
+        self.log.info('Combining all meta data from %s list for processing.' % obj)
         pstart = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         Items = [ReturnDict('Object', obj), ReturnDict('Record Name', obj_rec_name),
                  ReturnDict('Sender Email', sent_from), ReturnDict('Sender Name', sender_name),
@@ -125,12 +131,16 @@ class MailBoxReader:
                  ReturnDict('AttachmentId', att_link), ReturnDict('ListObjId', list_obj),
                  ReturnDict('ExtensionType', ext)]
 
-        return dict([(i.item, i.email_var) for i in Items])
+        vars_list = dict([(i.item, i.email_var) for i in Items])
+        self.log.info('Current vars list: \n%s' % vars_list)
+
+        return vars_list
 
     def _move_received_list_to_processed_folder(self, num):
         self.mailbox.copy(num, 'INBOX/Auto Processed Lists')
         self.mailbox.store(num, '+FLAGS', r'(\Deleted)')
         self.mailbox.expunge()
+        self.log.info("Moved email to 'Auto Processed Lists' folder in outlook.")
 
     def get_decoded_email_body(self, message_body):
         msg = email.message_from_string(message_body)
@@ -210,7 +220,6 @@ class MailBoxReader:
 
     def close_mailbox(self):
         self.mailbox.logout()
-
 
 # m = MailBoxReader()
 # for i in range(m.pending_lists['Lists_In_Queue']):

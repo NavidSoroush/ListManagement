@@ -12,7 +12,8 @@ from utility.progress_bar import myprogressbar
 
 
 class FinraScraping:
-    def __init__(self):
+    def __init__(self, log=None):
+        self.log = log
         self._chrome_driver = "C:/Python27/selenium/Chrome/chromedriver"
         os.environ["webdriver.chrome.driver"] = self._chrome_driver
         self._finra_site = 'http://www.finra.org/'
@@ -90,7 +91,7 @@ class FinraScraping:
         '''
         self._sel.refresh()
         self._refresh_count += 1
-        print('refreshing...%s' % self._refresh_count)
+        self.log.info('refreshing...%s' % self._refresh_count)
 
     def __close_selenium_components(self):
         '''
@@ -111,10 +112,10 @@ class FinraScraping:
         '''
         self.__init_crd_metadata(path=path)
         self._sel.get(self._finra_site)
-        print('\nAttempting to get CRDs from FINRA for %s names.' % len(self._to_be_searched))
+        self.log.info('\nAttempting to get CRDs from FINRA for %s names.' % len(self._to_be_searched))
 
         self.__crd_only_search_functionality()
-        print('\nConfidently found %s CRD numbers from FINRA search.' % self._found)
+        self.log.info('\nConfidently found %s CRD numbers from FINRA search.' % self._found)
 
         self.__data_output_prep()
 
@@ -239,7 +240,7 @@ class FinraScraping:
         :return: dicitonary - next step for list program
         '''
         self.__init_license_metadata(path)
-        print('Pulling licenses from FINRA for %s advisors.' % (
+        self.log.info('Pulling licenses from FINRA for %s advisors.' % (
             len(self._search_list[self._search_list['CRDNumber'].notnull()].index)))
 
         self.__license_finra_search()
@@ -325,7 +326,7 @@ class FinraScraping:
 
     def address_check(self, path):
         self.__init_address_metadata(path=path)
-        print('Attempting to get addresses from FINRA for %s CRDs.' % len(self._search_list.index))
+        self.log.info('Attempting to get addresses from FINRA for %s CRDs.' % len(self._search_list.index))
         self.__address_scrape()
         save_df(self._search_list, path=path)
 
@@ -464,7 +465,7 @@ class FinraScraping:
             self.__str_or_int(search_input)
 
         if not self._crd_enabled and not self._license_enabled:
-            print('Input %s is of type %s which is not a supported format' % (
+            self.log.warning('Input %s is of type %s which is not a supported format' % (
                 search_input, type(search_input)
             ))
             sys.exit(0)
@@ -492,21 +493,21 @@ class FinraScraping:
         :return: updated self.
         '''
         if not self._crd_enabled and crd:
-            print('CRD is not possible to search for given the data type of input %s.' % (
+            self.log.warning('CRD is not possible to search for given the data type of input %s.' % (
                 search_input
             ))
             sys.exit(0)
 
         if not self._license_enabled and licenses:
-            print('License is not possible to search for given the data type of input %s.' % (
+            self.log.warning('License is not possible to search for given the data type of input %s.' % (
                 search_input
             ))
             sys.exit(0)
 
         if (crd and licenses) and not (self._crd_enabled or self._license_enabled):
-            print('Finra search cannot return CRD or Licenses as you provided %s'
-                  'and the license search does not support %s type.' % (search_input,
-                                                                        type(search_input)))
+            self.log.warning('Finra search cannot return CRD or Licenses as you provided %s'
+                             'and the license search does not support %s type.' % (search_input,
+                                                                                   type(search_input)))
             sys.exit(0)
 
 
@@ -525,4 +526,4 @@ class FinraScraping:
         self._sel.get(self._finra_site)
         self.__crd_only_search_functionality()
         for search in range(len(self._to_be_searched)):
-            print("CRD search for '%s' returned: '%s'" % (self._to_be_searched[search], self._to_be_added[search]))
+            self.log.info("CRD search for '%s' returned: '%s'" % (self._to_be_searched[search], self._to_be_added[search]))

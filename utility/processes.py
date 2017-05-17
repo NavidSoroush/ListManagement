@@ -6,7 +6,7 @@ from sf_helper import *
 import datetime
 
 
-def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
+def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
     """
     parses the list into new files based on the current biz dev, campaign, or account list.
     :param path: path to original list of advisors
@@ -27,7 +27,6 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
             dict_elements['cmp_status'] = 'Needs Follow-Up'
         else:
             dict_elements['cmp_status'] = 'Invited'
-
         dict_elements['to_create_path'] = create_path_name(path, 'cmp_to_create')
         dict_elements['cmp_upload_path'] = create_path_name(path, 'cmp_upload')
 
@@ -40,6 +39,7 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
 
         save_df(df=cmp_upload_df, path=dict_elements['cmp_upload_path'])
         save_df(df=to_create_df, path=dict_elements['to_create_path'])
+        files_created = ['cmp_upload_path', 'to_create_path']
 
     elif l_type == 'Account':
         dict_elements['no_update_path'] = create_path_name(path, 'no_updates')
@@ -53,6 +53,7 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
 
         save_df(df=no_update_df, path=dict_elements['no_update_path'])
         save_df(df=to_update_df, path=dict_elements['update_path'])
+        files_created = ['no_update_path', 'update_path']
 
     elif l_type == 'BizDev Group':
         dict_elements['no_update_path'] = create_path_name(path=path, new_name='no_updates')
@@ -74,11 +75,13 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None):
         save_df(df=to_update_df, path=dict_elements['update_path'])
         save_df(df=to_create_df, path=dict_elements['to_create_path'])
         save_df(df=bdg_update_df, path=dict_elements['bdg_update_path'])
+        files_created = ['no_update_path', 'update_path', 'to_create_path', 'bdg_update_path']
 
+    log.info('Parsed the %s list in to the the below files: %s' % (l_type, '\n'.join(files_created)))
     return dict_elements
 
 
-def source_channel(path, record_name, obj_id, obj, aid=None):
+def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
     '''
     prepares the list for SFDC /upload and contact creation.
 
@@ -87,15 +90,17 @@ def source_channel(path, record_name, obj_id, obj, aid=None):
     :param obj_id: SFDC object id
     :param obj: SFDC object type
     :param aid: SFDC account id if SFDC object is BizDev Group
+    :param log: logging object, passed from main processing
     :return:
     '''
     move_to_bulk = False
     if obj == 'Campaign':
-        print('\nStep 9. Data Prep (will be performed twice)')
+        msg = 'Will be performed twice.'
     elif obj == 'BizDev Group':
-        print('\nStep 9. Data Prep (will be performed thrice)')
+        msg = 'Will be performed thrice.'
     else:
-        print('\nStep 9. Data Prep')
+        msg = ''
+    log.info("Preparing data prep for the %s list's action files, based list type. %s" % (obj, msg))
     list_df = read_df(path)
 
     if obj == 'Account':
@@ -155,7 +160,7 @@ def source_channel(path, record_name, obj_id, obj, aid=None):
                 for index, row in list_df.iterrows():
                     list_df.loc[index, ph] = clean_phone_number(row[ph])
             except:
-                print("Can't clean up %s numbers due to %s." % (ph, Exception.message))
+                log.info("Can't clean up %s numbers due to %s." % (ph, Exception.message))
 
     save_df(df=list_df, path=path)
     return {
@@ -165,14 +170,16 @@ def source_channel(path, record_name, obj_id, obj, aid=None):
     }
 
 
-def extract_dictionary_values(dict_data):
+def extract_dictionary_values(dict_data, log=None):
     '''
     from all values created by list processing, creates email
     to send by to list requester.
 
     :param dict_data: dictionary of values created by list program processing.
+    :param log: logging object, passed from main processing
     :return: stats for record keeping
     '''
+    log.info('Extracting stats from the %s data dictionary.' % dict_data['Object'])
     if dict_data['Object'] == 'Campaign':
         to_update = dict_data['n_cmp_upload']
         to_create = dict_data['n_to_create']
@@ -231,6 +238,8 @@ def extract_dictionary_values(dict_data):
                       obj_to_remove, need_research, received, process_start,
                       completed, processing_string, create_advisors_note]
     body_string = craft_notification_email(items_to_email)
+    log.info(
+        'Processed Vars Dictionary: \n\n%s' % '\n: '.join(['{}_{}'.format(k, v) for k, v in dict_data.iteritems()]))
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
@@ -249,18 +258,21 @@ def extract_dictionary_values(dict_data):
     listobj_data = [dict_data['ListObjId'], 'Process Completed', total, obj_to_add, to_create, num_found_in_sfdc,
                     need_research, need_research, to_update, match_rate * 100, processing_completed, sf_uid]
 
+    log.info('Updating the List record for Id: %s' % dict_data['ListObjId'])
     dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
     if len(att_paths) > 0:
+        log.info('Attempting to attach %s records to the List record.' % len(att_paths))
         dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
 
     subject = "ALM Notification: %s list processed." % obj_name
 
+    log.info('Sending notification email to requestor to notify of completion.')
     Email(subject=subject, to=[sender_email], body=body_string, attachment_path=att_paths)
     return {'Next Step': 'Record Stats',
             'Stats Data': items_for_stats}
 
 
-def sfdc_upload(path, obj, obj_id, session):
+def sfdc_upload(path, obj, obj_id, session, log=None):
     paths = ['', '', '', '']
     stats = ['', '', '']
     col_nums = []
@@ -274,6 +286,7 @@ def sfdc_upload(path, obj, obj_id, session):
     df_values = df.values.tolist()
     df_headers = df.columns.values.tolist()
 
+    log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
     if obj == 'Campaign':
         paths, stats = upload(session, df_headers, df_values, obj_id, obj)
 

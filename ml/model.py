@@ -7,7 +7,9 @@ import numpy as np
 
 
 class HeaderPredictions:
-    def __init__(self):
+    def __init__(self, log=None):
+        self.log = log
+        self.log.info('Entering header prediction module.')
         self.brain = 'T:/Shared/FS2 Business Operations/Python Search Program/Training Data/Headers_Train.xlsx'
         self.predict_path = None
         self.obj = None
@@ -21,6 +23,7 @@ class HeaderPredictions:
         self.predictions, self.probability = None, None
 
     def data_preprocessing(self):
+        self.log.info('Preprocessing header data for Random Forest Classification.')
         train_df = read_df(self.brain)
         train_df.rename(columns={'Header Value': 'headers'}, inplace=True)
         train_df.dropna(axis=0, inplace=True)
@@ -41,8 +44,8 @@ class HeaderPredictions:
         f = RandomForestClassifier(n_estimators=1000, n_jobs=-1, oob_score=True)
         f.fit(train_feat, train_class)
         test_results = f.predict(test_feat)
-        print('Current RFC Model Accuracy: %s' % "{0:.0f}%".format(
-            metrics.accuracy_score(test_class, test_results)) * 100)
+        accuracy = metrics.accuracy_score(test_class, test_results) * 100
+        self.log.info('Current RFC Model Accuracy: %s' % ("{0:.0f}%".format(accuracy)))
         return f.fit(self.features, self.train_class)
 
     def create_training_features(self, headers, t_type='train'):
@@ -51,7 +54,7 @@ class HeaderPredictions:
         elif t_type == 'predict':
             features = self.vectorizer.transform(headers)
         else:
-            raise TypeError('%s is not a valid t_type. Must be either train or predict.' % t_type)
+            self.log.error('%s is not a valid t_type. Must be either train or predict.' % t_type)
         return features.toarray()
 
     def _init_predict_meta_data(self):
@@ -62,6 +65,7 @@ class HeaderPredictions:
         return predict_file_name, predict_df, headers, p_features
 
     def predict(self, predict_path, obj):
+        self.log.info("Attempting to predict header names for '%s' file." % predict_path)
         self.predict_path = predict_path
         self.obj = obj
         self.predict_file_name, self.p_df, self.p_headers, self.p_features = self._init_predict_meta_data()
