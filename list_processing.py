@@ -157,7 +157,7 @@ class ListProcessing:
                                                  pre_or_post=var_list['Pre_or_Post'], log=self.log))
         var_list['SFDC Session'].last_list_uploaded(obj_id=var_list['ObjectId'], obj=var_list['Object'])
         var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object'],log=self.log))
+                                       var_list['ObjectId'], var_list['Object'], log=self.log))
         var_list.update(extract_dictionary_values(dict_data=var_list, log=self.log))
 
         if var_list['Move To Bulk']:
@@ -193,7 +193,7 @@ class ListProcessing:
         var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
                                                  pre_or_post=var_list['Pre_or_Post'], log=self.log))
         var_list.update(sfdc_upload(path=var_list['bdg_update_path'], obj=var_list['Object'],
-                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session'],log=self.log))
+                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session'], log=self.log))
         var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
                                        var_list['ObjectId'], var_list['Object'],
                                        var_list['CmpAccountID'], log=self.log))
