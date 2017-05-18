@@ -282,6 +282,9 @@ class MailBoxReader:
         if dict_data['name'] == 'FS Investments':
             self._move_received_list_to_processed_folder(num, 'INBOX/FS Emails')
 
+        if dict_data['sub'] == 'An upload list has been added':
+            self._move_received_list_to_processed_folder(num, 'INBOX/Auto Lists From SFDC')
+
         elif len(att) == 0 or dict_data['has_link'] in [-1, 'not set']:
             msg_body = "%s,\n\nThe list request sent is lacking either attachments or a SF link.\n\n" \
                        "Please resend your request for the '%s' list again with the list to SF " \
