@@ -2,6 +2,17 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import datetime
 import os
+from cred import username
+
+
+class ContextFilter(logging.Filter):
+    """
+    This is a filter which injects contextual information into the log.
+    """
+
+    def filter(self, record):
+        record.user = username
+        return True
 
 
 class ListManagementLogger:
@@ -30,11 +41,13 @@ class ListManagementLogger:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
 
-        log_format = logging.Formatter(fmt='\n%(asctime)s - %(name)s - %(levelname)s - %(module)s '
-                                           '\nMessage: %(message)s',
-                                       datefmt='%m/%d/%Y %I:%M:%S %p')
+        log_format = logging.Formatter(
+            fmt='\nRunning user: %(user)s - %(asctime)s - %(name)s - %(levelname)s - %(module)s '
+                '\nMessage: %(message)s',
+            datefmt='%m/%d/%Y %I:%M:%S %p')
         file_handler.setFormatter(log_format)
 
+        logger.addFilter(ContextFilter())
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
         return logger
