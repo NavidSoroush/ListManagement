@@ -1,13 +1,13 @@
-from search.search import Search
+from ListManagement.utility.email_wrapper import Email
 from finra.finra import FinraScraping
-from stats.record_stats import record_processing_stats
-from utility.gen_helper import drop_in_bulk_processing
 from ml.header_predictions import predict_headers_and_pre_processing
-from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
+from search.search import Search
+from stats.record_stats import record_processing_stats
 from utility.email_helper import lists_in_queue
 from utility.email_reader import MailBoxReader
+from utility.gen_helper import drop_in_bulk_processing
 from utility.log_helper import ListManagementLogger
-from email_handler.email_wrapper import Email
+from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
@@ -26,7 +26,7 @@ class ListProcessing:
         self.s = Search(log=self.log)
         self.fin = FinraScraping(log=self.log)
         self.mb = MailBoxReader(log=self.log)
-        self.vars = self.mb.pending_lists
+        self.vars = self.mb.extract_pending_lists(self.mb.mailbox, self.mb.email_folder)
         self.main_contact_based_processing()
 
     def main_contact_based_processing(self):
