@@ -1,12 +1,17 @@
+import os
+import shutil
+import re
+import imaplib
 import email
+from email.utils import parseaddr
 import time
 import datetime
-import imaplib
+from dateutil.parser import parse
 from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 from lxml.html import fromstring
 from sf.sf_wrapper import SFPlatform
-from email_handler.email_wrapper import Email
-from utility.gen_helper import determine_ext
+from email_wrapper import Email
+from gen_helper import determine_ext
 
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [
@@ -17,6 +22,9 @@ _list_notification_elements = [
     , 'BizDev Group Link: '
     , 'List Link:']
 _looking_for_elements = ['Campaign Link: ', 'Attachment Link: ']
+_acceptable_types = ['.xlsx', '.pdf', '.csv', '.xls', '.zip', '.ocx', '.txt']
+_temp_save_attachments = 'C:/save_att/'
+_list_team = ["ricky.schools@fsinvestments.com"]  # "max.charles@fsinvestments.com",
 
 
 class ReturnDict(object):
@@ -29,13 +37,14 @@ class MailBoxReader:
     def __init__(self, log):
         self.log = log
         self._email_account = outlook_userEmail + '/Lists'
-        self._email_folder = 'INBOX/Auto Lists From SFDC/'
+        self.new_requests_folder = 'INBOX/'
+        self.email_folder = 'INBOX/Auto Lists From SFDC/'
         self.mailbox = imaplib.IMAP4_SSL('outlook.office365.com')
         self.mailbox.login(self._email_account, password)
-        self.mailbox.select(self._email_folder)
-        self.pending_lists = self.extract_pending_lists(mailbox=self.mailbox)
 
-    def extract_pending_lists(self, mailbox, list_queue=[]):
+    def extract_pending_lists(self, mailbox, folder):
+        list_queue = list()
+        mailbox.select(folder)
         s_resp, s_data = mailbox.search(None, 'ALL')
         if s_resp != "OK":
             self.log.info('No new lists were found in the email queue.')
@@ -47,16 +56,49 @@ class MailBoxReader:
                 self.log.info('Experienced an issue getting message %s' % num)
                 return
             else:
+                if folder == self.new_requests_folder:
+                    self.handle_new_email_requests(num, email.message_from_string(f_data[0][1]))
+                else:
+                    list_queue = self.handle_list_queue_requests(num, f_data, list_queue)
 
-                subject = self.get_msg_part('Subject', f_data[0])
-                if _list_notification_elements[0] in subject:
-                    msg, msg_body = self.get_decoded_email_body(f_data[0][1])
-                    list_queue.append([msg, msg_body, num])
-        self.log.info('Found %s lists pending in the queue.' % len(list_queue))
-        item = {'Lists_In_Queue': len(list_queue),
-                'Num_Processed': 0,
-                'Lists_Data': list_queue}
-        return item
+        if folder == self.new_requests_folder:
+            return
+        else:
+            self.log.info('Found %s lists pending in the queue.' % len(list_queue))
+            item = {'Lists_In_Queue': len(list_queue),
+                    'Num_Processed': 0,
+                    'Lists_Data': list_queue}
+            return item
+
+    def handle_new_email_requests(self, num, raw_email):
+        attmts = list()
+        tmp_dict = dict()
+        tmp_dict['has_link'] = 'not set'
+        tmp_dict['name'], tmp_dict['email'] = parseaddr(raw_email['From'])[0], parseaddr(raw_email['From'])[1]
+        tmp_dict['sub'], tmp_dict['date'] = raw_email['subject'], datetime.datetime.strftime(parse(raw_email['date']),
+                                                                                             '%m/%d/%Y %H:%M:%S')
+        msg_body = "Sent by: %s\nReceived on: %s\nSubject: %s\n" % (tmp_dict['name'], tmp_dict['date'], tmp_dict['sub'])
+        for part in raw_email.walk():
+            if part.get_content_type().lower() == "text/html" and tmp_dict['has_link'] == 'not set':
+                e_body = fromstring(part.get_payload(decode=True)).text_content()
+                e_body = e_body[e_body.find("-->") + 3:]
+                tmp_dict['has_link'] = e_body.find("https://fsinvestments.my.salesforce.com")
+                msg_body += re.sub(r'[^\x00-\x7F]+', ' ', e_body)
+
+            if part.get_content_maintype() == "mulipart": continue
+            if part.get("Content-Disposition") is None: continue
+            if part.get_filename() is not None:
+                attmts.append(self.attachment_reader(raw=part, att=part.get_filename()))
+        self.determine_path_and_complete_processing(num=num, dict_data=tmp_dict, att=attmts, msg_body=msg_body)
+        self.attachment_reader(remove=True)
+        self._move_received_list_to_processed_folder(num=num, folder="INBOX/New Lists")
+
+    def handle_list_queue_requests(self, num, f_data, list_queue):
+        subject = f_data[0]['subject']
+        if _list_notification_elements[0] in subject:
+            msg, msg_body = self.get_decoded_email_body(f_data[0][1])
+            list_queue.append([msg, msg_body, num])
+        return list_queue
 
     def iterative_processing(self, msg_list):
         msg = msg_list[0]
@@ -70,10 +112,9 @@ class MailBoxReader:
         else:
             obj = 'Account'
 
-        rec_date = msg['Date']
-        sent_from = msg['From']
-        sender_name = self.email_parser(sent_from, ' <')
-        sent_from = self.email_parser(sent_from, '<', '>')
+        rec_date = datetime.datetime.strftime(parse(msg['Date'], '%m/%d/%Y %H:%M:%S'))
+        sender_name = parseaddr(msg['From'])[0]
+        sent_from = parseaddr(msg['From'])[1]
 
         obj_rec_name = self.info_parser(msg_body, _list_notification_elements[1],
                                         _list_notification_elements[2])
@@ -136,11 +177,12 @@ class MailBoxReader:
 
         return vars_list
 
-    def _move_received_list_to_processed_folder(self, num):
-        self.mailbox.copy(num, 'INBOX/Auto Processed Lists')
+    def _move_received_list_to_processed_folder(self, num, folder):
+        # self.mailbox.copy(num, 'INBOX/Auto Processed Lists')
+        self.mailbox.copy(num, folder)
         self.mailbox.store(num, '+FLAGS', r'(\Deleted)')
         self.mailbox.expunge()
-        self.log.info("Moved email to 'Auto Processed Lists' folder in outlook.")
+        self.log.info("Moved email to %s folder in outlook." % folder)
 
     def get_decoded_email_body(self, message_body):
         msg = email.message_from_string(message_body)
@@ -220,6 +262,39 @@ class MailBoxReader:
 
     def close_mailbox(self):
         self.mailbox.logout()
+
+    def attachment_reader(self, remove=False, raw=None, att=None):
+        if remove:
+            if os.path.isdir(_temp_save_attachments):
+                shutil.rmtree(_temp_save_attachments)
+        else:
+            if not os.path.isdir(_temp_save_attachments):
+                os.mkdir(_temp_save_attachments)
+            if att is not None:
+                len_ext, ext = determine_ext(att)
+                if ext in _acceptable_types:
+                    new_f_name = _temp_save_attachments + ''.join(e for e in att[:-5] if e.isalnum()) + ext
+                    with file(new_f_name, mode='wb') as f:
+                        f.write(raw.get_payload(decode=True))
+                    return new_f_name
+
+    def determine_path_and_complete_processing(self, num, dict_data, att, msg_body):
+        if dict_data['name'] == 'FS Investments':
+            self._move_received_list_to_processed_folder(num, 'INBOX/FS Emails')
+
+        elif len(att) == 0 or dict_data['has_link'] in [-1, 'not set']:
+            msg_body = "%s,\n\nThe list request sent is lacking either attachments or a SF link.\n\n" \
+                       "Please resend your request for the '%s' list again with the list to SF " \
+                       "and at least one attachment." \
+                       "\n\nAll the best," % (dict_data['name'].split(' ')[0], dict_data['sub'])
+            sub = "LMA Notification: Missing Attachments or SFDC Links for '%s'" % dict_data['sub']
+            _list_team.append(dict_data['email'])
+            Email(subject=sub, to=_list_team, body=msg_body, attachment_path=None)
+        else:
+            _list_team.append('rickyschools+v3lhm65etri76gwbn0sy@boards.trello.com')
+            sub = 'New List Received. Check List Management Trello Board'
+            msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
+            Email(subject=sub, to=_list_team, body=msg_body, attachment_path=att)
 
 # m = MailBoxReader()
 # for i in range(m.pending_lists['Lists_In_Queue']):
