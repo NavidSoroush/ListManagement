@@ -1,3 +1,4 @@
+import traceback
 from ListManagement.utility.email_wrapper import Email
 from finra.finra import FinraScraping
 from ml.header_predictions import predict_headers_and_pre_processing
@@ -47,28 +48,31 @@ class ListProcessing:
                 np = self.vars['Num_Processed']
                 n = np + 1
 
-                self.vars.update(self.mb.iterative_processing(self.mb.pending_lists['Lists_Data'][np]))
+                self.vars.update(self.mb.iterative_processing(self.vars['Lists_Data'][np]))
                 if not self.is_bad_extension():
-                    if self.vars['Object'] == 'Campaign':
-                        self.campaign_processing(self.vars)
+                    try:
+                        if self.vars['Object'] == 'Campaign':
+                            self.campaign_processing()
 
-                    elif self.vars['Object'] == 'Account':
-                        self.account_processing(self.vars)
+                        elif self.vars['Object'] == 'Account':
+                            self.account_processing()
 
-                    elif self.vars['Object'] == 'BizDev Group':
-                        self.bizdev_processing(self.vars)
+                        elif self.vars['Object'] == 'BizDev Group':
+                            self.bizdev_processing()
+                    except:
+                        self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
 
-                    self.vars.update(record_processing_stats(self.vars['Stats Data']))
+                        self.vars.update(record_processing_stats(self.vars['Stats Data']))
 
-                np += 1
-                self.vars.update({'Num_Processed': n})
-                self.log.info('List #%s processed.' % self.vars['Num_Processed'])
-                for k, v in self.vars.iteritems():
-                    if k not in _dict_keys_to_keep:
-                        self.vars[k] = None
+                        np += 1
+                        self.vars.update({'Num_Processed': n})
+                        self.log.info('List #%s processed.' % self.vars['Num_Processed'])
+                        for k, v in self.vars.iteritems():
+                            if k not in _dict_keys_to_keep:
+                                self.vars[k] = None
 
-            self.vars['SFDC Session'].close_session()
-            self.mb.close_mailbox()
+                        self.vars['SFDC Session'].close_session()
+                        self.mb.close_mailbox()
 
     def is_bad_extension(self):
         """
@@ -95,7 +99,7 @@ class ListProcessing:
         else:
             return False
 
-    def campaign_processing(self, var_list):
+    def campaign_processing(self):
         """
         handles list processing for the campaign object. processing steps below.
         
@@ -108,29 +112,28 @@ class ListProcessing:
         7) extract stats from search processing, send notification email, and update SalesForce list record
         8) if applicable, drop file in the bulk_processing network drive to create or update SaleForce contacts
         
-        :param var_list: list processing metadata 
         :return: n/a
         """
-        var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
-                                                           var_list['CmpAccountName'], self.log))
-        var_list.update(self.s.perform_search_one(var_list['File Path'], var_list['Object']))
-        self.finra_search_and_search_two(var_list)
-        var_list.update(self.fin.license_check(var_list['Found Path']))
-        var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
-                                                 pre_or_post=var_list['Pre_or_Post'], log=self.log))
-        var_list.update(source_channel(var_list['cmp_upload_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object'], log=self.log))
-        var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
-                                       var_list['CmpAccountID'], var_list['Object'], log=self.log))
-        var_list.update(sfdc_upload(path=var_list['cmp_upload_path'], obj=var_list['Object'],
-                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session'], log=self.log))
-        var_list.update(extract_dictionary_values(dict_data=var_list, log=self.log))
-        if var_list['Move To Bulk']:
-            drop_in_bulk_processing(var_list['to_create_path'])
+        self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
+                                                            self.vars['CmpAccountName'], self.log))
+        self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        self.finra_search_and_search_two()
+        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self.log))
+        self.vars.update(source_channel(self.vars['cmp_upload_path'], self.vars['Record Name'],
+                                        self.vars['ObjectId'], self.vars['Object'], log=self.log))
+        self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
+                                        self.vars['CmpAccountID'], self.vars['Object'], log=self.log))
+        self.vars.update(sfdc_upload(path=self.vars['cmp_upload_path'], obj=self.vars['Object'],
+                                     obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
+                                     log=self.log))
+        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
+        if self.vars['Move To Bulk']:
+            drop_in_bulk_processing(self.vars['to_create_path'])
         else:
             print(_steps[2])
 
-    def account_processing(self, var_list):
+    def account_processing(self):
         """
         handles list processing for the account object. processing steps below.
         
@@ -145,29 +148,29 @@ class ListProcessing:
         9) extract stats from search processing, send notification email, and update SalesForce list record
         10) if applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts
         
-        :param var_list: list processing metadata 
         :return: n/a
         """
-        var_list.update(predict_headers_and_pre_processing(var_list['File Path'], var_list['Record Name'],
-                                                           log=self.log))
-        var_list.update(self.s.perform_search_one(var_list['File Path'], var_list['Object']))
-        self.finra_search_and_search_two(var_list)
-        var_list.update(self.fin.license_check(var_list['Found Path']))
-        var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
-                                                 pre_or_post=var_list['Pre_or_Post'], log=self.log))
-        var_list['SFDC Session'].last_list_uploaded(obj_id=var_list['ObjectId'], obj=var_list['Object'])
-        var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object'], log=self.log))
-        var_list.update(extract_dictionary_values(dict_data=var_list, log=self.log))
+        self.vars.update(
+            predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
+                                               log=self.log))
+        self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        self.finra_search_and_search_two()
+        self.vars.update(self.fin.license_check(self.vars['Found Path']))
+        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self.log))
+        self.vars['SFDC Session'].last_list_uploaded(obj_id=self.vars['ObjectId'], obj=self.vars['Object'])
+        self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
+                                        self.vars['ObjectId'], self.vars['Object'], log=self.log))
+        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
 
-        if var_list['Move To Bulk']:
-            drop_in_bulk_processing(var_list['update_path'])
-            drop_in_bulk_processing(var_list['to_create_path'])
+        if self.vars['Move To Bulk']:
+            drop_in_bulk_processing(self.vars['update_path'])
+            drop_in_bulk_processing(self.vars['to_create_path'])
 
         else:
             print(_steps[2])
 
-    def bizdev_processing(self, var_list):
+    def bizdev_processing(self):
         """
         handles list processing for the bizdev object. processing steps below.
 
@@ -181,37 +184,37 @@ class ListProcessing:
         8) prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
         9) extract stats from search processing, send notification email, and update SalesForce list record
         10) if applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts
-
-        :param var_list: list processing metadata 
+ 
         :return: n/a
         """
-        var_list.update(predict_headers_and_pre_processing(var_list['File Path'],
-                                                           var_list['CmpAccountName'], log=self.log))
-        var_list.update(self.s.perform_search_one(var_list['File Path'], var_list['Object']))
-        self.finra_search_and_search_two(var_list)
-        var_list.update(self.fin.license_check(var_list['Found Path']))
-        var_list.update(parse_list_based_on_type(path=var_list['Found Path'], l_type=var_list['Object'],
-                                                 pre_or_post=var_list['Pre_or_Post'], log=self.log))
-        var_list.update(sfdc_upload(path=var_list['bdg_update_path'], obj=var_list['Object'],
-                                    obj_id=var_list['ObjectId'], session=var_list['SFDC Session'], log=self.log))
-        var_list.update(source_channel(var_list['update_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object'],
-                                       var_list['CmpAccountID'], log=self.log))
-        var_list.update(source_channel(var_list['to_create_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object'],
-                                       var_list['CmpAccountID'], log=self.log))
-        var_list.update(source_channel(var_list['bdg_update_path'], var_list['Record Name'],
-                                       var_list['ObjectId'], var_list['Object'],
-                                       var_list['CmpAccountID'], log=self.log))
-        var_list.update(extract_dictionary_values(dict_data=var_list, log=self.log))
+        self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
+                                                            self.vars['CmpAccountName'], log=self.log))
+        self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        self.finra_search_and_search_two()
+        self.vars.update(self.fin.license_check(self.vars['Found Path']))
+        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self.log))
+        self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
+                                     obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
+                                     log=self.log))
+        self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
+                                        self.vars['ObjectId'], self.vars['Object'],
+                                        self.vars['CmpAccountID'], log=self.log))
+        self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
+                                        self.vars['ObjectId'], self.vars['Object'],
+                                        self.vars['CmpAccountID'], log=self.log))
+        self.vars.update(source_channel(self.vars['bdg_update_path'], self.vars['Record Name'],
+                                        self.vars['ObjectId'], self.vars['Object'],
+                                        self.vars['CmpAccountID'], log=self.log))
+        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
 
-        if var_list['Move To Bulk']:
-            drop_in_bulk_processing(var_list['to_create_path'])
-            drop_in_bulk_processing(var_list['update_path'])
+        if self.vars['Move To Bulk']:
+            drop_in_bulk_processing(self.vars['to_create_path'])
+            drop_in_bulk_processing(self.vars['update_path'])
         else:
             print _steps[2]
 
-    def finra_search_and_search_two(self, var_list):
+    def finra_search_and_search_two(self):
         """
         this method handles helps to decide if FINRA scraping or searching SalesForce a 2nd time
         is necessary.
@@ -219,22 +222,30 @@ class ListProcessing:
         1) if all advisors are not found and are missing CRDNumbers, scrape FINRA
         2) if FINRA is scraped, search our SalesForce database to increase our likely match-rate.
         
-        :param var_list: list processing metadata
         :return: n/a
         """
-        if var_list['SFDC_Found'] < var_list['Total Records'] and var_list['FINRA?']:
+        if self.vars['SFDC_Found'] < self.vars['Total Records'] and self.vars['FINRA?']:
 
-            var_list.update(self.fin.crd_check(path=var_list['File Path']))
-            if (var_list['SFDC_Found'] + var_list['FINRA_Found']) < var_list['Total Records']:
-                var_list.update(self.s.perform_sec_search(var_list['No CRD'], var_list['FINRA_SEC Found']))
+            self.vars.update(self.fin.crd_check(path=self.vars['File Path']))
+            if (self.vars['SFDC_Found'] + self.vars['FINRA_Found']) < self.vars['Total Records']:
+                self.vars.update(
+                    self.s.perform_sec_search(self.vars['No CRD'], self.vars['FINRA_SEC Found']))
 
             else:
                 print(_steps[0])
 
-            var_list.update(self.s.perform_search_two(var_list['FINRA_SEC Found'], var_list['Found Path'],
-                                                      var_list['Object']))
+            self.vars.update(self.s.perform_search_two(self.vars['FINRA_SEC Found'],
+                                                       self.vars['Found Path'],
+                                                       self.vars['Object']))
         else:
             print(_steps[1])
+
+    def create_log_record_of_current_list_data(self, msg):
+        self.log.warning('A fatal error has occured. Printing out necessary data to restart the program and'
+                         'complete it manually.')
+        self.log.info(self.vars)
+        self.log.error(msg)
+        raise RuntimeError(msg)
 
 
 if __name__ == '__main__':
