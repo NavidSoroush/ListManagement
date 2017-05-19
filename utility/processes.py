@@ -240,7 +240,7 @@ def extract_dictionary_values(dict_data, log=None):
                       completed, processing_string, create_advisors_note]
     body_string = craft_notification_email(items_to_email)
     log.info(
-        'Processed Vars Dictionary: \n\n%s' % '\n: '.join(['{}_{}'.format(k, v) for k, v in dict_data.iteritems()]))
+        'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.iteritems()]))
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
