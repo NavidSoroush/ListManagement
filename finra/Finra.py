@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import pandas as pd
 from selenium import webdriver
@@ -79,7 +80,8 @@ class FinraScraping:
         self._search_list['Account'].apply(strip_unicode_chars)
         for index, row in self._search_list.iterrows():
             try:
-                search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + row['Account'][:14]
+                search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + re.sub(r'([^\s\w]|_)+', '',
+                                                                                      row['Account'][:14])
             except ValueError:
                 search_name = 'Error converting row %s to string' % index
             self._to_be_searched.append([search_name])
@@ -526,4 +528,5 @@ class FinraScraping:
         self._sel.get(self._finra_site)
         self.__crd_only_search_functionality()
         for search in range(len(self._to_be_searched)):
-            self.log.info("CRD search for '%s' returned: '%s'" % (self._to_be_searched[search], self._to_be_added[search]))
+            self.log.info(
+                "CRD search for '%s' returned: '%s'" % (self._to_be_searched[search], self._to_be_added[search]))
