@@ -54,12 +54,9 @@ class SFPlatform:
         :return: number of records updated
         """
         print('Attempting to update %s records on the %s object.' % (len(upload_data), obj))
-        try:
-            self.session.update(table=obj, columns=fields, data=upload_data)
-            n_updated = self.session.getenv('ROW_COUNT')
-            return n_updated
-        except Exception, e:
-            print(Exception, e)
+        self.session.update(table=obj, columns=fields, data=upload_data)
+        n_updated = self.session.getenv('ROW_COUNT')
+        return n_updated
 
     def create_records(self, obj, fields, upload_data):
         """
@@ -131,7 +128,10 @@ class SFPlatform:
             if len(att) >= 120:
                 att = self.__manage_attachements__(att=att)
             print('Attaching %s to %s list record.' % (att, obj_id))
-            AttachmentWriter.attachFile(session=self.session, parentId=obj_id, filename=att)
+            try:
+                AttachmentWriter.attachFile(session=self.session, parentId=obj_id, filename=att)
+            except:
+                print('Unable to attach the %s file. I suggest it gets uploaded manually.' % att)
         self.__clean_up_attachments__()
 
     def last_list_uploaded(self, obj_id, obj, success=False):
@@ -173,7 +173,9 @@ class SFPlatform:
         members = []
         try:
             if obj == 'Campaign':
-                sql = 'SELECT ContactId, Status, Id FROM CampaignMember WHERE CampaignId="' + obj_id + '"'
+                sql = 'SELECT ContactId, Status, Id FROM CampaignMember WHERE CampaignId="' \
+                      '' + obj_id + '" AND Contact.Territory_Manager__c!="Max Prown"'
+                print sql
                 for rec in self.session.selectRecords(sql):
                     members.append(rec.ContactId)
                     members.append(rec.Status)

@@ -24,7 +24,7 @@ _list_notification_elements = [
 _looking_for_elements = ['Campaign Link: ', 'Attachment Link: ']
 _acceptable_types = ['.xlsx', '.pdf', '.csv', '.xls', '.zip', '.ocx', '.txt']
 _temp_save_attachments = 'C:/save_att/'
-_list_team = ["ricky.schools@fsinvestments.com"]  # "max.charles@fsinvestments.com",
+_list_team = ["ricky.schools@fsinvestments.com", "max.charles@fsinvestments.com"]
 
 
 class ReturnDict(object):
@@ -94,7 +94,8 @@ class MailBoxReader:
         self._move_received_list_to_processed_folder(num=num, folder="INBOX/New Lists")
 
     def handle_list_queue_requests(self, num, f_data, list_queue):
-        subject = f_data[0]['subject']
+        raw = email.message_from_string(f_data[0][1])
+        subject = raw['subject']
         if _list_notification_elements[0] in subject:
             msg, msg_body = self.get_decoded_email_body(f_data[0][1])
             list_queue.append([msg, msg_body, num])
@@ -112,13 +113,12 @@ class MailBoxReader:
         else:
             obj = 'Account'
 
-        rec_date = datetime.datetime.strftime(parse(msg['Date'], '%m/%d/%Y %H:%M:%S'))
+        rec_date = datetime.datetime.strftime(parse(msg['Date']), '%m/%d/%Y %H:%M:%S')
         sender_name = parseaddr(msg['From'])[0]
         sent_from = parseaddr(msg['From'])[1]
 
         obj_rec_name = self.info_parser(msg_body, _list_notification_elements[1],
                                         _list_notification_elements[2])
-        obj_rec_name = obj_rec_name[:obj_rec_name.index(_list_notification_elements[2])]
 
         self.log.info(
             "Processing begins on %s's list attached to %s on the %s object" % (sender_name, obj_rec_name, obj))
@@ -150,7 +150,7 @@ class MailBoxReader:
                                                                                      obj_url=obj_rec_link)
         ext_len, ext = determine_ext(f_name=file_path)
 
-        self._move_received_list_to_processed_folder(num=msg_id)
+        self._move_received_list_to_processed_folder(num=msg_id, folder="INBOX/Auto Processed Lists")
 
         # _subject = "LMA Notification: %s list received." % obj_rec_name
         # _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \

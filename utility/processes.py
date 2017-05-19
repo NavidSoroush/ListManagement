@@ -1,9 +1,10 @@
 from gen_helper import *
 from email_helper import craft_notification_email
-from email_handler.email_wrapper import Email
+from email_wrapper import Email
 from pandas_helper import read_df, save_df, make_df, determine_num_records
 from sf_helper import *
 import datetime
+import traceback
 
 
 def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
@@ -202,16 +203,16 @@ def extract_dictionary_values(dict_data, log=None):
     obj = dict_data['Object']
     if obj == 'BizDev Group':
         if not dict_data['FINRA?']:
-            att_paths = [dict_data['File Path'], dict_data['Review Path'], dict_data['BDG Remove'],
+            att_paths = [dict_data['Review Path'], dict_data['BDG Remove'],
                          dict_data['BDG Add'], dict_data['BDG Stay'], dict_data['Current Members']]
         else:
             att_paths = [dict_data['No CRD'], dict_data['FINRA Ambiguous'],
                          dict_data['BDG Remove'], dict_data['BDG Add'],
                          dict_data['BDG Stay'], dict_data['Current Members']]
     elif dict_data['FINRA?']:
-        att_paths = [dict_data['File Path'], dict_data['No CRD'], dict_data['FINRA Ambiguous']]
+        att_paths = [dict_data['No CRD'], dict_data['FINRA Ambiguous']]
     else:
-        att_paths = [dict_data['File Path'], dict_data['Review Path']]
+        att_paths = [dict_data['Review Path']]
 
     total = dict_data['Total Records']
     file_name = split_name(dict_data['File Path'])
@@ -287,11 +288,19 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
     df_headers = df.columns.values.tolist()
 
     log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
-    if obj == 'Campaign':
-        paths, stats = upload(session, df_headers, df_values, obj_id, obj)
+    try:
+        if obj == 'Campaign':
+            paths, stats = upload(session, df_headers, df_values, obj_id, obj)
 
-    elif obj == 'BizDev Group':
-        paths, stats = upload(session, df_headers, df_values, obj_id, obj, col_nums, path)
+        elif obj == 'BizDev Group':
+            paths, stats = upload(session, df_headers, df_values, obj_id, obj, col_nums, path)
+    except:
+        sub = 'LMA: %s upload fail for %s'
+        body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
+               'manually upload this file at your earliest convenience.' % (path, obj)
+        log.error(body)
+        Email(subject=sub, to=['ricky.schools@fsinvestments.com', 'max.charles@fsinvestments.com'],
+              body=body, attachment_path=path)
 
     return {'Next Step': 'Send Email',
             'BDG Remove': paths[0],
@@ -304,7 +313,6 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
 
 
 def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
-    # try:
     if obj == 'Campaign':
         paths, stats = cmp_upload(session, data, obj_id, obj)
         if data[0][2] == 'Needs Follow-Up':
@@ -313,8 +321,6 @@ def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
     elif obj == 'BizDev Group':
         headers = headers_clean_up(headers)
         paths, stats = bdg_upload(session, data, obj_id, obj, col_num, df_path)
-    # except Exception, e:
-    #     print e
     return paths, stats
 
 
