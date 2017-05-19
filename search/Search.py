@@ -324,34 +324,27 @@ class Search:
                            'crps', 'csa', 'iar', 'jd', 'lutcf', 'mba', 'msa', 'msfp', 'pfs', 'phd', 'ppc']
 
         if "FullName" in headers:
-
             search_list.insert(0, "LastName", "")
             search_list.insert(0, "FirstName", "")
             for index, row in search_list.iterrows():
-
                 if ',' in row["FullName"]:
                     if row["FullName"].index(' ') < row["FullName"].index(','):
                         row["FirstName"] = row["FullName"].split(' ')[0]
-                        row["LastName"] = row["FullName"].split(' ')[1][:-1]
-
+                        row["LastName"] = ' '.join(row["FullName"].split(' ')[1:])
                     else:
                         row["LastName"] = row["FullName"].split(',')[0]
                         row["FirstName"] = row["FullName"].split(' ')[1]
-
                 else:
                     full_name_list = row["FullName"].split()
                     for name in full_name_list:
                         if name.lower() in names_to_remove:
                             full_name_list.pop(full_name_list.index(name))
-
                     if len(full_name_list) == 3:
                         search_list.loc[index, "FirstName"] = full_name_list[0]
                         search_list.loc[index, "LastName"] = full_name_list[2]
-
                     else:
                         search_list.loc[index, "FirstName"] = full_name_list[0]
                         search_list.loc[index, "LastName"] = full_name_list[1]
-
         return search_list
 
     def perform_search_one(self, searching_list_path, list_type):
