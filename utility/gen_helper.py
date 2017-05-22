@@ -5,8 +5,10 @@ import datetime
 import shutil
 import errno
 import ntpath
+from sqlalchemy import create_engine
 from dateutil.parser import parse
 from cred import userPhone, userEmail, userName, sf_uid
+import pandas as pd
 
 userName = userName
 userEmail = userEmail
@@ -187,6 +189,15 @@ def determine_move_to_bulk_processing(df):
     if len(df.index) == 0:
         move = False
     return move
+
+
+def save_conf_creation_meta(sc, id):
+    engine = create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
+    data_package = [['Date', 'ObjId', 'SourceChannel', 'AddedToCampaign'],
+                    [time_now, id, sc, False]]
+    df = pd.DataFrame(data_package[1], data_package[0])
+    df.to_sql('ConferenceCreation', con=engine, index=False, if_exists='append')
+    engine.close()
 
 
 def remove_underscores(line):
