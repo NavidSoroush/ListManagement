@@ -130,7 +130,7 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
             list_df.loc[list_df['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
             move_to_bulk = determine_move_to_bulk_processing(list_df)
             if move_to_bulk:
-                save_conf_creation_meta(sc_to_add, obj_id)
+                save_conf_creation_meta(sc=sc_to_add, objid=obj_id, status=list_df.iloc[0, 0])
         else:
             list_df = drop_unneeded_columns(list_df, obj, create=False)
             to_create = 0

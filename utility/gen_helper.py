@@ -191,13 +191,14 @@ def determine_move_to_bulk_processing(df):
     return move
 
 
-def save_conf_creation_meta(sc, id):
+def save_conf_creation_meta(sc, objid, status):
     engine = create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
-    data_package = [['Date', 'ObjId', 'SourceChannel', 'AddedToCampaign'],
-                    [time_now, id, sc, False]]
-    df = pd.DataFrame(data_package[1], data_package[0])
+    data_package = [['Date', 'ObjId', 'SourceChannel', 'Status', 'AddedToCampaign'],
+                    [time_now, objid, sc, status, False]]
+    df = pd.DataFrame(data_package[1], data_package[0]).T
     df.to_sql('ConferenceCreation', con=engine, index=False, if_exists='append')
-    engine.close()
+    engine.dispose()
+    del df
 
 
 def remove_underscores(line):
