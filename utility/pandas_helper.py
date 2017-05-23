@@ -32,6 +32,10 @@ def make_df(data=None, columns=None):
         return pd.DataFrame()
 
 
+def is_null(x):
+    return pd.isnull(x)
+
+
 def new_stat_line(value_dict):
     '''
     writes the new line of data to the stats dataframe
