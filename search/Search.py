@@ -285,7 +285,6 @@ class Search:
         return self
 
     def _lkup_name_address_processing(self, headers, search_list):
-        # If we have the information to make LkupName, do so
         """
         helper method to create the LkupName search field, if the necessary columns are present, and pre-process them.
     
@@ -301,24 +300,36 @@ class Search:
         :return: transformed data frame
         """
         if "MailingPostalCode" in headers and "MailingState" in headers:
+            import us
+            import uszipcode
+            zs = uszipcode.ZipcodeSearchEngine()
 
             search_list['MailingPostalCode'] = search_list['MailingPostalCode'].astype(str)
-            for index, row in search_list.iterrows():
-                search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"].split('-')[0]
-                if len(row["MailingPostalCode"]) == 9:
-                    search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"][:5]
-                elif len(row["MailingPostalCode"]) == 8:
-                    search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"][:4]
 
-            if np.mean(search_list['MailingState'].str.len()) > 2:
-                import us
-                self.log.info('MailingState column needs to be transformed.')
-                for index, row in search_list.iterrows():
-                    try:
-                        state = us.states.lookup(search_list.loc[index, "MailingState"])
-                        search_list.loc[index, "MailingState"] = str(state.abbr)
-                    except:
-                        pass
+            search_list['MailingPostalCode'] = search_list.apply(
+                lambda x: x['MailingPostalCode'].split('-')[0] if '-' in x['MailingPostalCode'] else x[
+                    'MailingPostalCode'], axis=1)
+
+            search_list['MailingPostalCode'] = search_list.apply(
+                lambda x: x['MailingPostalCode'][:5] if len(x['MailingPostalCode']) == 9 else x['MailingPostalCode'],
+                axis=1)
+
+            search_list['MailingPostalCode'] = search_list.apply(
+                lambda x: str(0) + x['MailingPostalCode'][:4] if len(x['MailingPostalCode']) == 8 else x[
+                    'MailingPostalCode'], axis=1)
+
+            try:
+                search_list['MailingState'] = search_list.apply(
+                    lambda x: us.states.lookup(unicode(x['MailingState']), use_cache=False).abbr if len(
+                        x['MailingState']) > 2 else x['MailingState'], axis=1)
+            except:
+                try:
+                    self.log.info("Unable to transform MailingState with the python 'us' library.")
+                    search_list['MailingState'] = search_list.apply(
+                        lambda x: zs.by_zipcode(x['MailingPostalCode'])['State'], axis=1)
+                except:
+                    self.log.info("Unable to transform MailingState with the python 'uszipcode' library.")
+                    self.log.info('Will forgo attempting to transform MailingState')
 
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = map(lambda x: x.title(), search_list["FirstName"])
