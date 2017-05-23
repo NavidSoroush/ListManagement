@@ -3,7 +3,7 @@ import time
 import numpy as np
 from legacy.get_sf_adv_list import run
 from utility.gen_helper import create_path_name, today
-from utility.pandas_helper import read_df, save_df, make_df
+from utility.pandas_helper import read_df, save_df, make_df, is_null
 
 _AdvListPath = 'T:/Shared/FS2 Business Operations/Search Program/Salesforce Data Files/SFDC Advisor List as of ' \
                + time.strftime("%m-%d-%y") + '.csv'
@@ -32,18 +32,23 @@ class Search:
                                'BizDev Group']
         self._found_contacts = make_df()
         self._contacts_to_review = make_df()
+        self._to_create = make_df()
         self._keep_cols = []
         self._to_finra = True
         self._is_crd_check = False
+        self._search_one_crd_additional = False
+        self._save_to_review_df = False
         self._num_searches_performed = 0
         self._total_found = 0
         self._num_found_contacts = 0
         self._review_path = ''
         self._search_list = ''
         self._found_contact_path = ''
+        self._to_create_path = ''
         self._list_type = ''
         self._sec_files = ''
-        self._sec_path = 'T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/Individuals/processed_data/' + self._today + '/'
+        self._sec_path = 'T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/' \
+                         'Individuals/processed_data/' + self._today + '/'
 
     def __init_list_metadata(self):
         """
@@ -52,7 +57,7 @@ class Search:
         :return: n/a
         """
         self._headers = self._search_list.columns.values
-        self._keep_cols = [c for c in self._headers if c.lower() != 'unknown']
+        self._keep_cols = [c for c in self._headers if 'unknown' not in c.lower()]
 
     def __preprocess_sfdc_list(self):
         """
@@ -78,7 +83,7 @@ class Search:
         :return: n/a
         """
         self._search_list = self._search_list[self._keep_cols]
-        self._search_list = self._search_list.fillna('')
+        self._search_list.fillna('', inplace=True)
         if len(self._search_list.columns) > 3:
             self._search_list.dropna(axis=0, thresh=3, inplace=True)
         if additional:
@@ -124,63 +129,102 @@ class Search:
         return list(joined_headers)
 
     def __create_meta_data(self, headers=None, search_two=False):
+        """
+        helper method to determine how a merged list (3rd party & FS SFDC data) get's handled.
+        
+        1) determine if this is the first, or second, set of searches against SFDC.
+        2) if this is the second set of searches, then 'found contacts' are only records that have a ContactID
+        3) if this is the first set of searches then:
+            a) if a CRD search is passed to the 'create_meta_data' method:
+                1a. 'found contacts' are records that have a ContactID merged with the original data
+                2a. if CRD's are provided for all records, set 'to_finra' to False and rename the CRDNumber column
+                3a. if the length of the search list and found contact list are not the same, we need to 
+                    perform additional searches to attempt to identify additional matches & duplicate records.
+            
+        :param headers: 
+        :param search_two: 
+        :return: 
+        """
         # may need to try and clean this method up, it's a bit confusing and messy.
-        if not search_two:
-
-            if self._is_crd_check and 'CRD Provided by List' not in self._headers:
-                found_contacts = self._found_contacts
-                search_list = self._search_list
-                found_contacts = found_contacts.append(search_list[search_list['ContactID'] != ''], ignore_index=True)
-                self._found_contacts = found_contacts
-
-                if self._search_list['CRDNumber'].count() == len(self._search_list) and \
-                                len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list):
-                    self._to_finra = False
-                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
-
-                if not self._to_finra:
-                    to_review = self._contacts_to_review
-                    to_review = to_review.append(search_list[search_list['ContactID'] == ''], ignore_index=True)
-                    self._contacts_to_review = to_review
-                    self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
-
-                else:
-                    search_list = search_list[search_list['ContactID'] == '']
-                    self._search_list = search_list
-                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
-                self._headers = self._search_list.columns.values
-
-            else:
-                found_contacts = self._found_contacts
-                search_list = self._search_list
-                self.log.info(search_list.head())
-                search_list.fillna('')
-
-                if "CRD Provided by List" in self._headers:
-                    found_contacts = found_contacts.append(search_list[search_list['ContactID'] != ''],
-                                                           ignore_index=True)
-                    search_list = search_list[search_list['ContactID'] == '']
-
-                else:
-                    found_contacts = found_contacts.append(search_list[search_list['CRDNumber'] != ''],
-                                                           ignore_index=True)
-                    search_list = search_list[search_list['CRDNumber'] == '']
-
-                self._search_list = search_list
-                self._found_contacts = found_contacts
-
-            for r_field in self._return_fields:
-                del search_list[r_field]
-        else:
+        if search_two:
             self._found_contacts = read_df(self._found_contact_path)
             finra_matched_to_sf = self._search_list[self._search_list['ContactID'] != '']
             self.log.info('\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf))
             self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True)
 
+        else:
+            if self._is_crd_check and 'CRD Provided by List' not in self._headers:
+                self._found_contacts = self._found_contacts.append(
+                    self._search_list[self._search_list['ContactID'] != ''], ignore_index=True)
+
+                if self._search_list['CRDNumber'].count() == len(self._search_list.index) and \
+                                len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list.index):
+
+                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+                    self._to_finra = False
+                    if len(self._search_list.index) != len(self._found_contacts.index):
+                        self._search_one_crd_additional = True
+                        self.log.info('CRD Info provided for all contacts. Will not search FINRA, but will '
+                                      'perform remaining standard searches to maximized match rate.')
+                        self._search_list = self._search_list[self._search_list['ContactID'] == '']
+                        # self._contacts_to_review = self._contacts_to_review.append(
+                        #     self._search_list[self._search_list['ContactID'] == ''], ignore_index=True)
+                        # self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
+
+                else:
+                    self._search_list = self._search_list[self._search_list['ContactID'] == '']
+                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+                self._headers = self._search_list.columns.values
+
+            else:
+                self._search_list.fillna('', inplace=True)
+                if "CRD Provided by List" in self._headers:
+                    self._identify_to_review_records()
+                    self._search_list.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
+                    self._found_contact = self._found_contacts.append(
+                        self._search_list[self._search_list['ContactID'] != ''],
+                        ignore_index=True)
+                    self._search_list = self._search_list[self._search_list['ContactID'] == '']
+                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+
+                else:
+                    self._found_contact = self._found_contacts.append(
+                        self._search_list[self._search_list['CRDNumber'] != ''],
+                        ignore_index=True)
+                    self._search_list = self._search_list[self._search_list['CRDNumber'] == '']
+
+            for r_field in self._return_fields:
+                try:
+                    del self._search_list[r_field]
+                except:
+                    pass
+
+    def _identify_to_review_records(self):
+        """
+        a method that's used to help identify records that need to be manually reviewed
+        
+        1) flag a record as needing review if:
+            a) a SFDC CRDNumber is not null doesn't equal the CRD Provided by List Number
+        :return: 
+        """
+        self._search_list['ToReview'] = 0
+        self._search_list['ToReview'] = self._search_list.apply(
+            lambda x: 1 if x['CRDNumber'] != '' and x['CRDNumber'] != x["CRD Provided by List"] else x[
+                'ToReview'], axis=1)
+        print(self._search_list.head())
+        self._contacts_to_review = self._contacts_to_review.append(
+            self._search_list[self._search_list['ToReview'] == 1], ignore_index=True)
+        self._search_list = self._search_list[self._search_list['ToReview'] == 0]
+        del self._search_list['CRDNumber']
+        del self._search_list['ToReview']
+        self._save_to_review_df = True
+        print(self._search_list.head())
+        self.log.info('Identified %s contacts that need to be reviewed.' % len(self._contacts_to_review.index))
+
     def __num_found(self, found_df):
         """
         records the number of records found during the search process
-
+    
         :param found_df: data frame
         :return: n/a
         """
@@ -195,11 +239,14 @@ class Search:
         3) merge data from 3rd party and SF subsetted data frame, merging on the search header
         4) submit the merged 3rd party list to the create_metadata method to determine how the list
             should be further sliced for subsequent processing, or if all records were found.
-
+    
         :param search_fields: list of columns to search (pandas merge) on
         :param search_two: boolean, default=False
         :return: n/a
         """
+        if len(search_fields) > 1:
+            self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?',
+                                   'BizDev Group']
         for header in search_fields:
             if header in self._headers:
                 self._num_searches_performed += 1
@@ -210,32 +257,30 @@ class Search:
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
 
                 self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
-                self._search_list = self._search_list.fillna('')
+                self._search_list.fillna('', inplace=True)
                 self._num_searched_on = len(self._search_list)
                 self.__create_meta_data(self._headers, search_two=search_two)
                 self._num_remaining = len(self._search_list)
 
-                if search_two:
-                    self.__num_found(self._found_contacts)
-                else:
-                    self.__num_found(self._found_contacts)
+                self.__num_found(self._found_contacts)
 
                 self.log.info('Found %s on %s search.\n' % (self._num_found_contacts, header))
+                self._headers = self._search_list.columns.values
 
     def _crd_search(self, search_field=['CRDNumber']):
         """
         helper method to help properly guide the search process when matching on CRDNumbers
-
+    
         1) set the fields that will be returned to the 3rd party list from the SFDC file, and fill blank values
         2) merge the 3rd party list and SFDC file, leveraging the __search_and_merge method.
-
+    
         :param search_field:
         :return:
         """
         self._is_crd_check = True
         self._return_fields = ['AccountId', 'SourceChannel',
                                'Needs Info Updated?', 'ContactID', 'BizDev Group']
-        self._search_list.fillna('')
+        self._search_list.fillna('', inplace=True)
         self.__search_and_merge(search_field)
         return self
 
@@ -243,21 +288,20 @@ class Search:
         # If we have the information to make LkupName, do so
         """
         helper method to create the LkupName search field, if the necessary columns are present, and pre-process them.
-
+    
         1) check if PostalCode and State are available in the data frame, and convert the data types to strings
         2) loop through each row, and attempt to clean the Postal code.
         3) attempt to clean the State column, if the name (rather than abbr.) is provided. leverage us.states.lookup
         4) check if FirstName and LastName are present
             a) if all columns are present combine first 3 chars of First Name, Last Name, Account, State, and Postal
             b) ex. RicSchools FS Investm PA 19112
-
+    
         :param headers: list of column headers of the data frame
         :param search_list: data frame value
         :return: transformed data frame
         """
         if "MailingPostalCode" in headers and "MailingState" in headers:
 
-            # Format Zip codes
             search_list['MailingPostalCode'] = search_list['MailingPostalCode'].astype(str)
             for index, row in search_list.iterrows():
                 search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"].split('-')[0]
@@ -290,7 +334,7 @@ class Search:
     def _clean_comma_and_space(self, row):
         """
         helper method to remove spaces and commas from a row of data.
-
+    
         :param row: data frame row of data
         :return: transformed row
         """
@@ -303,7 +347,7 @@ class Search:
     def _name_preprocessing(self, headers, search_list):
         """
         helper method to split and clean the FullName column of the 3rd party data frame.
-
+    
         1) if FullName is present, create a column for First and Last Name.
         2) iterate through the data frame and if a comma is present in the Full Name, check if:
             a) a space preceeds a comma. if so, assume the 1st element of the split FullName is the First Name
@@ -312,8 +356,8 @@ class Search:
         3) if no comma is present, assume First Last / (suffix or middle) - splitting the FullName on spaces (' ')
         4) attempt to remove potential suffixes (which may include .jr, iii, cfa, etc.)
         5) finally, attempt to appropriately assign the First and Last Name fields to the appropriate columns.
-
-
+    
+    
         :param headers: columns of the data frame
         :param search_list: data frame
         :return: transformed data frame
@@ -356,18 +400,28 @@ class Search:
         self.__data_preprocessing(additional=True)
         self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
         self._review_contact_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
+        self._to_create_path = create_path_name(path=searching_list_path, new_name='to_create')
 
         if 'CRDNumber' in self._headers and not self._is_crd_check:
             self.log.info("Performing a CRD search, as 'CRDNumber' is present.")
             self._crd_search()
+            if self._search_one_crd_additional:
+                self.log.info("Performing additional searches as the CRD search didn't find all records successfully.")
+                self.__search_and_merge(self._search_fields)
+
+                self._search_list.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
+                self._to_create = self._search_list[~is_null(self._search_list['CRDNumber'])]
+                self._search_list = self._search_list[is_null(self._search_list['CRDNumber'])]
 
         else:
             self.log.info("Performing standard search, as 'CRDNumber' is not present.")
             self.__search_and_merge(self._search_fields)
 
-        if not self._to_finra:
-            self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
+        if self._save_to_review_df:
             save_df(df=self._contacts_to_review, path=self._review_contact_path)
+
+        if len(self._to_create.index) > 0:
+            save_df(df=self._to_create, path=self._to_create_path)
 
         save_df(df=self._found_contacts, path=self._found_contact_path)
         save_df(df=self._search_list, path=searching_list_path)
@@ -376,7 +430,8 @@ class Search:
                     'Found Path': self._found_contact_path,
                     'SFDC_Found': self._num_found_contacts,
                     'FINRA?': self._to_finra,
-                    'Review Path': self._review_contact_path}
+                    'Review Path': self._review_contact_path,
+                    'to_create_path': self._to_create_path}
         return ret_item
 
     def perform_search_two(self, searching_list_path, found_path, list_type):
