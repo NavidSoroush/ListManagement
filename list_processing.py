@@ -1,5 +1,5 @@
 import traceback
-from ListManagement.utility.email_wrapper import Email
+from utility.email_wrapper import Email
 from finra.finra import FinraScraping
 from ml.header_predictions import predict_headers_and_pre_processing
 from search.search import Search

@@ -324,7 +324,7 @@ class MailBoxReader:
         try:
             self.log.info('Attempting to upload emailed list request to SFDC and attach links.')
             sfdc.update_records(dict_data['object'], data_pkg[0], [data_pkg[1]])
-            sfdc.upload_attachments(dict_data['object'], att)
+            sfdc.upload_attachments(dict_data['link'], att)
         except:
             self.log.warn('There was an issue updating and uploading data to the %s record.' % dict_data['object'])
             sfdc.close_session()
