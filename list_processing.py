@@ -1,5 +1,5 @@
 import traceback
-from ListManagement.utility.email_wrapper import Email
+from utility.email_wrapper import Email
 from finra.finra import FinraScraping
 from ml.header_predictions import predict_headers_and_pre_processing
 from search.search import Search
@@ -161,6 +161,9 @@ class ListProcessing:
         self.vars['SFDC Session'].last_list_uploaded(obj_id=self.vars['ObjectId'], obj=self.vars['Object'])
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'], log=self.log))
+        self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
+                                        self.vars['ObjectId'], self.vars['Object'],
+                                        self.vars['ObjectId'], log=self.log))
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
 
         if self.vars['Move To Bulk']:

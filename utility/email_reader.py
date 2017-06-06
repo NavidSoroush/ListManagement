@@ -73,7 +73,8 @@ class MailBoxReader:
     def handle_new_email_requests(self, num, raw_email):
         attmts = list()
         tmp_dict = dict()
-        tmp_dict['has_link'] = 'not set'
+        tmp_dict.update({'has_link': 'not set', 'link': None, 'object': None,
+                         'search_link': "https://fsinvestments.my.salesforce.com"})
         tmp_dict['name'], tmp_dict['email'] = parseaddr(raw_email['From'])[0], parseaddr(raw_email['From'])[1]
         tmp_dict['sub'], tmp_dict['date'] = raw_email['subject'], datetime.datetime.strftime(parse(raw_email['date']),
                                                                                              '%m/%d/%Y %H:%M:%S')
@@ -82,7 +83,9 @@ class MailBoxReader:
             if part.get_content_type().lower() == "text/html" and tmp_dict['has_link'] == 'not set':
                 e_body = fromstring(part.get_payload(decode=True)).text_content()
                 e_body = e_body[e_body.find("-->") + 3:]
-                tmp_dict['has_link'] = e_body.find("https://fsinvestments.my.salesforce.com")
+                tmp_dict['has_link'] = e_body.find(tmp_dict['search_link'])
+                if tmp_dict['has_link'] not in ['not set', -1]:
+                    tmp_dict = self.determine_id_and_object_from_link(tmp=tmp_dict, email_text=e_body)
                 msg_body += re.sub(r'[^\x00-\x7F]+', ' ', e_body)
 
             if part.get_content_maintype() == "mulipart": continue
@@ -100,6 +103,21 @@ class MailBoxReader:
             msg, msg_body = self.get_decoded_email_body(f_data[0][1])
             list_queue.append([msg, msg_body, num])
         return list_queue
+
+    def determine_id_and_object_from_link(self, tmp, email_text):
+        end_point = tmp['has_link'] + len(tmp['search_link']) + 16
+        tmp['link'] = email_text[tmp['has_link'] + len(tmp['search_link']) + 1: end_point]
+        if tmp['link'][:3] == '001':
+            tmp['object'] = 'Account'
+        elif tmp['link'][:3] == 'a0v':
+            tmp['object'] = 'BizDev__c'
+        elif tmp['link'][:3] == '701':
+            tmp['object'] = 'Campaign'
+        else:
+            tmp['object'] = None
+            self.log.warn('Unable to determine object from Salesforce link. You will need to manually upload'
+                          'the list Salesforce for the new list request.')
+        return tmp
 
     def iterative_processing(self, msg_list):
         msg = msg_list[0]
@@ -298,6 +316,19 @@ class MailBoxReader:
             sub = 'New List Received. Check List Management Trello Board'
             msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=att)
+            self.associate_email_request_with_sf_object(dict_data=dict_data, att=att)
+
+    def associate_email_request_with_sf_object(self, dict_data, att):
+        sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
+        data_pkg = [['List_Upload__c'], [dict_data['link'], 'True']]
+        try:
+            self.log.info('Attempting to upload emailed list request to SFDC and attach links.')
+            sfdc.update_records(dict_data['object'], data_pkg[0], [data_pkg[1]])
+            sfdc.upload_attachments(dict_data['link'], att)
+        except:
+            self.log.warn('There was an issue updating and uploading data to the %s record.' % dict_data['object'])
+            sfdc.close_session()
+            pass
 
 # m = MailBoxReader()
 # for i in range(m.pending_lists['Lists_In_Queue']):

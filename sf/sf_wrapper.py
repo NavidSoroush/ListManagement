@@ -1,6 +1,7 @@
 import SQLForce
 from SQLForce import AttachmentReader, AttachmentWriter
-from utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name
+from utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name, determine_ext
+import traceback
 import os
 import shutil
 
@@ -11,7 +12,7 @@ class SFPlatform:
     
     """
 
-    def __init__(self, user, pw, token):
+    def __init__(self, user, pw, token, log=None):
         """
         declare the objects attribute values and authenticate the user.
         
@@ -19,6 +20,7 @@ class SFPlatform:
         :param pw: sf_password 
         :param token: sf_secret_token
         """
+        self.log = log
         self._save_dir = 'T:/Shared/FS2 Business Operations/Python Search Program/New Lists/'
         self._custom_domain = 'https://fsinvestments.my.salesforce.com:'
         self.session = self._auth(user, pw, token)
@@ -125,13 +127,13 @@ class SFPlatform:
         :return: n/a
         """
         for att in attachments:
-            if len(att) >= 120:
-                att = self.__manage_attachements__(att=att)
-            print('Attaching %s to %s list record.' % (att, obj_id))
+            att = self.__manage_attachements__(att=att)
+            self.log.info('Attaching %s to %s list record.' % (att, obj_id))
             try:
                 AttachmentWriter.attachFile(session=self.session, parentId=obj_id, filename=att)
             except:
-                print('Unable to attach the %s file. I suggest it gets uploaded manually.' % att)
+                self.log.warn('Unable to attach the %s file. I suggest it gets uploaded manually.' % att)
+                self.log.warn(str(traceback.format_exc()))
         self.__clean_up_attachments__()
 
     def last_list_uploaded(self, obj_id, obj, success=False):
@@ -199,7 +201,10 @@ class SFPlatform:
         if not os.path.isdir(self.__att_drive__):
             os.mkdir(self.__att_drive__)
         file_name_list = split_name(att).replace('-', ' ').replace('_', ' ').split(' ')
-        new_name = self.__att_drive__ + ' '.join(file_name_list[:2]) + ' ' + ' '.join(file_name_list[-2:])
+        if len(file_name_list) > 2:
+            new_name = self.__att_drive__ + ' '.join(file_name_list[:2]) + ' ' + ' '.join(file_name_list[-2:])
+        else:
+            new_name = self.__att_drive__ + ' '.join(file_name_list)
         shutil.copy(att, new_name)
         return new_name
 
