@@ -10,7 +10,7 @@ def strip_unicode_chars(row):
     :param row: cell value with unicode chars
     :return: transformed cell value without unicode chars
     """
-    return [unicodedata.normalize('NFKD', r).encode('utf-8', 'ignore') for r in row]
+    return [unicodedata.normalize('NFKD', str(r)).encode('utf-8', 'ignore') for r in row]
 
 
 def find_chrome_driver_location(filename='chromedriver'):
