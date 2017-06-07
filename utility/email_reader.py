@@ -94,7 +94,6 @@ class MailBoxReader:
                 attmts.append(self.attachment_reader(raw=part, att=part.get_filename()))
         self.determine_path_and_complete_processing(num=num, dict_data=tmp_dict, att=attmts, msg_body=msg_body)
         self.attachment_reader(remove=True)
-        self._move_received_list_to_processed_folder(num=num, folder="INBOX/New Lists")
 
     def handle_list_queue_requests(self, num, f_data, list_queue):
         raw = email.message_from_string(f_data[0][1])
@@ -305,18 +304,20 @@ class MailBoxReader:
 
         elif len(att) == 0 or dict_data['has_link'] in [-1, 'not set']:
             msg_body = "%s,\n\nThe list request sent is lacking either attachments or a SF link.\n\n" \
-                       "Please resend your request for the '%s' list again with the list to SF " \
+                       "Please resend your request for the '%s' list again with the link to SF " \
                        "and at least one attachment." \
                        "\n\nAll the best," % (dict_data['name'].split(' ')[0], dict_data['sub'])
             sub = "LMA Notification: Missing Attachments or SFDC Links for '%s'" % dict_data['sub']
             _list_team.append(dict_data['email'])
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=None)
+            self._move_received_list_to_processed_folder(num, 'INBOX/No Link or Attachments')
         else:
             _list_team.append('rickyschools+v3lhm65etri76gwbn0sy@boards.trello.com')
             sub = 'New List Received. Check List Management Trello Board'
             msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=att)
             self.associate_email_request_with_sf_object(dict_data=dict_data, att=att)
+            self._move_received_list_to_processed_folder(num=num, folder="INBOX/New Lists")
 
     def associate_email_request_with_sf_object(self, dict_data, att):
         sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
