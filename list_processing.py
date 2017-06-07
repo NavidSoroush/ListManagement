@@ -59,11 +59,13 @@ class ListProcessing:
 
                         elif self.vars['Object'] == 'BizDev Group':
                             self.bizdev_processing()
-                    except:
-                        self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
 
                         self.vars.update(record_processing_stats(self.vars['Stats Data']))
 
+                    except:
+                        self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
+
+                    finally:
                         np += 1
                         self.vars.update({'Num_Processed': n})
                         self.log.info('List #%s processed.' % self.vars['Num_Processed'])
@@ -71,8 +73,8 @@ class ListProcessing:
                             if k not in _dict_keys_to_keep:
                                 self.vars[k] = None
 
-                        self.vars['SFDC Session'].close_session()
-                        self.mb.close_mailbox()
+            self.vars['SFDC Session'].close_session()
+            self.mb.close_mailbox()
 
     def is_bad_extension(self):
         """
