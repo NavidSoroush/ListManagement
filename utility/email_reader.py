@@ -303,10 +303,16 @@ class MailBoxReader:
             self._move_received_list_to_processed_folder(num, 'INBOX/Auto Lists From SFDC')
 
         elif len(att) == 0 or dict_data['has_link'] in [-1, 'not set']:
-            msg_body = "%s,\n\nThe list request sent is lacking either attachments or a SF link.\n\n" \
+            if len(att) == 0 and dict_data['has_link'] in [-1, 'not set']:
+                dyn_str = 'both an attachment and a SF link'
+            elif len(att) == 0:
+                dyn_str = 'an attachment'
+            elif dict_data['has_link'] in [-1, 'not set']:
+                dyn_str = 'a SF link'
+            msg_body = "%s,\n\nThe list request sent is lacking %s.\n\n" \
                        "Please resend your request for the '%s' list again with the link to SF " \
                        "and at least one attachment." \
-                       "\n\nAll the best," % (dict_data['name'].split(' ')[0], dict_data['sub'])
+                       "\n\nAll the best," % (dict_data['name'].split(' ')[0], dyn_str, dict_data['sub'])
             sub = "LMA Notification: Missing Attachments or SFDC Links for '%s'" % dict_data['sub']
             _list_team.append(dict_data['email'])
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=None)
