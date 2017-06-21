@@ -52,7 +52,7 @@ def determine_ext(f_name):
     :return: tuple of shorten extension length and file extension
     """
     filename, file_ext = os.path.splitext(f_name)
-    if file_ext.lower() not in ['.csv', '.pdf', '.xls', '.gif', '.png', '.jpg', '.doc', '.xlsx', '.docx']:
+    if file_ext.lower() not in ['.csv', '.pdf', '.xls', '.gif', '.png', '.jpg', '.doc', '.xlsx', '.docx', '.txt']:
         raise BaseException('No file name, or an unknown file type,  was passed to the program.')
 
     del filename

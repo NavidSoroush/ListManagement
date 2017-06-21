@@ -22,7 +22,7 @@ _list_notification_elements = [
     , 'BizDev Group Link: '
     , 'List Link:']
 _looking_for_elements = ['Campaign Link: ', 'Attachment Link: ']
-_acceptable_types = ['.xlsx', '.pdf', '.csv', '.xls', '.zip', '.ocx', '.txt']
+_acceptable_types = ['.xlsx', '.pdf', '.csv', '.xls', '.zip', '.docx', '.doc']
 _temp_save_attachments = 'C:/save_att/'
 _list_team = ["ricky.schools@fsinvestments.com", "max.charles@fsinvestments.com"]
 
