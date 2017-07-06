@@ -323,9 +323,15 @@ class Search:
                         pass
 
             if "FirstName" in headers and "LastName" in headers:
+                print "CREATING LOOKUP NAME"
                 search_list["FirstName"] = map(lambda x: x.title(), search_list["FirstName"])
                 search_list["LastName"] = map(lambda x: x.title(), search_list["LastName"])
+                print "pre-lkupname list"
+                print search_list.head()
                 search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list["Account"].str[:10] + search_list["MailingState"] + search_list["MailingPostalCode"].str[:-2]
+                print "post-lkupname list"
+                print search_list.head()
+
 
             else:
                 self.log.info("Advisor name or account information missing")
