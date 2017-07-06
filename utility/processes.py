@@ -265,7 +265,7 @@ def extract_dictionary_values(dict_data, log=None):
     dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
     if len(att_paths) > 0:
         log.info('Attempting to attach %s records to the List record.' % len(att_paths))
-        dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
+        #dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
 
     subject = "ALM Notification: %s list processed." % obj_name
 
