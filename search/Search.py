@@ -301,8 +301,8 @@ class Search:
         """
         if "MailingPostalCode" in headers and "MailingState" in headers:
             import us
-            import uszipcode
-            zs = uszipcode.ZipcodeSearchEngine()
+            #import uszipcode
+            #zs = uszipcode.ZipcodeSearchEngine()
 
             search_list['MailingPostalCode'] = search_list['MailingPostalCode'].astype(str)
             for index, row in search_list.iterrows():
@@ -323,15 +323,9 @@ class Search:
                         pass
 
             if "FirstName" in headers and "LastName" in headers:
-                print "CREATING LOOKUP NAME"
                 search_list["FirstName"] = map(lambda x: x.title(), search_list["FirstName"])
                 search_list["LastName"] = map(lambda x: x.title(), search_list["LastName"])
-                print "pre-lkupname list"
-                print search_list.head()
                 search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list["Account"].str[:10] + search_list["MailingState"] + search_list["MailingPostalCode"].str[:-2]
-                print "post-lkupname list"
-                print search_list.head()
-
 
             else:
                 self.log.info("Advisor name or account information missing")
@@ -403,7 +397,7 @@ class Search:
         self.__init_list_metadata()
         self._list_type = list_type
         self.__check_list_type()
-        self.s.__data_preprocessing(additional=True)
+        self.__data_preprocessing(additional=True)
         self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
         self._review_contact_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
         self._to_create_path = create_path_name(path=searching_list_path, new_name='to_create')
