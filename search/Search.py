@@ -181,16 +181,18 @@ class Search:
                 if "CRD Provided by List" in self._headers:
                     self._identify_to_review_records()
                     self._search_list.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
-                    self._found_contact = self._found_contacts.append(
+                    self._found_contacts = self._found_contacts.append(
                         self._search_list[self._search_list['ContactID'] != ''],
                         ignore_index=True)
                     self._search_list = self._search_list[self._search_list['ContactID'] == '']
                     self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
 
                 else:
-                    self._found_contact = self._found_contacts.append(
+                    self._found_contacts = self._found_contacts.append(
                         self._search_list[self._search_list['CRDNumber'] != ''],
                         ignore_index=True)
+                    print self._found_contacts.head()
+                    print "these were found"
                     self._search_list = self._search_list[self._search_list['CRDNumber'] == '']
 
             for r_field in self._return_fields:
@@ -255,7 +257,6 @@ class Search:
 
                 self._headers_and_ids = make_df()
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
-
                 self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
                 self._search_list.fillna('', inplace=True)
                 self._num_searched_on = len(self._search_list)
@@ -325,7 +326,7 @@ class Search:
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = map(lambda x: x.title(), search_list["FirstName"])
                 search_list["LastName"] = map(lambda x: x.title(), search_list["LastName"])
-                search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list["Account"].str[:10] + search_list["MailingState"] + search_list["MailingPostalCode"].str[:-2]
+                search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list["Account"].str[:10] + search_list["MailingState"] + search_list["MailingPostalCode"]#.str[:-2]
 
             else:
                 self.log.info("Advisor name or account information missing")
