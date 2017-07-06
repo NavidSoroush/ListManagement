@@ -403,7 +403,7 @@ class Search:
         self.__init_list_metadata()
         self._list_type = list_type
         self.__check_list_type()
-        self.__data_preprocessing(additional=True)
+        self.s.__data_preprocessing(additional=True)
         self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
         self._review_contact_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
         self._to_create_path = create_path_name(path=searching_list_path, new_name='to_create')
