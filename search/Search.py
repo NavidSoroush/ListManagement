@@ -302,9 +302,37 @@ class Search:
         """
         if "MailingPostalCode" in headers and "MailingState" in headers:
             import us
-            #import uszipcode
-            #zs = uszipcode.ZipcodeSearchEngine()
+            import uszipcode
+            zs = uszipcode.ZipcodeSearchEngine()
 
+            search_list['MailingPostalCode'] = search_list['MailingPostalCode'].astype(str)
+
+            search_list['MailingPostalCode'] = search_list.apply(
+                lambda x: x['MailingPostalCode'].split('-')[0] if '-' in x['MailingPostalCode'] else x[
+                    'MailingPostalCode'], axis=1)
+
+            search_list['MailingPostalCode'] = search_list.apply(
+                lambda x: x['MailingPostalCode'][:5] if len(x['MailingPostalCode']) == 9 else x['MailingPostalCode'],
+                axis=1)
+
+            search_list['MailingPostalCode'] = search_list.apply(
+                lambda x: str(0) + x['MailingPostalCode'][:4] if len(x['MailingPostalCode']) == 8 else x[
+                    'MailingPostalCode'], axis=1)
+
+            try:
+                search_list['MailingState'] = search_list.apply(
+                    lambda x: us.states.lookup(unicode(x['MailingState']), use_cache=False).abbr if len(
+                        x['MailingState']) > 2 else x['MailingState'], axis=1)
+            except:
+                try:
+                    self.log.info("Unable to transform MailingState with the python 'us' library.")
+                    search_list['MailingState'] = search_list.apply(
+                        lambda x: zs.by_zipcode(x['MailingPostalCode'])['State'], axis=1)
+                except:
+                    self.log.info("Unable to transform MailingState with the python 'uszipcode' library.")
+                    self.log.info('Will forgo attempting to transform MailingState')
+
+            """ archaic code for zip below
             search_list['MailingPostalCode'] = search_list['MailingPostalCode'].astype(str)
             for index, row in search_list.iterrows():
                 search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"].split('-')[0]
@@ -322,7 +350,7 @@ class Search:
                         search_list.loc[index, "MailingState"] = str(state.abbr)
                     except:
                         pass
-
+            """
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = map(lambda x: x.title(), search_list["FirstName"])
                 search_list["LastName"] = map(lambda x: x.title(), search_list["LastName"])
