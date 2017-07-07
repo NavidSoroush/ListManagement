@@ -1,8 +1,8 @@
 import traceback
 from utility.email_wrapper import Email
-from finra.finra import FinraScraping
+from finra.Finra import FinraScraping
 from ml.header_predictions import predict_headers_and_pre_processing
-from search.search import Search
+from search.Search import Search
 from stats.record_stats import record_processing_stats
 from utility.email_helper import lists_in_queue
 from utility.email_reader import MailBoxReader
