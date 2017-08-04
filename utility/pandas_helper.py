@@ -1,5 +1,8 @@
 import pandas as pd
 from gen_helper import determine_ext
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 
 def read_df(path):

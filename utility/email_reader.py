@@ -146,7 +146,7 @@ class MailBoxReader:
         att_link = self.info_parser(msg_body, _list_notification_elements[4],
                                     _list_notification_elements[-2])[39:57]
 
-        list_obj = self.info_parser(msg_body, _list_notification_elements[-2])[-22:-4]
+        list_obj = self.info_parser(msg_body, _list_notification_elements[-2])[-18:]
 
         self.log.info('Attachment Id: %s' % att_link)
         self.log.info('List Object Id: %s' % list_obj)
@@ -338,8 +338,9 @@ class MailBoxReader:
             pass
 
 # m = MailBoxReader()
-# for i in range(m.pending_lists['Lists_In_Queue']):
+# m_vars = m.extract_pending_lists(m.mailbox, m.email_folder)
+# for i in range(m_vars['Lists_In_Queue']):
 #     print('List %s pre-processed data.' % (i + 1))
-#     extracted_data = m.iterative_processing(m.pending_lists['Lists_Data'][i])
+#     extracted_data = m.iterative_processing(m_vars['Lists_Data'][i])
 #     for k, v in extracted_data.iteritems():
 #         print('%s: %s' % (k, v))
