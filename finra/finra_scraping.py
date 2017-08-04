@@ -54,7 +54,7 @@ class Finra:
         else:
             raise KeyError('Not able to infer a search type from the data provided. \n%s' % ','.join(df.columns))
 
-        self.__main_scraper__()
+        self.__main_scraper__(xpath_keys=self.scrape_type)
         df = self.return_scraped_data(df=df)
         save_df(df, self.save_to_path)
 
@@ -106,11 +106,9 @@ class Finra:
 
                 except:
                     self._attempts += 1
-                    print('i hit an error.')
             else:
                 self.attempted_count += 1
                 self._attempts = 0
-                print('skipping to the next record')
 
         self._sel.close()
 
