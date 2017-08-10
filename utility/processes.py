@@ -270,7 +270,7 @@ def extract_dictionary_values(dict_data, log=None):
     subject = "ALM Notification: %s list processed." % obj_name
 
     log.info('Sending notification email to requestor to notify of completion.')
-    Email(subject=subject, to=[sender_email], body=body_string, attachment_path=att_paths)
+    Email(subject=subject, to=[sender_email,userEmail], body=body_string, attachment_path=att_paths)
     return {'Next Step': 'Record Stats',
             'Stats Data': items_for_stats}
 
