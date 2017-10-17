@@ -1,8 +1,9 @@
 import traceback
 from utility.email_wrapper import Email
-from finra.finra import FinraScraping
+from finra.Finra import FinraScraping
+from finra.finra_scraping import Finra
 from ml.header_predictions import predict_headers_and_pre_processing
-from search.search import Search
+from search.Search import Search
 from stats.record_stats import record_processing_stats
 from utility.email_helper import lists_in_queue
 from utility.email_reader import MailBoxReader
@@ -26,6 +27,7 @@ class ListProcessing:
         self.log = ListManagementLogger().logger
         self.s = Search(log=self.log)
         self.fin = FinraScraping(log=self.log)
+        self.finra = Finra()
         self.mb = MailBoxReader(log=self.log)
         self.vars = self.mb.extract_pending_lists(self.mb.mailbox, self.mb.email_folder)
         self.main_contact_based_processing()
@@ -157,15 +159,15 @@ class ListProcessing:
                                                log=self.log))
         self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
-        self.vars.update(self.fin.license_check(self.vars['Found Path']))
+        self.vars.update(self.finra.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self.log))
         self.vars['SFDC Session'].last_list_uploaded(obj_id=self.vars['ObjectId'], obj=self.vars['Object'])
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'], log=self.log))
-        #self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                        #self.vars['ObjectId'], self.vars['Object'],
-                                        #self.vars['ObjectId'], log=self.log))
+        # self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
+        # self.vars['ObjectId'], self.vars['Object'],
+        # self.vars['ObjectId'], log=self.log))
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
 
         if self.vars['Move To Bulk']:
@@ -196,7 +198,7 @@ class ListProcessing:
                                                             self.vars['CmpAccountName'], log=self.log))
         self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
-        self.vars.update(self.fin.license_check(self.vars['Found Path']))
+        self.vars.update(self.finra.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self.log))
         self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
@@ -231,7 +233,7 @@ class ListProcessing:
         """
         if self.vars['SFDC_Found'] < self.vars['Total Records'] and self.vars['FINRA?']:
 
-            self.vars.update(self.fin.crd_check(path=self.vars['File Path']))
+            self.vars.update(self.finra.scrape(path=self.vars['File Path'], scrape_type='crd', parse_list=True))
             if (self.vars['SFDC_Found'] + self.vars['FINRA_Found']) < self.vars['Total Records']:
                 self.vars.update(
                     self.s.perform_sec_search(self.vars['No CRD'], self.vars['FINRA_SEC Found']))
