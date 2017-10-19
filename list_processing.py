@@ -1,15 +1,17 @@
 import traceback
-from utility.email_wrapper import Email
-from finra.Finra import FinraScraping
-from finra.finra_scraping import Finra
-from ml.header_predictions import predict_headers_and_pre_processing
-from search.Search import Search
-from stats.record_stats import record_processing_stats
-from utility.email_helper import lists_in_queue
-from utility.email_reader import MailBoxReader
-from utility.gen_helper import drop_in_bulk_processing
-from utility.log_helper import ListManagementLogger
-from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, sfdc_upload
+
+from ListManagement.finra.Finra import FinraScraping
+from ListManagement.finra.api import Finra
+from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
+from ListManagement.search.Search import Search
+from ListManagement.stats.record_stats import record_processing_stats
+from ListManagement.utility.email_wrapper import Email
+from ListManagement.utility.email_helper import lists_in_queue
+from ListManagement.utility.email_reader import MailBoxReader
+from ListManagement.utility.gen_helper import drop_in_bulk_processing
+from ListManagement.utility.log_helper import ListManagementLogger
+from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
+    sfdc_upload
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
@@ -24,24 +26,28 @@ class ListProcessing:
         declare and set global objects that are leveraged through the
         actually processing of lists.
         """
-        self.log = ListManagementLogger().logger
-        self.s = Search(log=self.log)
-        self.fin = FinraScraping(log=self.log)
-        self.finra = Finra()
-        self.mb = MailBoxReader(log=self.log)
-        self.vars = self.mb.extract_pending_lists(self.mb.mailbox, self.mb.email_folder)
+        self._log = ListManagementLogger().logger
+        self._search_api = Search(log=self._log)
+        self._finra_api_deprecated = FinraScraping(log=self._log)
+        self._finra_api = Finra()
+        self._mailbox = MailBoxReader(log=self._log)
+        self.vars = self._mailbox.extract_pending_lists(self._mailbox.mailbox, self._mailbox.email_folder)
         self.main_contact_based_processing()
 
     def main_contact_based_processing(self):
         """
-        this method manages all potential contact based nodes of FS processing. each node has it's own method 
-        to help clearly define the processing path.
+        this method manages all potential contact based nodes of FS 
+        processing. each node has it's own method to help clearly 
+        define the processing path.
         
-        1) determine if there are lists pending in the queue (in the lists at fsinvestments mailbox)
-        2) if lists are pending, loop through each list - grabbing necessary metadata
-        3) if the file is a 'good' extension, process the list based on the list source object
-        4) record stats for each list
-        5) when all lists are processed, close all mailbox and SalesForce connections
+        1. determine if there are lists pending in the queue
+        (in the lists at fsinvestments mailbox)
+        2. if lists are pending, loop through each list request
+        and grab necessary metadata to process
+        3. if the file is a 'good' extension, process the 
+        request based upon the SFDC object where request originated.
+        4. record stats for each list
+        5. when all lists are processed, close all mailbox and SalesForce connections
         
         :return: 
         """
@@ -50,7 +56,7 @@ class ListProcessing:
                 np = self.vars['Num_Processed']
                 n = np + 1
 
-                self.vars.update(self.mb.iterative_processing(self.vars['Lists_Data'][np]))
+                self.vars.update(self._mailbox.iterative_processing(self.vars['Lists_Data'][np]))
                 if not self.is_bad_extension():
                     try:
                         if self.vars['Object'] == 'Campaign':
@@ -70,13 +76,13 @@ class ListProcessing:
                     finally:
                         np += 1
                         self.vars.update({'Num_Processed': n})
-                        self.log.info('List #%s processed.' % self.vars['Num_Processed'])
+                        self._log.info('List #%s processed.' % self.vars['Num_Processed'])
                         for k, v in self.vars.iteritems():
                             if k not in _dict_keys_to_keep:
                                 self.vars[k] = None
 
             self.vars['SFDC Session'].close_session()
-            self.mb.close_mailbox()
+            self._mailbox.close_mailbox()
 
     def is_bad_extension(self):
         """
@@ -95,7 +101,7 @@ class ListProcessing:
             sub = 'LMA: Unable to Process List Attached to %s' % obj_name
             msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
                   'List Management App.' % (obj_name, self.vars['ExtensionType'])
-            self.log.warning(msg)
+            self._log.warning(msg)
             Email(subject=sub, to=[self.vars['Sender Email']], body=msg, attachment_path=None)
             self.vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
                                                      upload_data=[[self.vars['ListObjId'], 'Unable to Process']])
@@ -119,19 +125,19 @@ class ListProcessing:
         :return: n/a
         """
         self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], self.log))
-        self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
+                                                            self.vars['CmpAccountName'], self._log))
+        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self.log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
         self.vars.update(source_channel(self.vars['cmp_upload_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'], log=self.log))
+                                        self.vars['ObjectId'], self.vars['Object'], log=self._log))
         self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                        self.vars['CmpAccountID'], self.vars['Object'], log=self.log))
+                                        self.vars['CmpAccountID'], self.vars['Object'], log=self._log))
         self.vars.update(sfdc_upload(path=self.vars['cmp_upload_path'], obj=self.vars['Object'],
                                      obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
-                                     log=self.log))
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
+                                     log=self._log))
+        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
         if self.vars['Move To Bulk']:
             drop_in_bulk_processing(self.vars['to_create_path'])
         else:
@@ -156,19 +162,19 @@ class ListProcessing:
         """
         self.vars.update(
             predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
-                                               log=self.log))
-        self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
+                                               log=self._log))
+        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
-        self.vars.update(self.finra.scrape(self.vars['Found Path'], scrape_type='all'))
+        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self.log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
         self.vars['SFDC Session'].last_list_uploaded(obj_id=self.vars['ObjectId'], obj=self.vars['Object'])
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'], log=self.log))
+                                        self.vars['ObjectId'], self.vars['Object'], log=self._log))
         # self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
         # self.vars['ObjectId'], self.vars['Object'],
         # self.vars['ObjectId'], log=self.log))
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
+        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
             drop_in_bulk_processing(self.vars['update_path'])
@@ -195,31 +201,31 @@ class ListProcessing:
         :return: n/a
         """
         self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], log=self.log))
-        self.vars.update(self.s.perform_search_one(self.vars['File Path'], self.vars['Object']))
+                                                            self.vars['CmpAccountName'], log=self._log))
+        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
-        self.vars.update(self.finra.scrape(self.vars['Found Path'], scrape_type='all'))
+        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self.log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
         self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
                                      obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
-                                     log=self.log))
+                                     log=self._log))
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self.log))
+                                        self.vars['CmpAccountID'], log=self._log))
         self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self.log))
+                                        self.vars['CmpAccountID'], log=self._log))
         self.vars.update(source_channel(self.vars['bdg_update_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self.log))
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self.log))
+                                        self.vars['CmpAccountID'], log=self._log))
+        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
             drop_in_bulk_processing(self.vars['to_create_path'])
             drop_in_bulk_processing(self.vars['update_path'])
         else:
-            print _steps[2]
+            print(_steps[2])
 
     def finra_search_and_search_two(self):
         """
@@ -231,27 +237,30 @@ class ListProcessing:
         
         :return: n/a
         """
-        if self.vars['SFDC_Found'] < self.vars['Total Records'] and self.vars['FINRA?']:
+        if self.vars['SFDC_Found'] < self.vars['Total Records'] \
+                and self.vars['FINRA?']:
 
-            self.vars.update(self.finra.scrape(path=self.vars['File Path'], scrape_type='crd', parse_list=True))
+            self.vars.update(self._finra_api.scrape(path=self.vars['File Path'],
+                                                    scrape_type='crd',
+                                                    parse_list=True))
             if (self.vars['SFDC_Found'] + self.vars['FINRA_Found']) < self.vars['Total Records']:
                 self.vars.update(
-                    self.s.perform_sec_search(self.vars['No CRD'], self.vars['FINRA_SEC Found']))
+                    self._search_api.perform_sec_search(self.vars['No CRD'], self.vars['FINRA_SEC Found']))
 
             else:
                 print(_steps[0])
 
-            self.vars.update(self.s.perform_search_two(self.vars['FINRA_SEC Found'],
-                                                       self.vars['Found Path'],
-                                                       self.vars['Object']))
+            self.vars.update(self._search_api.perform_search_two(self.vars['FINRA_SEC Found'],
+                                                                 self.vars['Found Path'],
+                                                                 self.vars['Object']))
         else:
             print(_steps[1])
 
     def create_log_record_of_current_list_data(self, msg):
-        self.log.warning('A fatal error has occured. Printing out necessary data to restart the program and'
-                         'complete it manually.')
-        self.log.info(self.vars)
-        self.log.error(msg)
+        self._log.warning('A fatal error has occured. Printing out necessary data to restart the program and'
+                          'complete it manually.')
+        self._log.info(self.vars)
+        self._log.error(msg)
         raise RuntimeError(msg)
 
 

@@ -1,5 +1,5 @@
-from utility.pandas_helper import read_df, make_df, save_df, concat_dfs
-from ml.model import HeaderPredictions
+from ListManagement.ml.model import HeaderPredictions
+from ListManagement.utility.pandas_helper import read_df, make_df, save_df, concat_dfs
 
 _confidence = .99
 
@@ -32,7 +32,7 @@ def predict_headers_and_pre_processing(path, obj, log):
                                                "{0:.0f}%".format(model.probability[index] * 100)))
             was_i_right = ""
             while was_i_right.lower not in ('y', 'n'):
-                was_i_right = raw_input("Was I right? Please just put 'Y' or 'N'.\n")
+                was_i_right = input("Was I right? Please just put 'Y' or 'N'.\n")
                 if was_i_right.lower() == 'y':
                     tmp = [row['Header Value'], row['Class']]
                     new_headers.append(tmp)
@@ -42,7 +42,7 @@ def predict_headers_and_pre_processing(path, obj, log):
                     expected = ""
                     while expected not in expected_inputs:
                         log.info("Can you tell me what it should have been?\n")
-                        expected = raw_input("\n".join(expected_inputs) + '\n\n')
+                        expected = input("\n".join(expected_inputs) + '\n\n')
                         if expected in expected_inputs:
                             tmp = [row['Header Value'], expected]
                             new_headers.append(tmp)

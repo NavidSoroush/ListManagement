@@ -1,10 +1,12 @@
 import smtplib
 import string
 import os
+
 from email.mime.multipart import MIMEMultipart
 from email import encoders
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
+
 from cred import password, outlook_userEmail
 
 
@@ -43,7 +45,7 @@ class Email:
                     msg.attach(part)
         return msg
 
-    def _sendEmail(self, FROM, TO, BODY, mess=None):
+    def _send_email(self, FROM, TO, BODY, mess=None):
         '''
         executes the actual email send
 
@@ -80,6 +82,6 @@ class Email:
                             "",
 
                             self.body), "\r\n")
-        self._sendEmail(self.from_address, self.to, body, msg)
+        self._send_email(self.from_address, self.to, body, msg)
         print('%s email sent.' % self.subject)
         self._del_email_object(msg)

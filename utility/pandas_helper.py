@@ -1,5 +1,5 @@
 import pandas as pd
-from gen_helper import determine_ext
+from ListManagement.utility.gen_helper import determine_ext
 
 
 def read_df(path):

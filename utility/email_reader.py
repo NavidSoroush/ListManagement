@@ -7,11 +7,13 @@ from email.utils import parseaddr
 import time
 import datetime
 from dateutil.parser import parse
-from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 from lxml.html import fromstring
-from sf.sf_wrapper import SFPlatform
-from email_wrapper import Email
-from gen_helper import determine_ext
+
+from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
+
+from ListManagement.sf.sf_wrapper import SFPlatform
+from ListManagement.utility.email_wrapper import Email
+from ListManagement.utility.gen_helper import determine_ext
 
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [
