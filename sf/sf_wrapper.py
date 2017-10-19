@@ -129,14 +129,14 @@ class SFPlatform:
         :return: n/a
         """
         for att in attachments:
-            att = self.__manage_attachements__(att=att)
+            att = self._manage_attachements(att=att)
             self.log.info('Attaching %s to %s list record.' % (att, obj_id))
             try:
                 AttachmentWriter.attachFile(session=self.session, parentId=obj_id, filename=att)
             except:
                 self.log.warn('Unable to attach the %s file. I suggest it gets uploaded manually.' % att)
                 self.log.warn(str(traceback.format_exc()))
-        self.__clean_up_attachments__()
+        self._clean_up_attachments()
 
     def last_list_uploaded(self, obj_id, obj, success=False):
         """
@@ -178,8 +178,7 @@ class SFPlatform:
             if obj == 'Campaign':
                 sql = 'SELECT ContactId, Status, Id FROM CampaignMember WHERE CampaignId="' \
                       '' + obj_id + '" AND Contact.Territory_Manager__c!="Max Prown"'
-                print
-                sql
+                print(sql)
                 for rec in self.session.selectRecords(sql):
                     members.append(rec.ContactId)
                     members.append(rec.Status)
@@ -190,11 +189,10 @@ class SFPlatform:
                     members.append(rec.Id)
                     members.append(rec.BizDev_Group__c)
         except:
-            print
-            'No advisors in %s object.' % obj
+            print('No advisors in %s object.' % obj)
         return members
 
-    def __manage_attachements__(self, att):
+    def _manage_attachements(self, att):
         """
         used as a helper method to create a temp drive, and move files from a source to the temp drive.
         
@@ -211,7 +209,7 @@ class SFPlatform:
         shutil.copy(att, new_name)
         return new_name
 
-    def __clean_up_attachments__(self):
+    def _clean_up_attachments(self):
         """
         used to delete a temporary drive, if it exists
         
