@@ -1,9 +1,11 @@
+import os
+import traceback
+import shutil
+
 import SQLForce
 from SQLForce import AttachmentReader, AttachmentWriter
-from utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name, determine_ext
-import traceback
-import os
-import shutil
+
+from ListManagement.utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name, determine_ext
 
 
 class SFPlatform:
@@ -24,7 +26,7 @@ class SFPlatform:
         self._save_dir = 'T:/Shared/FS2 Business Operations/Python Search Program/New Lists/'
         self._custom_domain = 'https://fsinvestments.my.salesforce.com:'
         self.session = self._auth(user, pw, token)
-        self.__att_drive__ = 'C:/SFDC_Uploads/'
+        self._att_drive = 'C:/SFDC_Uploads/'
 
     def _auth(self, user, pw, token, instance='Production'):
         """
@@ -74,8 +76,8 @@ class SFPlatform:
             self.session.insert(table=obj, columns=fields, data=upload_data)
             n_inserted = self.session.getenv('ROW_COUNT')
             return n_inserted
-        except Exception, e:
-            print(Exception, e)
+        except Exception:
+            print(Exception)
 
     def download_attachments(self, att_id, obj, obj_url):
         """
@@ -156,8 +158,7 @@ class SFPlatform:
                 self.session.update('BizDev__c', ['Last_Upload_Date__c'], [items])
             success = True
             print("Successfully updated the last list uploaded field on the %s's page." % obj)
-        except Exception, e:
-            print Exception, e
+        except Exception:
             success = False
 
         finally:
@@ -177,7 +178,8 @@ class SFPlatform:
             if obj == 'Campaign':
                 sql = 'SELECT ContactId, Status, Id FROM CampaignMember WHERE CampaignId="' \
                       '' + obj_id + '" AND Contact.Territory_Manager__c!="Max Prown"'
-                print sql
+                print
+                sql
                 for rec in self.session.selectRecords(sql):
                     members.append(rec.ContactId)
                     members.append(rec.Status)
@@ -188,7 +190,8 @@ class SFPlatform:
                     members.append(rec.Id)
                     members.append(rec.BizDev_Group__c)
         except:
-            print 'No advisors in %s object.' % obj
+            print
+            'No advisors in %s object.' % obj
         return members
 
     def __manage_attachements__(self, att):
@@ -198,13 +201,13 @@ class SFPlatform:
         :param att: source file name  
         :return: new temp file name
         """
-        if not os.path.isdir(self.__att_drive__):
-            os.mkdir(self.__att_drive__)
+        if not os.path.isdir(self._att_drive):
+            os.mkdir(self._att_drive)
         file_name_list = split_name(att).replace('-', ' ').replace('_', ' ').split(' ')
         if len(file_name_list) > 2:
-            new_name = self.__att_drive__ + ' '.join(file_name_list[:2]) + ' ' + ' '.join(file_name_list[-2:])
+            new_name = self._att_drive + ' '.join(file_name_list[:2]) + ' ' + ' '.join(file_name_list[-2:])
         else:
-            new_name = self.__att_drive__ + ' '.join(file_name_list)
+            new_name = self._att_drive + ' '.join(file_name_list)
         shutil.copy(att, new_name)
         return new_name
 
@@ -214,5 +217,5 @@ class SFPlatform:
         
         :return: n/a
         """
-        if os.path.isdir(self.__att_drive__):
-            shutil.rmtree(self.__att_drive__)
+        if os.path.isdir(self._att_drive):
+            shutil.rmtree(self._att_drive)
