@@ -2,6 +2,8 @@ import os
 import traceback
 import shutil
 
+import json
+import base64
 import requests
 import simple_salesforce
 
@@ -150,65 +152,26 @@ class SFPlatform:
             att = self._manage_attachements(att=att)
             self.log.info('Attaching %s to %s list record.' % (att, obj_id))
             try:
-                AttachmentWriter.attachFile(session=self.session, parentId=obj_id, filename=att)
+                body = self._read_data(path=att)
+                file_name = split_name(att)
+                self._prepare_post(body, obj_id, file_name)
             except:
-                self.log.warn('Unable to attach the %s file. I suggest it gets uploaded manually.' % att)
+                self.log.warn('Unable to attach the %s file. Please manually upload.' % att)
                 self.log.warn(str(traceback.format_exc()))
         self._clean_up_attachments()
 
-    def last_list_uploaded(self, obj_id, obj, success=False):
-        """
-        used to determine the last time a record was updated on a given object (given the field is exists on said obj)
-        
-        :param obj_id: SFDC obj id
-        :param obj: SFDC API object name
-        :param success: boolean
-        :return: boolean
-        """
-        from datetime import datetime
-        print(obj_id)
-        today = datetime.utcnow().isoformat()
-        items = [obj_id, today]
-        try:
-            if obj == 'Account':
-                self.session.update('Account', ['Last_Rep_List_Upload__c'], [items])
-            elif obj == 'BizDev Group':
-                self.session.update('BizDev__c', ['Last_Upload_Date__c'], [items])
-            success = True
-            print("Successfully updated the last list uploaded field on the %s's page." % obj)
-        except Exception:
-            success = False
+    def _read_data(self, path):
+        with open(path, 'rb') as f:
+            body = base64.b64encode(f.read())
+        return body
 
-        finally:
-            return success
-
-    def get_current_members(self, obj_id, obj):
-        """
-        used to get the current members of an object (given it exists)
-        
-        :param obj_id: SFDC obj id
-        :param obj: SFDC API object name
-        :return: list, members of object [a, b, c, d, e, f, g, ...]
-        """
-        print('Getting current members from %s object.' % obj)
-        members = []
-        try:
-            if obj == 'Campaign':
-                sql = 'SELECT ContactId, Status, Id FROM CampaignMember WHERE CampaignId="' \
-                      '' + obj_id + '" AND Contact.Territory_Manager__c!="Max Prown"'
-                print(sql)
-                for rec in self.session.selectRecords(sql):
-                    members.append(rec.ContactId)
-                    members.append(rec.Status)
-                    members.append(rec.Id)
-            elif obj == 'BizDev Group':
-                sql = 'SELECT Id, BizDev_Group__c FROM Contact WHERE BizDev_Group__c="' + obj_id + '"'
-                for rec in self.session.selectRecords(sql):
-                    members.append(rec.Id)
-                    members.append(rec.BizDev_Group__c)
-        except:
-            print('No advisors in %s object.' % obj)
-        return members
+    def _prepare_post(self, body, obj_id, file_name):
+        api_url = 'https://%s/services/data/v29.0/sobjects/Attachment' % self.session.sf_instance
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer %s' % self.session.session_id}
+        data = json.dumps({'ParentId': obj_id, 'Name': file_name, 'body': body.decode('utf-8')})
+        response = requests.post(api_url, data=data, headers=headers)
+        return response.text
 
     def _manage_attachements(self, att):
         """
