@@ -1,21 +1,20 @@
 import os
 import time
+
 import numpy as np
-from legacy.get_sf_adv_list import run
-from utility.gen_helper import create_path_name, today
-from utility.pandas_helper import read_df, save_df, make_df, is_null
 
-_AdvListPath = 'T:/Shared/FS2 Business Operations/Search Program/Salesforce Data Files/SFDC Advisor List as of ' \
-               + time.strftime("%m-%d-%y") + '.csv'
+from ListManagement.legacy.get_sf_adv_list import run
+from ListManagement.utility.gen_helper import create_path_name, today
+from ListManagement.utility.pandas_helper import read_df, save_df, make_df, is_null
 
+_todays_sfdc_advisor_list = 'T:/Shared/FS2 Business Operations/Search Program' \
+                            '/Salesforce Data Files/SFDC Advisor List as of ' \
+                            + time.strftime("%m-%d-%y") + '.csv'
 
-def sf_advlist():
+if not os.path.exists(_todays_sfdc_advisor_list):
     print("Please wait. Downloading SFDC list, as today's file was not available.")
-    run()
-
-
-if not os.path.exists(_AdvListPath):
-    sf_advlist()
+    print(_todays_sfdc_advisor_list)
+    run(path_name=_todays_sfdc_advisor_list)
 
 
 class Search:
@@ -25,11 +24,11 @@ class Search:
         """
         self.log = log
         self._today = today
-        self._SFDC_advisor_list = read_df(_AdvListPath)
+        self._SFDC_advisor_list = read_df(_todays_sfdc_advisor_list)
         self.__preprocess_sfdc_list()
         self._search_fields = ['AMPFMBRID', 'Email', 'LkupName']
-        self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?',
-                               'BizDev Group']
+        self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel',
+                               'ContactID', 'Needs Info Updated?', 'BizDev Group']
         self._found_contacts = make_df()
         self._contacts_to_review = make_df()
         self._to_create = make_df()
@@ -358,6 +357,11 @@ class Search:
 
             else:
                 self.log.info("Advisor name or account information missing")
+        try:
+            search_list['FinraLookup'] = search_list["FirstName"] + ' ' + search_list["LastName"] + " " + \
+                                         search_list["Account"].str[:10]
+        except:
+            self._to_finra = False
         return search_list
 
     def _clean_comma_and_space(self, row):

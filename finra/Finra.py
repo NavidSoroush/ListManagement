@@ -1,19 +1,26 @@
 import os
 import re
 import sys
+import warnings
+
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
-from utility.finra_helper import strip_unicode_chars
-from utility.gen_helper import create_path_name
-from utility.pandas_helper import read_df, save_df
-from utility.progress_bar import myprogressbar
+
+from ListManagement.utility.finra_helper import strip_unicode_chars
+from ListManagement.utility.gen_helper import create_path_name
+from ListManagement.utility.pandas_helper import read_df, save_df
+from ListManagement.utility.progress_bar import myprogressbar
 
 
 class FinraScraping:
     def __init__(self, log=None):
+        warnings.warn(
+            "Finra.FinraScraping class is deprecated, use api.Finra class instead",
+            DeprecationWarning
+        )
         self.log = log
         self._chrome_driver = "C:/Python27/selenium/Chrome/chromedriver"
         os.environ["webdriver.chrome.driver"] = self._chrome_driver

@@ -2,13 +2,16 @@ import os
 import re
 import time
 import datetime
+from dateutil.parser import parse
 import shutil
 import errno
 import ntpath
-from sqlalchemy import create_engine
-from dateutil.parser import parse
-from cred import userPhone, userEmail, userName, sf_uid
+
 import pandas as pd
+from sqlalchemy import create_engine
+
+from cred import *
+
 
 userName = userName
 userEmail = userEmail

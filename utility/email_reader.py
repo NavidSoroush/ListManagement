@@ -7,11 +7,13 @@ from email.utils import parseaddr
 import time
 import datetime
 from dateutil.parser import parse
-from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 from lxml.html import fromstring
-from sf.sf_wrapper import SFPlatform
-from email_wrapper import Email
-from gen_helper import determine_ext
+
+from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
+
+from ListManagement.sf.sf_wrapper import SFPlatform
+from ListManagement.utility.email_wrapper import Email
+from ListManagement.utility.gen_helper import determine_ext
 
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [
@@ -37,14 +39,14 @@ class MailBoxReader:
     def __init__(self, log):
         self.log = log
         self._email_account = outlook_userEmail + '/Lists'
-        self.new_requests_folder = 'INBOX/'
-        self.email_folder = 'INBOX/Auto Lists From SFDC/'
+        self.new_requests_folder = '"INBOX/"'
+        self.email_folder = '"INBOX/Auto Lists From SFDC/"'
         self.mailbox = imaplib.IMAP4_SSL('outlook.office365.com')
         self.mailbox.login(self._email_account, password)
 
     def extract_pending_lists(self, mailbox, folder):
         list_queue = list()
-        mailbox.select(folder)
+        mailbox.select("%s" % folder)
         s_resp, s_data = mailbox.search(None, 'ALL')
         if s_resp != "OK":
             self.log.info('No new lists were found in the email queue.')
@@ -96,7 +98,7 @@ class MailBoxReader:
         self.attachment_reader(remove=True)
 
     def handle_list_queue_requests(self, num, f_data, list_queue):
-        raw = email.message_from_string(f_data[0][1])
+        raw = email.message_from_bytes(f_data[0][1])
         subject = raw['subject']
         if _list_notification_elements[0] in subject:
             msg, msg_body = self.get_decoded_email_body(f_data[0][1])
@@ -162,12 +164,12 @@ class MailBoxReader:
         self.log.info('Object Id: %s' % obj_rec_link)
 
         self.log.info('Downloading attachment from SFDC.')
-        sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token)
-        file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=[att_link], obj=obj,
+        sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
+        file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=att_link, obj=obj,
                                                                                      obj_url=obj_rec_link)
         ext_len, ext = determine_ext(f_name=file_path)
 
-        self._move_received_list_to_processed_folder(num=msg_id, folder="INBOX/Auto Processed Lists")
+        self._move_received_list_to_processed_folder(num=msg_id, folder='"INBOX/Auto Processed Lists"')
 
         # _subject = "LMA Notification: %s list received." % obj_rec_name
         # _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \
@@ -202,7 +204,7 @@ class MailBoxReader:
         self.log.info("Moved email to %s folder in outlook." % folder)
 
     def get_decoded_email_body(self, message_body):
-        msg = email.message_from_string(message_body)
+        msg = email.message_from_bytes(message_body)
         if msg.is_multipart():
             for payload in msg.get_payload():
                 pl = payload.get_payload(decode=True)

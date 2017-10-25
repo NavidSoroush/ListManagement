@@ -1,10 +1,8 @@
-from gen_helper import *
-from email_helper import craft_notification_email
-from email_wrapper import Email
-from pandas_helper import read_df, save_df, make_df, determine_num_records
-from sf_helper import *
-import datetime
-import traceback
+from ListManagement.utility.gen_helper import *
+from ListManagement.utility.email_helper import craft_notification_email
+from ListManagement.utility.email_wrapper import Email
+from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
+from ListManagement.utility.sf_helper import *
 
 
 def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
@@ -241,8 +239,13 @@ def extract_dictionary_values(dict_data, log=None):
                       obj_to_remove, need_research, received, process_start,
                       completed, processing_string, create_advisors_note]
     body_string = craft_notification_email(items_to_email)
-    log.info(
-        'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.iteritems()]))
+    try:
+        log.info(
+            'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.iteritems()]))
+    except:
+        #Python3
+        log.info(
+            'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.items()]))
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
@@ -253,7 +256,7 @@ def extract_dictionary_values(dict_data, log=None):
         , 'Match Rate': match_rate, 'Processing Time': processing_string
     }
 
-    listobj_cols = ['Status__c', 'Advisors_on_List__c', 'Contacts_Added_to_Related_Record__c',
+    listobj_cols = ['Id', 'Status__c', 'Advisors_on_List__c', 'Contacts_Added_to_Related_Record__c',
                     'Contacts_Created__c', 'Contacts_Found_in_SF__c', 'Contacts_Not_Found__c',
                     'Contacts_to_Research__c', 'Contacts_Updated__c', 'Match_Rate__c', 'List_Process_Completed_At__c',
                     'Processed_By__c']
@@ -264,8 +267,9 @@ def extract_dictionary_values(dict_data, log=None):
     log.info('Updating the List record for Id: %s' % dict_data['ListObjId'])
     dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
     if len(att_paths) > 0:
-        log.info('Attempting to attach %s records to the List record.' % len(att_paths))
-        #dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
+        log.info('Attempting to attach %s files to the List record.' % len(att_paths))
+        dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
+
 
     subject = "ALM Notification: %s list processed." % obj_name
 
@@ -297,12 +301,15 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
         elif obj == 'BizDev Group':
             paths, stats = upload(session, df_headers, df_values, obj_id, obj, col_nums, path)
     except:
-        sub = 'LMA: %s upload fail for %s'
-        body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
-               'manually upload this file at your earliest convenience.' % (path, obj)
-        log.error(body)
-        Email(subject=sub, to=['ricky.schools@fsinvestments.com', 'max.charles@fsinvestments.com'],
-              body=body, attachment_path=path)
+        if len(df_values) > 0:
+            sub = 'LMA: %s upload fail for %s'
+            body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
+                   'manually upload this file at your earliest convenience.' % (path, obj)
+            log.error(body)
+            Email(subject=sub, to=['ricky.schools@fsinvestments.com', 'max.charles@fsinvestments.com'],
+                  body=body, attachment_path=[path])
+        else:
+            log.info('There is no data to upload to the %s object.' % obj)
 
     return {'Next Step': 'Send Email',
             'BDG Remove': paths[0],
@@ -315,21 +322,26 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
 
 
 def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
-    if obj == 'Campaign':
-        paths, stats = cmp_upload(session, data, obj_id, obj)
-        if data[0][2] == 'Needs Follow-Up':
-            session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
-                                   upload_data=[[data[0][1], 'true']])
-    elif obj == 'BizDev Group':
-        headers = headers_clean_up(headers)
-        paths, stats = bdg_upload(session, data, obj_id, obj, col_num, df_path)
-    return paths, stats
+    if len(data) > 0:
+        if obj == 'Campaign':
+            paths, stats = cmp_upload(session, data, obj_id, obj)
+            print(data)
+            if data[0][2] == 'Needs Follow-Up':
+                session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
+                                       upload_data=[[data[0][1], 'true']])
+        elif obj == 'BizDev Group':
+            headers = headers_clean_up(headers)
+            paths, stats = bdg_upload(session, data, obj_id, obj, col_num, df_path)
+        return paths, stats
+    else:
+        return
 
 
 def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
     print('\nStep 10. Salesforce Campaign Upload.')
-    sf_c_cmp_members = session.get_current_members(obj_id=obj_id, obj=obj)
-    to_insert, to_update, to_remove = split_list(sf_c_cmp_members, data, obj_id, obj)
+    where = "Id='%s' AND Contact.Territory_Manager__c!='Max Prown'" % obj_id
+    sf_c_cmp_members = session.query('CampaignMember', ['ContactId', 'Status', 'Id'], where)
+    to_insert, to_update, to_remove = split_list(sf_c_cmp_members.values.tolist(), data, obj_id, obj)
     n_add = len(to_insert)
     n_up = len(to_update)
     while n_added < n_add:
@@ -337,7 +349,7 @@ def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
                                          upload_data=to_insert)
 
     if n_uptd < n_up:
-        n_uptd = session.update_records(obj='CampaignMember', fields=['Status', 'CampaignId'],
+        n_uptd = session.update_records(obj='CampaignMember', fields=['Id', 'Status', 'CampaignId'],
                                         upload_data=to_update)
     return ['', '', '', ''], [n_re, n_add, n_up]
 
@@ -345,8 +357,9 @@ def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
 def bdg_upload(session, data, obj_id, obj, col_num, df_path, remove_path=None, add_path=None, update_path=None,
                curr_memb=None, n_add=0, n_up=0, n_re=0):
     print('\nStep 10. Salesforce BizDev Group Upload.')
-    sf_bdg_members = session.get_current_members(obj_id=obj_id, obj=obj)
-    to_insert, to_update, to_remove = split_list(sf_bdg_members, data, obj_id, obj, col_num[1])
+    where = "BizDev_Group__c='%s'" % obj_id
+    sf_bdg_members = session.query('Contact', ['Id', 'BizDev_Group__c '], where)
+    to_insert, to_update, to_remove = split_list(sf_bdg_members.values.tolist(), data, obj_id, obj, col_num[1])
     curr_memb = create_path_name(df_path, 'current_bdg_members')
     sf_bdg_members = [sf_bdg_members[i:i + 2] for i in range(0, len(sf_bdg_members), 2)]
     save_df(df=make_df(data=sf_bdg_members, columns=['Id', 'BizDev_Group__c']), path=curr_memb)
