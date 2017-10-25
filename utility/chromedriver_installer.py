@@ -24,6 +24,6 @@ def install_whl(loc):
     subprocess.call('python -m pip install %s' % loc)
 
 
-if __name__ == '__main__':
+def install_chromedriver():
     name = download_chromewhl()
     install_whl(name)
