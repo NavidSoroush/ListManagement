@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import warnings
 
 import pandas as pd
 from selenium import webdriver
@@ -16,6 +17,10 @@ from ListManagement.utility.progress_bar import myprogressbar
 
 class FinraScraping:
     def __init__(self, log=None):
+        warnings.warn(
+            "Finra.FinraScraping class is deprecated, use api.Finra class instead",
+            DeprecationWarning
+        )
         self.log = log
         self._chrome_driver = "C:/Python27/selenium/Chrome/chromedriver"
         os.environ["webdriver.chrome.driver"] = self._chrome_driver
