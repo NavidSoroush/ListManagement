@@ -1,3 +1,7 @@
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 import pandas as pd
 from ListManagement.utility.gen_helper import determine_ext
 

@@ -1,5 +1,6 @@
 import traceback
 
+from config import *
 from ListManagement.finra.Finra import FinraScraping
 from ListManagement.finra.api import Finra
 from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
@@ -18,6 +19,8 @@ _steps = [
     '\nSkipping email, LkupName, FINRA, and SEC searches.',
     '\nContacts will not be created. Not enough information provided.']
 _dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox', 'SFDC Session']
+
+ensure_requirements_met()
 
 
 class ListProcessing:
@@ -170,11 +173,13 @@ class ListProcessing:
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log))
         self.vars['SFDC Session'].last_list_uploaded(obj_id=self.vars['ObjectId'], obj=self.vars['Object'])
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
+
                                         self.vars['ObjectId'], self.vars['Object'], log=self._log))
         # self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
         # self.vars['ObjectId'], self.vars['Object'],
         # self.vars['ObjectId'], log=self.log))
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
+
 
         if self.vars['Move To Bulk']:
             drop_in_bulk_processing(self.vars['update_path'])

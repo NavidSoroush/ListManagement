@@ -82,9 +82,9 @@ class FinraScraping:
         advisor CRD numbers.
         :return: list of all items to_be_searched
         '''
-        self._search_list['FirstName'].apply(strip_unicode_chars)
-        self._search_list['LastName'].apply(strip_unicode_chars)
-        self._search_list['Account'].apply(strip_unicode_chars)
+        self._search_list['FirstName'] = strip_unicode_chars(self._search_list['FirstName'])
+        self._search_list['LastName'] = strip_unicode_chars(self._search_list['LastName'])
+        self._search_list['Account'] = strip_unicode_chars(self._search_list['Account'])
         for index, row in self._search_list.iterrows():
             try:
                 search_name = row['FirstName'] + ' ' + row['LastName'] + ' ' + re.sub(r'([^\s\w]|_)+', '',

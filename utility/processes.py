@@ -270,10 +270,11 @@ def extract_dictionary_values(dict_data, log=None):
         log.info('Attempting to attach %s files to the List record.' % len(att_paths))
         dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
 
+
     subject = "ALM Notification: %s list processed." % obj_name
 
     log.info('Sending notification email to requestor to notify of completion.')
-    Email(subject=subject, to=[sender_email], body=body_string, attachment_path=att_paths)
+    Email(subject=subject, to=[sender_email,userEmail], body=body_string, attachment_path=att_paths)
     return {'Next Step': 'Record Stats',
             'Stats Data': items_for_stats}
 
