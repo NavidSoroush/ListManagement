@@ -339,6 +339,11 @@ class Search:
 
             else:
                 self.log.info("Advisor name or account information missing")
+        try:
+            search_list['FinraLookup'] = search_list["FirstName"] + ' ' + search_list["LastName"] + " " + \
+                                         search_list["Account"].str[:10]
+        except:
+            self._to_finra = False
         return search_list
 
     def _clean_comma_and_space(self, row):

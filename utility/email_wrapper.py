@@ -1,6 +1,5 @@
-import smtplib
-import string
 import os
+import smtplib
 
 from email.mime.multipart import MIMEMultipart
 from email import encoders
@@ -76,12 +75,15 @@ class Email:
         msg.attach(MIMEText(''.join(self.body)))
         if self.attachment is not None:
             msg = self._attachments(self.attachment, msg)
-        body = string.join(("From: %s" % self.from_address,
+        pre_body = (("From: %s" % self.from_address,
                             "To: %s" % self.to,
                             "Subject: %s" % self.subject,
                             "",
 
                             self.body), "\r\n")
+
+        body = ' '.join(str(item) for item in pre_body)
+
         self._send_email(self.from_address, self.to, body, msg)
         print('%s email sent.' % self.subject)
         self._del_email_object(msg)

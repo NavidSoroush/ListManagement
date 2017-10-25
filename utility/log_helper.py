@@ -21,7 +21,7 @@ class ListManagementLogger:
         self.dir = 'T:/Shared/FS2 Business Operations/Python Search Program/logs/'
         self.__make_dir__()
         self.today = datetime.datetime.today().date().isoformat()
-        self.log_name = '%s%s_List_Management.log' % (self.dir, self.today)
+        self.log_name = '%s%s_%s_List_Management.log' % (self.dir, self.today, username)
         self.logger = self.config()
 
     def config(self):

@@ -10,7 +10,7 @@ import ntpath
 import pandas as pd
 from sqlalchemy import create_engine
 
-from cred import userPhone, userEmail, userName
+from cred import *
 
 
 userName = userName
