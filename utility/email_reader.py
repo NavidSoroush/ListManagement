@@ -11,9 +11,14 @@ from lxml.html import fromstring
 
 from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 
-from ListManagement.sf.sf_wrapper import SFPlatform
-from ListManagement.utility.email_wrapper import Email
-from ListManagement.utility.gen_helper import determine_ext
+try:
+    from ListManagement.sf.sf_wrapper import SFPlatform
+    from ListManagement.utility.email_wrapper import Email
+    from ListManagement.utility.gen_helper import determine_ext
+except:
+    from sf.sf_wrapper import SFPlatform
+    from utility.email_wrapper import Email
+    from utility.gen_helper import determine_ext
 
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [

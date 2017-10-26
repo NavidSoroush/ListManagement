@@ -1,8 +1,15 @@
-from ListManagement.utility.gen_helper import *
-from ListManagement.utility.email_helper import craft_notification_email
-from ListManagement.utility.email_wrapper import Email
-from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
-from ListManagement.utility.sf_helper import *
+try:
+    from ListManagement.utility.gen_helper import *
+    from ListManagement.utility.email_helper import craft_notification_email
+    from ListManagement.utility.email_wrapper import Email
+    from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
+    from ListManagement.utility.sf_helper import *
+except:
+    from utility.gen_helper import *
+    from utility.email_helper import craft_notification_email
+    from utility.email_wrapper import Email
+    from utility.pandas_helper import read_df, save_df, make_df, determine_num_records
+    from utility.sf_helper import *
 
 
 def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):

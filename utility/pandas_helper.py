@@ -1,6 +1,9 @@
 import pandas as pd
-from ListManagement.utility.gen_helper import determine_ext
 
+try:
+    from ListManagement.utility.gen_helper import determine_ext
+except:
+    from utility.gen_helper import determine_ext
 
 def read_df(path):
     e_len, ext = determine_ext(path)
