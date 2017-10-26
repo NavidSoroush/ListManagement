@@ -1,5 +1,10 @@
 import pip
 
+try:
+    from ListManagement.utility.chromedriver_installer import install_chromedriver
+except:
+    from utility.chromedriver_installer import install_chromedriver
+
 
 def ensure_requirements_met():
     '''
@@ -14,7 +19,11 @@ def ensure_requirements_met():
         try:
             __import__(r)
         except:
-            pip.main(['install', r])
+            if r != 'chromedriver':
+                pip.main(['install', r])
+            else:
+                install_chromedriver()
     print('All requirements are successfully installed.')
+
 
 ensure_requirements_met()

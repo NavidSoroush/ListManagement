@@ -1,8 +1,13 @@
-from utility.log_helper import ListManagementLogger
-from sf.sf_wrapper import SFPlatform
-from cred import sfuser, sfpw, sf_token
-from sqlalchemy import create_engine
 import pandas as pd
+from sqlalchemy import create_engine
+
+from cred import sfuser, sfpw, sf_token
+try:
+    from ListManagement.utility.log_helper import ListManagementLogger
+    from ListManagement.sf.sf_wrapper import SFPlatform
+except:
+    from utility.log_helper import ListManagementLogger
+    from sf.sf_wrapper import SFPlatform
 
 log = ListManagementLogger().logger
 log.info('Starting conference creation contact processing.')

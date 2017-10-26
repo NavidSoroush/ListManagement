@@ -1,7 +1,14 @@
-from utility.email_reader import MailBoxReader
-from utility.log_helper import ListManagementLogger
-from utility.email_wrapper import Email
 import traceback
+
+try:
+    from ListManagement.utility.email_reader import MailBoxReader
+    from ListManagement.utility.log_helper import ListManagementLogger
+    from ListManagement.utility import Email
+except:
+    from utility.email_reader import MailBoxReader
+    from utility.log_helper import ListManagementLogger
+    from utility.email_wrapper import Email
+
 
 log = ListManagementLogger().logger
 mb = MailBoxReader(log=log)

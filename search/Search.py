@@ -3,9 +3,14 @@ import time
 
 import numpy as np
 
-from ListManagement.legacy.get_sf_adv_list import run
-from ListManagement.utility.gen_helper import create_path_name, today
-from ListManagement.utility.pandas_helper import read_df, save_df, make_df, is_null
+try:
+    from ListManagement.legacy.get_sf_adv_list import run
+    from ListManagement.utility.gen_helper import create_path_name, today
+    from ListManagement.utility.pandas_helper import read_df, save_df, make_df, is_null
+except:
+    from legacy.get_sf_adv_list import run
+    from utility.gen_helper import create_path_name, today
+    from utility.pandas_helper import read_df, save_df, make_df, is_null
 
 _todays_sfdc_advisor_list = 'T:/Shared/FS2 Business Operations/Search Program' \
                             '/Salesforce Data Files/SFDC Advisor List as of ' \
@@ -190,8 +195,8 @@ class Search:
                     self._found_contacts = self._found_contacts.append(
                         self._search_list[self._search_list['CRDNumber'] != ''],
                         ignore_index=True)
-                    print self._found_contacts.head()
-                    print "these were found"
+                    print(self._found_contacts.head())
+                    print("these were found")
                     self._search_list = self._search_list[self._search_list['CRDNumber'] == '']
 
             for r_field in self._return_fields:
@@ -320,7 +325,7 @@ class Search:
 
             try:
                 search_list['MailingState'] = search_list.apply(
-                    lambda x: us.states.lookup(unicode(x['MailingState']), use_cache=False).abbr if len(
+                    lambda x: us.states.lookup(x['MailingState'].str, use_cache=False).abbr if len(
                         x['MailingState']) > 2 else x['MailingState'], axis=1)
             except:
                 try:

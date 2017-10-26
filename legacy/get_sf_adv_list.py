@@ -6,8 +6,12 @@ import logging.handlers
 import sqlalchemy
 import pandas as pd
 
-from ListManagement.legacy.sf_adv_query import list_SQL
-from ListManagement.legacy.sf_adv_formatting import lkupName, needsUpdate
+try:
+    from ListManagement.legacy.sf_adv_query import list_SQL
+    from ListManagement.legacy.sf_adv_formatting import lkupName, needsUpdate
+except:
+    from legacy.sf_adv_query import list_SQL
+    from legacy.sf_adv_formatting import lkupName, needsUpdate
 
 
 def run(path_name):

@@ -1,6 +1,9 @@
 import sqlalchemy
 
-from ListManagement.utility.pandas_helper import read_df, save_df, new_stat_line
+try:
+    from ListManagement.utility.pandas_helper import read_df, save_df, new_stat_line
+except:
+    from utility.pandas_helper import read_df, save_df, new_stat_line
 
 _stats_file_path = 'T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
 

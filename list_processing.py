@@ -1,18 +1,33 @@
 import traceback
 
-from config import *
-from ListManagement.finra.Finra import FinraScraping
-from ListManagement.finra.api import Finra
-from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
-from ListManagement.search.Search import Search
-from ListManagement.stats.record_stats import record_processing_stats
-from ListManagement.utility.email_wrapper import Email
-from ListManagement.utility.email_helper import lists_in_queue
-from ListManagement.utility.email_reader import MailBoxReader
-from ListManagement.utility.gen_helper import drop_in_bulk_processing
-from ListManagement.utility.log_helper import ListManagementLogger
-from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
-    sfdc_upload
+try:
+    from ListManagement.config import *
+    from ListManagement.finra.Finra import FinraScraping
+    from ListManagement.finra.api import Finra
+    from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
+    from ListManagement.search.Search import Search
+    from ListManagement.stats.record_stats import record_processing_stats
+    from ListManagement.utility.email_wrapper import Email
+    from ListManagement.utility.email_helper import lists_in_queue
+    from ListManagement.utility.email_reader import MailBoxReader
+    from ListManagement.utility.gen_helper import drop_in_bulk_processing
+    from ListManagement.utility.log_helper import ListManagementLogger
+    from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
+        sfdc_upload
+except:
+    from config import *
+    from finra.Finra import FinraScraping
+    from finra.api import Finra
+    from ml.header_predictions import predict_headers_and_pre_processing
+    from search.Search import Search
+    from stats.record_stats import record_processing_stats
+    from utility.email_wrapper import Email
+    from utility.email_helper import lists_in_queue
+    from utility.email_reader import MailBoxReader
+    from utility.gen_helper import drop_in_bulk_processing
+    from utility.log_helper import ListManagementLogger
+    from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
+        sfdc_upload
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',

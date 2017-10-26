@@ -1,5 +1,9 @@
-from ListManagement.ml.model import HeaderPredictions
-from ListManagement.utility.pandas_helper import read_df, make_df, save_df, concat_dfs
+try:
+    from ListManagement.ml.model import HeaderPredictions
+    from ListManagement.utility.pandas_helper import read_df, make_df, save_df, concat_dfs
+except:
+    from ml.model import HeaderPredictions
+    from utility.pandas_helper import read_df, make_df, save_df, concat_dfs
 
 _confidence = .99
 
