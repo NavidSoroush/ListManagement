@@ -18,8 +18,8 @@ def ensure_requirements_met():
     for r in reqs:
         try:
             __import__(r)
-        except:
-            if r != 'chromedriver':
+        except RuntimeError or ImportError:
+            if r[:12] != 'chromedriver':
                 pip.main(['install', r])
             else:
                 install_chromedriver()
