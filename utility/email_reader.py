@@ -6,7 +6,6 @@ import email
 from email.utils import parseaddr
 import time
 import datetime
-from dateutil.parser import parse
 from lxml.html import fromstring
 
 from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
@@ -83,7 +82,7 @@ class MailBoxReader:
         tmp_dict.update({'has_link': 'not set', 'link': None, 'object': None,
                          'search_link': "https://fsinvestments.my.salesforce.com"})
         tmp_dict['name'], tmp_dict['email'] = parseaddr(raw_email['From'])[0], parseaddr(raw_email['From'])[1]
-        tmp_dict['sub'], tmp_dict['date'] = raw_email['subject'], datetime.datetime.strftime(parse(raw_email['date']),
+        tmp_dict['sub'], tmp_dict['date'] = raw_email['subject'], datetime.datetime.strftime(raw_email['date'],
                                                                                              '%m/%d/%Y %H:%M:%S')
         msg_body = "Sent by: %s\nReceived on: %s\nSubject: %s\n" % (tmp_dict['name'], tmp_dict['date'], tmp_dict['sub'])
         for part in raw_email.walk():
@@ -137,7 +136,7 @@ class MailBoxReader:
         else:
             obj = 'Account'
 
-        rec_date = datetime.datetime.strftime(parse(msg['Date']), '%m/%d/%Y %H:%M:%S')
+        rec_date = datetime.datetime.strftime(msg['Date'], '%m/%d/%Y %H:%M:%S')
         sender_name = parseaddr(msg['From'])[0]
         sent_from = parseaddr(msg['From'])[1]
 

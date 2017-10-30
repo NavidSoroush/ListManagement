@@ -1,4 +1,6 @@
+import importlib
 import pip
+import sys
 
 try:
     from ListManagement.utility.chromedriver_installer import install_chromedriver
@@ -16,14 +18,21 @@ def ensure_requirements_met():
     install_reqs = pip.req.parse_requirements('requirements.txt', session='hack')
     reqs = [str(ir.req) for ir in install_reqs]
     for r in reqs:
+        r_name, r_version = r.split('=')[0].lower().replace('_', '-'), r.split('=')[-1]
         try:
-            __import__(r)
-        except RuntimeError or ImportError:
-            if r[:12] != 'chromedriver':
-                pip.main(['install', r])
-            else:
-                install_chromedriver()
-    print('All requirements are successfully installed.')
+            if r_name == 'beautifulsoup4':
+                r_name = 'bs4'
+            importlib.import_module(name=r_name, package=r_version)
 
+        except ImportError:
+            pip.main(['install', r_name + '==' + r_version])
+
+        except RuntimeError:
+            install_chromedriver()
+
+        except ModuleNotFoundError:
+            print('Unable to install %s. Please paste the below into the command-line.\n%s' %
+                  (r_name, ' '.join([sys.executable, '-m', 'pip', 'install',
+                                     '=='.join([r_name, r_version])])))
 
 ensure_requirements_met()
