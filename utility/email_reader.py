@@ -63,7 +63,7 @@ class MailBoxReader:
                 return
             else:
                 if folder == self.new_requests_folder:
-                    self.handle_new_email_requests(num, email.message_from_string(f_data[0][1]))
+                    self.handle_new_email_requests(num, email.message_from_string(f_data[0][1].decode('utf-8')))
                 else:
                     list_queue = self.handle_list_queue_requests(num, f_data, list_queue)
 
@@ -82,8 +82,11 @@ class MailBoxReader:
         tmp_dict.update({'has_link': 'not set', 'link': None, 'object': None,
                          'search_link': "https://fsinvestments.my.salesforce.com"})
         tmp_dict['name'], tmp_dict['email'] = parseaddr(raw_email['From'])[0], parseaddr(raw_email['From'])[1]
-        tmp_dict['sub'], tmp_dict['date'] = raw_email['subject'], datetime.datetime.strftime(raw_email['date'],
-                                                                                             '%m/%d/%Y %H:%M:%S')
+        tmp_dict['sub'], tmp_dict['date'] = raw_email['subject'], \
+                                            datetime.datetime.strftime(
+                                                datetime.datetime.strptime(raw_email['date'],
+                                                                           '%a, %d %b %Y %H:%M:%S %z'),
+                                                '%m/%d/%Y %H:%M:%S')
         msg_body = "Sent by: %s\nReceived on: %s\nSubject: %s\n" % (tmp_dict['name'], tmp_dict['date'], tmp_dict['sub'])
         for part in raw_email.walk():
             if part.get_content_type().lower() == "text/html" and tmp_dict['has_link'] == 'not set':
@@ -297,16 +300,16 @@ class MailBoxReader:
                 len_ext, ext = determine_ext(att)
                 if ext in _acceptable_types:
                     new_f_name = _temp_save_attachments + ''.join(e for e in att[:-5] if e.isalnum()) + ext
-                    with file(new_f_name, mode='wb') as f:
+                    with open(new_f_name, mode='wb') as f:
                         f.write(raw.get_payload(decode=True))
                     return new_f_name
 
     def determine_path_and_complete_processing(self, num, dict_data, att, msg_body):
         if dict_data['name'] == 'FS Investments':
-            self._move_received_list_to_processed_folder(num, 'INBOX/FS Emails')
+            self._move_received_list_to_processed_folder(num, '"INBOX/FS Emails"')
 
         if dict_data['sub'] == 'An upload list has been added':
-            self._move_received_list_to_processed_folder(num, 'INBOX/Auto Lists From SFDC')
+            self._move_received_list_to_processed_folder(num, '"INBOX/Auto Lists From SFDC"')
 
         elif len(att) == 0 or dict_data['has_link'] in [-1, 'not set']:
             if len(att) == 0 and dict_data['has_link'] in [-1, 'not set']:
@@ -322,18 +325,18 @@ class MailBoxReader:
             sub = "LMA Notification: Missing Attachments or SFDC Links for '%s'" % dict_data['sub']
             _list_team.append(dict_data['email'])
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=None)
-            self._move_received_list_to_processed_folder(num, 'INBOX/No Link or Attachments')
+            self._move_received_list_to_processed_folder(num, '"INBOX/No Link or Attachments"')
         else:
             _list_team.append('rickyschools+v3lhm65etri76gwbn0sy@boards.trello.com')
             sub = 'New List Received. Check List Management Trello Board'
             msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=att)
             self.associate_email_request_with_sf_object(dict_data=dict_data, att=att)
-            self._move_received_list_to_processed_folder(num=num, folder="INBOX/New Lists")
+            self._move_received_list_to_processed_folder(num=num, folder='"INBOX/New Lists"')
 
     def associate_email_request_with_sf_object(self, dict_data, att):
         sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
-        data_pkg = [['List_Upload__c'], [dict_data['link'], 'True']]
+        data_pkg = [['Id', 'List_Upload__c'], [dict_data['link'], 'True']]
         try:
             self.log.info('Attempting to upload emailed list request to SFDC and attach links.')
             sfdc.update_records(dict_data['object'], data_pkg[0], [data_pkg[1]])
