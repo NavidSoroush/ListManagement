@@ -82,11 +82,18 @@ class MailBoxReader:
         tmp_dict.update({'has_link': 'not set', 'link': None, 'object': None,
                          'search_link': "https://fsinvestments.my.salesforce.com"})
         tmp_dict['name'], tmp_dict['email'] = parseaddr(raw_email['From'])[0], parseaddr(raw_email['From'])[1]
-        tmp_dict['sub'], tmp_dict['date'] = raw_email['subject'], \
-                                            datetime.datetime.strftime(
-                                                datetime.datetime.strptime(raw_email['date'],
-                                                                           '%a, %d %b %Y %H:%M:%S %z'),
-                                                '%m/%d/%Y %H:%M:%S')
+        print(raw_email['date'])
+        tmp_dict['sub'] = raw_email['subject']
+
+        try:
+            tmp_dict['date'] = datetime.datetime.strftime(
+                datetime.datetime.strptime(raw_email['date'],
+                                           '%a, %d %b %Y %H:%M:%S %z'), '%m/%d/%Y %H:%M:%S')
+        except ValueError:
+            test_date = ' '.join(raw_email['date'].split(' ')[:-1])
+            tmp_dict['date'] = datetime.datetime.strftime(
+                datetime.datetime.strptime(test_date, '%a, %d %b %Y %H:%M:%S %z'), '%m/%d/%Y %H:%M:%S')
+
         msg_body = "Sent by: %s\nReceived on: %s\nSubject: %s\n" % (tmp_dict['name'], tmp_dict['date'], tmp_dict['sub'])
         for part in raw_email.walk():
             if part.get_content_type().lower() == "text/html" and tmp_dict['has_link'] == 'not set':
@@ -308,7 +315,7 @@ class MailBoxReader:
         if dict_data['name'] == 'FS Investments':
             self._move_received_list_to_processed_folder(num, '"INBOX/FS Emails"')
 
-        if dict_data['sub'] == 'An upload list has been added':
+        elif dict_data['sub'] == 'An upload list has been added':
             self._move_received_list_to_processed_folder(num, '"INBOX/Auto Lists From SFDC"')
 
         elif len(att) == 0 or dict_data['has_link'] in [-1, 'not set']:
