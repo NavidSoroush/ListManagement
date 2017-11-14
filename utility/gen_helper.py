@@ -37,6 +37,10 @@ _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
                    'toAdd', 'bdg_toStay', 'current_bdg_members', 'to_remove']
 
 
+def date_parsing(str_date_value):
+    return datetime.datetime.strptime(str_date_value, '%a, %d %b %Y %H:%M:%S %z')
+
+
 def split_dir_name(full_path):
     """
     receives a full path name splits it into directory, file name

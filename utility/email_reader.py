@@ -13,11 +13,11 @@ from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 try:
     from ListManagement.sf.sf_wrapper import SFPlatform
     from ListManagement.utility.email_wrapper import Email
-    from ListManagement.utility.gen_helper import determine_ext
+    from ListManagement.utility.gen_helper import determine_ext, date_parsing
 except:
     from sf.sf_wrapper import SFPlatform
     from utility.email_wrapper import Email
-    from utility.gen_helper import determine_ext
+    from utility.gen_helper import determine_ext, date_parsing
 
 _objects = ['Campaign', 'BizDev Group', 'Account']
 _list_notification_elements = [
@@ -87,8 +87,7 @@ class MailBoxReader:
 
         try:
             tmp_dict['date'] = datetime.datetime.strftime(
-                datetime.datetime.strptime(raw_email['date'],
-                                           '%a, %d %b %Y %H:%M:%S %z'), '%m/%d/%Y %H:%M:%S')
+                date_parsing(raw_email['date']), '%m/%d/%Y %H:%M:%S')
         except ValueError:
             test_date = ' '.join(raw_email['date'].split(' ')[:-1])
             tmp_dict['date'] = datetime.datetime.strftime(
@@ -146,7 +145,9 @@ class MailBoxReader:
         else:
             obj = 'Account'
 
-        rec_date = datetime.datetime.strftime(msg['Date'], '%m/%d/%Y %H:%M:%S')
+        rec_date = datetime.datetime.strftime(
+            date_parsing(msg['Date']), '%m/%d/%Y %H:%M:%S')
+
         sender_name = parseaddr(msg['From'])[0]
         sent_from = parseaddr(msg['From'])[1]
 
