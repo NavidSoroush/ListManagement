@@ -10,8 +10,12 @@ from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn import metrics
 import pickle
 
-from ..utility.pandas_helper import read_df
-from ..utility.gen_helper import path_leaf, lower_head_values
+try:
+    from ListManagement.utility.pandas_helper import read_df
+    from ListManagement.utility.gen_helper import path_leaf, lower_head_values
+except:
+    from utility.pandas_helper import read_df
+    from utility.gen_helper import path_leaf, lower_head_values
 
 _acceptable_diagnostics = [True, False, 'only_diagnostics', ]
 
