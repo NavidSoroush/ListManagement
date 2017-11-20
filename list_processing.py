@@ -15,18 +15,18 @@ try:
     from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
         sfdc_upload
 except:
-    from config import *
-    from finra.Finra import FinraScraping
-    from finra.api import Finra
-    from ml.header_predictions import predict_headers_and_pre_processing
-    from search.Search import Search
-    from stats.record_stats import record_processing_stats
-    from utility.email_wrapper import Email
-    from utility.email_helper import lists_in_queue
-    from utility.email_reader import MailBoxReader
-    from utility.gen_helper import drop_in_bulk_processing
-    from utility.log_helper import ListManagementLogger
-    from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
+    from .config import *
+    from .finra.Finra import FinraScraping
+    from .finra.api import Finra
+    from .ml.header_predictions import predict_headers_and_pre_processing
+    from .search.Search import Search
+    from .stats.record_stats import record_processing_stats
+    from .utility.email_wrapper import Email
+    from .utility.email_helper import lists_in_queue
+    from .utility.email_reader import MailBoxReader
+    from .utility.gen_helper import drop_in_bulk_processing
+    from .utility.log_helper import ListManagementLogger
+    from .utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
         sfdc_upload
 
 _steps = [
@@ -194,7 +194,6 @@ class ListProcessing:
         # self.vars['ObjectId'], self.vars['Object'],
         # self.vars['ObjectId'], log=self.log))
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
-
 
         if self.vars['Move To Bulk']:
             drop_in_bulk_processing(self.vars['update_path'])
