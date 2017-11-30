@@ -356,8 +356,8 @@ class Search:
                         pass
             """
             if "FirstName" in headers and "LastName" in headers:
-                search_list["FirstName"] = map(lambda x: x.title(), search_list["FirstName"])
-                search_list["LastName"] = map(lambda x: x.title(), search_list["LastName"])
+                search_list["FirstName"] = search_list["FirstName"].apply(lambda x: x.title())
+                search_list["LastName"] = search_list["LastName"].apply(lambda x: x.title())
                 search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list["Account"].str[:10] + search_list["MailingState"] + search_list["MailingPostalCode"]#.str[:-2]
 
             else:
@@ -411,11 +411,11 @@ class Search:
             for index, row in search_list.iterrows():
                 if ',' in row["FullName"]:
                     if row["FullName"].index(' ') < row["FullName"].index(','):
-                        row["FirstName"] = row["FullName"].split(' ')[0]
-                        row["LastName"] = ' '.join(row["FullName"].split(' ')[1:])
+                        search_list.loc[index,"FirstName"] = row["FullName"].split(' ')[0]
+                        search_list.loc[index,"LastName"] = ' '.join(row["FullName"].split(' ')[1:])
                     else:
-                        row["LastName"] = row["FullName"].split(',')[0]
-                        row["FirstName"] = row["FullName"].split(' ')[1]
+                        search_list.loc[index,"LastName"] = row["FullName"].split(',')[0]
+                        search_list.loc[index,"FirstName"] = row["FullName"].split(' ')[1]
                 else:
                     full_name_list = row["FullName"].split()
                     for name in full_name_list:

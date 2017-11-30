@@ -95,7 +95,7 @@ class ListProcessing:
                         np += 1
                         self.vars.update({'Num_Processed': n})
                         self._log.info('List #%s processed.' % self.vars['Num_Processed'])
-                        for k, v in self.vars.iteritems():
+                        for k, v in self.vars.items():
                             if k not in _dict_keys_to_keep:
                                 self.vars[k] = None
 
@@ -223,7 +223,7 @@ class ListProcessing:
                                                             self.vars['CmpAccountName'], log=self._log))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
-        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
+        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all', save=True))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log))
         self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],

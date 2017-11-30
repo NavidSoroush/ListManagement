@@ -90,6 +90,7 @@ class Finra:
 
     def _main_scraper(self, xpath_keys):
         # self.log.info('Attempting to get %s meta data from an individual Finra page.' % ', '.join(xpath_keys))
+        self._attempted_count = 0
         while self._attempted_count < len(self._search):
             myprogressbar(self._attempted_count + 1, len(self._search),
                           message='%s FINRA scraping' % self._scrape_type.upper())

@@ -70,7 +70,7 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
         no_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] == 'N')]
         to_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] != 'N')]
         to_create_df = df[df['AccountId'].isnull()]
-        bdg_update_df = df[(df['AccountId'].notnull()) & (df['Licenses'].str.contains('Series 7|Series 22'))]
+        bdg_update_df = df[(df['AccountId'].notnull()) & (df['Licenses'].str.contains('Series 7') or df['Licenses'].str.contains('Series 22'))]
 
         dict_elements['n_no_update'] = len(no_update_df.index)
         dict_elements['n_to_update'] = len(to_update_df.index)
