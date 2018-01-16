@@ -34,7 +34,7 @@ class Email:
         :return: updated mail message
         '''
         for att in att_paths:
-            if att is not None and len(att)>0:
+            if att is not None and len(att) > 0 and os.path.isfile(att):
                 with open(str(att), 'rb') as f:
                     part = MIMEBase('application', 'vnd.openxmlformats-officedocument.spreadsheetml.sheet')
                     part.set_payload(f.read())
@@ -76,11 +76,11 @@ class Email:
         if self.attachment is not None:
             msg = self._attachments(self.attachment, msg)
         pre_body = (("From: %s" % self.from_address,
-                            "To: %s" % self.to,
-                            "Subject: %s" % self.subject,
-                            "",
+                     "To: %s" % self.to,
+                     "Subject: %s" % self.subject,
+                     "",
 
-                            self.body), "\r\n")
+                     self.body), "\r\n")
 
         body = ' '.join(str(item) for item in pre_body)
 

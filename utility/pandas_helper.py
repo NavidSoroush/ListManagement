@@ -46,7 +46,7 @@ def new_stat_line(value_dict):
     :param value_dict: values to add to stats
     :return: dataframe of stats to record.
     '''
-    df = pd.DataFrame(value_dict.values(), index=value_dict.keys())
+    df = pd.DataFrame(list(value_dict.values()), index=list(value_dict.keys()))
     df = df.transpose()
     return df
 

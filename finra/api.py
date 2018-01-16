@@ -134,8 +134,7 @@ class Finra:
                                 code = self._wait.until(ec.visibility_of_element_located((By.CLASS_NAME,
                                                                                           xpath_keys[1])))
                                 crd_text = code.text.split()
-                                suggestions = len(page_src.split(xpath_keys[2]))
-
+                                suggestions = (len(page_src.split(xpath_keys[2]))-1)
                                 if suggestions == 0:
                                     self._scraped_dict['CRDNumber'].append("CRD Not Found")
                                     self._scraped_dict['NumSuggestions'].append(suggestions)

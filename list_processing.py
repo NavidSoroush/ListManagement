@@ -69,6 +69,7 @@ class ListProcessing:
         
         :return: 
         """
+
         if lists_in_queue(var_list=self.vars):
             while self.vars['Num_Processed'] < self.vars['Lists_In_Queue']:
                 np = self.vars['Num_Processed']
@@ -186,7 +187,9 @@ class ListProcessing:
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log))
-        self.vars['SFDC Session'].last_list_uploaded(obj_id=self.vars['ObjectId'], obj=self.vars['Object'])
+        #self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id'],upload_data= self.vars['ObjectId'])
+
+
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
 
                                         self.vars['ObjectId'], self.vars['Object'], log=self._log))

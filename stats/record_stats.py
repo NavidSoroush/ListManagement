@@ -19,6 +19,8 @@ def record_processing_stats(values):
     print('\nStep 11. Recording stats from processing.')
     df2 = new_stat_line(values)
     engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
+    df2 = df2['Advisors on List','Advisors w/CID','Advisors w/CID old Contact Info','CRD Found Not in SFDC','Created By','Creating','File Name','File Type','Last Search Date','Match Rate','Processing Time','Received Date','Received From','Unable to Find']
+    print(df2)
     df2.to_sql(name='SearchStats', con=engine, if_exists='append', index=False)
     df = df.append(df2, ignore_index=True)
     save_df(df=df, path=_stats_file_path)
