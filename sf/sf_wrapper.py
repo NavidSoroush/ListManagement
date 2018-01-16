@@ -14,12 +14,6 @@ except ImportError:
     from salesforce_bulk import SalesforceBulk as Bulk, CsvDictsAdapter
 
 try:
-    import SQLForce
-    from SQLForce import AttachmentReader, AttachmentWriter
-except ImportError:
-    print('SQLForce is not currently installed in this environment.')
-
-try:
     from ListManagement.utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name
     from ListManagement.utility.pandas_helper import make_df
 except:
@@ -36,7 +30,7 @@ class SFPlatform:
     
     """
 
-    def __init__(self, user, pw, token, log=None):
+    def __init__(self, user, pw, token, log=None, instance='Production'):
         """
         declare the objects attribute values and authenticate the user.
         
@@ -46,12 +40,15 @@ class SFPlatform:
         """
         self.log = log
         self._save_dir = 'T:/Shared/FS2 Business Operations/Python Search Program/New Lists/'
-        self._custom_domain = 'https://fsinvestments.my.salesforce.com:'
-        self.session, self.bulk_session = self._auth(user, pw, token)
+        if instance == 'Production':
+            self._custom_domain = 'https://fsinvestments.my.salesforce.com:'
+        else:
+            self._custom_domain = 'https://test.salesforce.com'
+        self.session, self.bulk_session = self._auth(user, pw, token, instance)
         self._accepted_job_types = ['insert', 'update']
         self._att_drive = 'C:/SFDC_Uploads/'
 
-    def _auth(self, user, pw, token, instance='Production'):
+    def _auth(self, user, pw, token, instance):
         """
         helper method to authenticate a user when the SFPlatform object is instantiated.
         
@@ -61,22 +58,11 @@ class SFPlatform:
         :param instance: 'Production' or 'Sandbox'
         :return: authenticated SFDC session 
         """
-        try:
-            session = SQLForce.Session(instance, user, pw, token)
-            bulk_session = None
-        except NameError:
-            session = Salesforce(username=user, password=pw, security_token=token,
-                                 instance_url=self._custom_domain, session=requests.Session())
-            bulk_session = Bulk(sessionId=session.session_id, host=self._custom_domain)
+        session = Salesforce(username=user, password=pw, security_token=token,
+                             instance=instance, instance_url=self._custom_domain,
+                             session=requests.Session())
+        bulk_session = Bulk(sessionId=session.session_id, host=self._custom_domain)
         return session, bulk_session
-
-    def close_session(self):
-        """
-        used to close and logout of the SalesForce session
-        :return: n/a
-        """
-        self.session.logout()
-        SQLForce.SQLForceServer.killServer()
 
     def update_records(self, obj, fields, upload_data):
         """
@@ -88,12 +74,7 @@ class SFPlatform:
         :return: number of records updated
         """
         self.log.info('Attempting to update %s records on the %s object.' % (len(upload_data), obj))
-        try:
-            self.session.update(table=obj, columns=fields, data=upload_data)
-            n_updated = self.session.getenv('ROW_COUNT')
-            return n_updated
-        except TypeError:
-            self.request_job(job_type='update', sf_object=obj, fields=fields, data=upload_data)
+        self.request_job(job_type='update', sf_object=obj, fields=fields, data=upload_data)
 
     def create_records(self, obj, fields, upload_data):
         """
@@ -105,12 +86,7 @@ class SFPlatform:
         :return: number of records created
         """
         self.log.info('Attempting to associate %s records to the %s object.' % (len(upload_data), obj))
-        try:
-            self.session.insert(table=obj, columns=fields, data=upload_data)
-            n_inserted = self.session.getenv('ROW_COUNT')
-            return n_inserted
-        except TypeError:
-            self.request_job(job_type='insert', sf_object=obj, fields=fields, data=upload_data)
+        self.request_job(job_type='insert', sf_object=obj, fields=fields, data=upload_data)
 
     def download_attachments(self, att_id, obj, obj_url):
         """
@@ -121,11 +97,7 @@ class SFPlatform:
         :param obj_url: SFDC obj_id
         :return: tuple, (attachment_name, event_date, pre_or_post, account_name, account_id)
         """
-        try:
-            attachment = AttachmentReader.exportByAttachmentIds(session=self.session, attachmentIds=att_id,
-                                                                outputDir=self._save_dir, createSubDirs=False)
-        except NameError:
-            attachment = self._export_attachment(att_id=att_id, output=self._save_dir)
+        attachment = self._export_attachment(att_id=att_id, output=self._save_dir)
 
         e_date = None
         pre_or_post = None
@@ -133,32 +105,17 @@ class SFPlatform:
         account_id = None
 
         if obj == 'Campaign':
-            try:
-                sql = 'SELECT StartDate,Account__c FROM Campaign Where id=' + '"{}"'.format('" "'.join([obj_url[-18:]]))
-                for rec in self.session.selectRecords(sql):
-                    e_date, pre_or_post = convert_unicode_to_date(rec.StartDate)
-                    account_id = rec.Account__c
-            except:
-                df = self.query('Campaign', ['StartDate', 'Account__c'], where="Id='%s'" % obj_url[-18:])
-                e_date, pre_or_post = convert_unicode_to_date(df['StartDate'][0])
-                account_id = df['Account__c'][0]
+            df = self.query('Campaign', ['StartDate', 'Account__c'], where="Id='%s'" % obj_url[-18:])
+            e_date, pre_or_post = convert_unicode_to_date(df['StartDate'][0])
+            account_id = df['Account__c'][0]
+
         elif obj == 'BizDev Group':
-            try:
-                sql = 'SELECT Name,Account__c FROM BizDev__c Where id=' + '"{}"'.format('" "'.join([obj_url[:18]]))
-                for rec in self.session.selectRecords(sql):
-                    account_id = rec.Account__c
-            except:
-                df = self.query('BizDev__c', ['Name', 'Account__c'], where="Id='%s'" % obj_url[:18])
-                account_id = df['Account__c'][0]
+            df = self.query('BizDev__c', ['Name', 'Account__c'], where="Id='%s'" % obj_url[:18])
+            account_id = df['Account__c'][0]
 
         if account_id is not None:
-            try:
-                sql = 'SELECT Name FROM Account Where id=' + '"{}"'.format('" "'.join([account_id]))
-                for rec in self.session.selectRecords(sql):
-                    account_name = rec.Name
-            except:
-                df = self.query('Account', ['Name'], where="Id='%s'" % account_id)
-                account_name = df['Name'][0]
+            df = self.query('Account', ['Name'], where="Id='%s'" % account_id)
+            account_name = df['Name'][0]
 
         attachment = create_dir_move_file(path=attachment)
         print('Successfully downloaded file from SF here:\n   - %s' % attachment)

@@ -309,7 +309,7 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
             paths, stats = upload(session, df_headers, df_values, obj_id, obj, col_nums, path)
     except:
         if len(df_values) > 0:
-            sub = 'LMA: %s upload fail for %s'
+            sub = 'LMA: %s upload fail for %s' % (path, obj)
             body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
                    'manually upload this file at your earliest convenience.' % (path, obj)
             log.error(body)
