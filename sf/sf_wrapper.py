@@ -110,7 +110,7 @@ class SFPlatform:
             n_inserted = self.session.getenv('ROW_COUNT')
             return n_inserted
         except TypeError:
-            self.request_job(job_type='create', sf_object=obj, fields=fields, data=upload_data)
+            self.request_job(job_type='insert', sf_object=obj, fields=fields, data=upload_data)
 
     def download_attachments(self, att_id, obj, obj_url):
         """

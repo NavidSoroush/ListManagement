@@ -54,7 +54,7 @@ class Email:
         :param mess: message data (attachments)
         :return: NONE
         '''
-        server = smtplib.SMTP("smtp.office365.com", 587)
+        server = smtplib.SMTP("smtp.office365.com", self.port)
         server.ehlo()
         server.starttls()
         server.login(outlook_userEmail, password)

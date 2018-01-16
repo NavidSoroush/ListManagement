@@ -1,5 +1,5 @@
-import pandas as pd
-from sqlalchemy import create_engine
+
+from FS_Performance.main.admin import PyDBA
 
 from cred import sfuser, sfpw, sf_token
 try:
@@ -9,23 +9,23 @@ except:
     from utility.log_helper import ListManagementLogger
     from sf.sf_wrapper import SFPlatform
 
+dba = PyDBA()
 log = ListManagementLogger().logger
 log.info('Starting conference creation contact processing.')
 log.info('Initializing variables and objects.')
 sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=log)
-engine = create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
+engine = dba.init_new_connection(svr='DPHL-PROPSCORE', db_name='ListManagement')
 sql = "SELECT ObjId, SourceChannel, Status FROM [dbo].[ConferenceCreation] WHERE AddedToCampaign=0"
 
 log.info('Reading data from ListManagement database.')
-data = pd.read_sql(sql=sql, con=engine).values
+data = dba.read_df(query=sql, connection=engine).values
 
 if len(data) < 1:
     log.info('There are no new contacts that need to be associated with a campaign. Trying again tomorrow morning.')
 else:
-    soql = "SELECT Id, Source_Channel__c FROM Contact WHERE Source_Channel__c IN ('%s')" % "','".join([x[1]
-                                                                                                       for x in data])
+    where = "Source_Channel__c IN ('%s')" % "','".join([x[1] for x in data])
     log.info('Grabbing data, based on Source_Channel__c, from SFDC.')
-    result = sfdc.session.selectRecords(soql)
+    result = sfdc.query(sfdc_object='Contact', fields=['Id', 'Source_Channel__c'])
 
     log.info('Creating data mappings for SFDC campaign upload.')
     mappings = {x[1]: [] for x in data}
