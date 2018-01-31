@@ -227,8 +227,9 @@ class SFPlatform:
 
     def request_job(self, job_type, sf_object, fields, data):
         assert job_type in self._accepted_job_types
-        data = self._prepare_data(data, fields)
-        self._bulk_job(job_type, sf_object, data)
+        for chunk in self._chunker(data, 10000):
+            chunk = self._prepare_data(chunk, fields)
+            self._bulk_job(job_type, sf_object, chunk)
 
     def _bulk_job(self, bulk_type, sf_object, csv_data):
         csv_iter = CsvDictsAdapter(iter(csv_data))
@@ -252,3 +253,8 @@ class SFPlatform:
         else:
             df = make_df(data=data, columns=fields)
         return df.to_dict('rows')
+
+    @staticmethod
+    def _chunker(data, size):
+        for i in range(0, len(data), size):
+            yield data[i:i + size]
