@@ -37,6 +37,12 @@ _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
                    'toAdd', 'bdg_toStay', 'current_bdg_members', 'to_remove']
 
 
+def duration(start, end):
+    _min, _sec = divmod((end - start), 60)
+    _hour, _min = divmod(_min, 60)
+    string_duration = "%02d:%02d:%02d" % _hour, _min, _sec
+    return string_duration
+
 def date_parsing(str_date_value):
     return datetime.datetime.strptime(str_date_value, '%a, %d %b %Y %H:%M:%S %z')
 
