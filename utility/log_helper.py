@@ -20,6 +20,7 @@ class ListManagementLogger:
     def __init__(self):
         self.dir = 'T:/Shared/FS2 Business Operations/Python Search Program/logs/'
         self.__make_dir__()
+        self._maintain(self.dir)
         self.today = datetime.datetime.today().date().isoformat()
         self.log_name = '%s%s_%s_List_Management.log' % (self.dir, self.today, username)
         self.logger = self.config()
@@ -43,8 +44,7 @@ class ListManagementLogger:
         console_handler.setLevel(logging.DEBUG)
 
         log_format = logging.Formatter(
-            fmt='\nRunning user: %(user)s - %(asctime)s - %(name)s - %(levelname)s - %(module)s '
-                '\nMessage: %(message)s',
+            fmt='%(asctime)s_%(user)s_%(module)s__%(levelname)s__: %(message)s',
             datefmt='%m/%d/%Y %I:%M:%S %p')
         file_handler.setFormatter(log_format)
 
@@ -56,3 +56,11 @@ class ListManagementLogger:
     def __make_dir__(self):
         if not os.path.isdir(self.dir):
             os.mkdir(self.dir)
+
+    @staticmethod
+    def _maintain(_dir):
+        from datetime import datetime as dt
+        for f in os.listdir(_dir):
+            delta = dt.now() - dt.fromtimestamp(os.path.getmtime(os.path.join(_dir, f)))
+            if delta.days > 30:
+                os.remove(os.path.join(_dir, f))
