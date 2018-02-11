@@ -40,7 +40,7 @@ _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
 def duration(start, end):
     _min, _sec = divmod((end - start), 60)
     _hour, _min = divmod(_min, 60)
-    string_duration = "%02d:%02d:%02d" % _hour, _min, _sec
+    string_duration = "%02d:%02d:%02d" % (_hour, _min, _sec)
     return string_duration
 
 def date_parsing(str_date_value):
