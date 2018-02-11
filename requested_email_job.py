@@ -1,9 +1,16 @@
 import traceback
 
-from ListManagement.utility.email_reader import MailBoxReader
-from ListManagement.utility.log_helper import ListManagementLogger
-from ListManagement.utility.email_wrapper import Email
-from ListManagement.utility.gen_helper import duration, time
+try:
+    from utility.email_reader import MailBoxReader
+    from utility.log_helper import ListManagementLogger
+    from utility.email_wrapper import Email
+    from utility.gen_helper import duration, time
+
+except:
+    from ListManagement.utility.email_reader import MailBoxReader
+    from ListManagement.utility.log_helper import ListManagementLogger
+    from ListManagement.utility.email_wrapper import Email
+    from ListManagement.utility.gen_helper import duration, time
 
 log = ListManagementLogger().logger
 start = time.time()
@@ -21,4 +28,4 @@ except:
     sub = 'LMA: Requested Email Notification - Unable to Process'
     Email(subject=sub, to=['ricky.schools@fsinvestments.com'], body=str(traceback.format_exc()), attachment_path=None)
 finally:
-    log.ino('AUTOMATED JOB COMPLETED IN %s.\n\n' % duration(start, time.time()))
+    log.info('AUTOMATED JOB COMPLETED IN %s.\n\n' % duration(start, time.time()))
