@@ -163,7 +163,7 @@ class MailBoxReader:
         att_link = self.info_parser(msg_body, _list_notification_elements[4],
                                     _list_notification_elements[-2])[39:57]
 
-        list_obj = self.info_parser(msg_body, _list_notification_elements[-2])[-18:]
+        list_obj = self.info_parser(msg_body, _list_notification_elements[-1])[40:58]
 
         self.log.info('Attachment Id: %s' % att_link)
         self.log.info('List Object Id: %s' % list_obj)
