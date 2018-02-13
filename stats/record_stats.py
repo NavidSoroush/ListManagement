@@ -8,25 +8,28 @@ except:
 _stats_file_path = 'T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
 
 
-def record_processing_stats(values):
+def record_processing_stats(values, save=True):
     '''
     processes stats data files
 
     :param values: data to record in stats dataframe
+    :param save: boolean, defaults to True
     :return: dictionary items for list processing
     '''
-    df = read_df(_stats_file_path)
+
     print('\nStep 11. Recording stats from processing.')
     df2 = new_stat_line(values)
-    engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
-    df2 = df2['Advisors on List','Advisors w/CID','Advisors w/CID old Contact Info','CRD Found Not in SFDC','Created By','Creating','File Name','File Type','Last Search Date','Match Rate','Processing Time','Received Date','Received From','Unable to Find']
-    print(df2)
-    df2.to_sql(name='SearchStats', con=engine, if_exists='append', index=False)
-    df = df.append(df2, ignore_index=True)
-    save_df(df=df, path=_stats_file_path)
-    del df
-    del df2
-    return {'Next Step': 'Done.'}
+    if save:
+        df = read_df(_stats_file_path)
+        engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
+        df2.to_sql(name='SearchStats', con=engine, if_exists='append', index=False)
+        df = df.append(df2, ignore_index=True)
+        save_df(df=df, path=_stats_file_path)
+        del df
+        del df2
+        return {'Next Step': 'Done.'}
+    else:
+        return df2
 
 #
 # class Stats():
