@@ -133,6 +133,7 @@ class Finra:
                             try:
                                 code = self._wait.until(ec.visibility_of_element_located((By.CLASS_NAME,
                                                                                           xpath_keys[1])))
+                                page_src = self._sel.page_source
                                 crd_text = code.text.split()
                                 suggestions = (len(page_src.split(xpath_keys[2]))-1)
                                 if suggestions == 0:
