@@ -30,7 +30,7 @@ class ListProcessing:
         """
         self._log = ListManagementLogger().logger
         self._search_api = Search(log=self._log)
-        self._finra_api = Finra()
+        self._finra_api = Finra(log=self._log)
         self._mailbox = MailBoxReader(log=self._log)
         self.vars = self._mailbox.extract_pending_lists(self._mailbox.mailbox, self._mailbox.email_folder)
         self.main_contact_based_processing()
