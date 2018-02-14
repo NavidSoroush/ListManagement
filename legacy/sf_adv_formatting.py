@@ -50,9 +50,8 @@ def needs_update_flag(frame, headers, activity_range, sales_range):
 
 # this function will coerce the dates from an object format to datetime
 def clean_dates(frame, headers):
-    max = len(frame.columns)
-    for i in range(max):
-        frame[headers[i]] = pd.to_datetime(frame[headers[i]], errors='coerce')
+    for i in range(len(frame.columns)):
+        frame.loc[:, headers[i]] = pd.to_datetime(frame.loc[:, headers[i]], errors='coerce')
     return frame
 
 

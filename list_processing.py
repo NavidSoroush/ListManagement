@@ -226,7 +226,7 @@ class ListProcessing:
 
         try:
             llu_data = last_list_uploaded_data(self.vars['ObjectId'])
-            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
+            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
                                                      upload_data=[llu_data])
         except:
             self._log.warn('A non-fatal error occured during the Last List Upload'

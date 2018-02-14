@@ -96,6 +96,9 @@ class ListManagementLogger:
     def _maintain(_dir):
         from datetime import datetime as dt
         for f in os.listdir(_dir):
-            delta = dt.now() - dt.fromtimestamp(os.path.getmtime(os.path.join(_dir, f)))
-            if delta.days > 30:
-                os.remove(os.path.join(_dir, f))
+            try:
+                delta = dt.now() - dt.fromtimestamp(os.path.getmtime(os.path.join(_dir, f)))
+                if delta.days > 30:
+                    os.remove(os.path.join(_dir, f))
+            except OSError:
+                pass
