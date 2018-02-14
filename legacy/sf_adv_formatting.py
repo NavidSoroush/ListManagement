@@ -1,32 +1,32 @@
-import pandas as pd
+from ListManagement.utility.pandas_helper import pd
 
 
 # create functions to manage creation of lookup name for each advisor
-def shortenData(df, colName, x):
+def shorten_data(df, col_name, x):
     tmp = []
-    df2 = df[colName].fillna('')
+    df2 = df[col_name].fillna('')
     # df2 = df2.astype(str).str.split(',')
     for c in df2:
         if len(c) >= x:
             tmp.append(c[:x])
-        elif len(c) > 0 and len(c) < x:
+        elif 0 < x < len(c):
             tmp.append(c)
         else:
             tmp.append('')
     return tmp
 
 
-def lkupName(df, jstr):
+def make_lookup_name(df, jstr):
     var = []
-    var = shortenData(df, jstr[0], 3) + df[jstr[1]] + shortenData(df, jstr[2], 10) + df[jstr[3]] + df[jstr[4]]
+    var = shorten_data(df, jstr[0], 3) + df[jstr[1]] + shorten_data(df, jstr[2], 10) + df[jstr[3]] + df[jstr[4]]
     return var
 
 
 # create function to evalute last time an advisor was contact / updated
-def needsUpdate(dFrame, colHeaders, Activityrange, Salerange):
-    df2 = cleanDates(dFrame, colHeaders)
-    activ_day = pd.tslib.Timestamp.now() - pd.tslib.Timedelta(days=Activityrange)
-    sale_day = pd.tslib.Timestamp.now() - pd.tslib.Timedelta(days=Salerange)
+def needs_update_flag(frame, headers, activity_range, sales_range):
+    df2 = clean_dates(frame, headers)
+    activ_day = pd.Timestamp.now() - pd.Timedelta(days=activity_range)
+    sale_day = pd.Timestamp.now() - pd.Timedelta(days=sales_range)
     var = []
     for ind, val in df2.iterrows():
         colcount = 0
@@ -49,11 +49,11 @@ def needsUpdate(dFrame, colHeaders, Activityrange, Salerange):
 
 
 # this function will coerce the dates from an object format to datetime
-def cleanDates(dFrame, colHeaders):
-    max = len(dFrame.columns)
+def clean_dates(frame, headers):
+    max = len(frame.columns)
     for i in range(max):
-        dFrame[colHeaders[i]] = pd.to_datetime(dFrame[colHeaders[i]], errors='coerce')
-    return dFrame
+        frame[headers[i]] = pd.to_datetime(frame[headers[i]], errors='coerce')
+    return frame
 
 
 # This function is used to evaluate the last business date of a file

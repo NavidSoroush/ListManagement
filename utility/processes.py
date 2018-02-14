@@ -70,7 +70,8 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
         no_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] == 'N')]
         to_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] != 'N')]
         to_create_df = df[df['AccountId'].isnull()]
-        bdg_update_df = df[(df['AccountId'].notnull()) & (df['Licenses'].str.contains('Series 7') or df['Licenses'].str.contains('Series 22'))]
+        bdg_update_df = df[(df['AccountId'].notnull()) & (
+            df['Licenses'].str.contains('Series 7') or df['Licenses'].str.contains('Series 22'))]
 
         dict_elements['n_no_update'] = len(no_update_df.index)
         dict_elements['n_to_update'] = len(to_update_df.index)
@@ -189,6 +190,7 @@ def extract_dictionary_values(dict_data, log=None):
     '''
     log.info('Extracting stats from the %s data dictionary.' % dict_data['Object'])
     if dict_data['Object'] == 'Campaign':
+
         to_update = dict_data['n_cmp_upload']
         to_create = dict_data['n_to_create']
         obj_to_add = dict_data['Num Adding']
@@ -202,8 +204,11 @@ def extract_dictionary_values(dict_data, log=None):
         obj_to_remove = dict_data['Num Removing']
         obj_to_update = dict_data['Num Updating/Staying']
 
+    log.info(' > Organized %s specific metrics.' % dict_data['Object'])
+
     if not dict_data['Move To Bulk']:
         create_advisors_note = 'Contacts will not be created. Not enough information provided.'
+        log.info('For %s list, %s' % (dict_data['Object'], create_advisors_note))
     else:
         create_advisors_note = ''
 
@@ -246,13 +251,6 @@ def extract_dictionary_values(dict_data, log=None):
                       obj_to_remove, need_research, received, process_start,
                       completed, processing_string, create_advisors_note]
     body_string = craft_notification_email(items_to_email)
-    try:
-        log.info(
-            'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.iteritems()]))
-    except:
-        #Python3
-        log.info(
-            'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.items()]))
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
@@ -262,6 +260,8 @@ def extract_dictionary_values(dict_data, log=None):
         , 'Unable to Find': need_research, 'Last Search Date': completed
         , 'Match Rate': match_rate, 'Processing Time': processing_string
     }
+
+    log.info('Extracted stats data:\n%s' % items_for_stats)
 
     listobj_cols = ['Id', 'Status__c', 'Advisors_on_List__c', 'Contacts_Added_to_Related_Record__c',
                     'Contacts_Created__c', 'Contacts_Found_in_SF__c', 'Contacts_Not_Found__c',
@@ -277,11 +277,10 @@ def extract_dictionary_values(dict_data, log=None):
         log.info('Attempting to attach %s files to the List record.' % len(att_paths))
         dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
 
-
     subject = "ALM Notification: %s list processed." % obj_name
 
     log.info('Sending notification email to requestor to notify of completion.')
-    Email(subject=subject, to=[sender_email,userEmail], body=body_string, attachment_path=att_paths)
+    Email(subject=subject, to=[sender_email, userEmail], body=body_string, attachment_path=att_paths)
     return {'Next Step': 'Record Stats',
             'Stats Data': items_for_stats}
 
