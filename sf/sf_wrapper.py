@@ -39,7 +39,7 @@ class SFPlatform:
         :param token: sf_secret_token
         """
         self.log = log
-        self._save_dir = 'T:/Shared/FS2 Business Operations/Python Search Program/New Lists/'
+        self._save_dir = 'T:\\Shared\\FS2 Business Operations\\Python Search Program\\New Lists\\'
         if instance == 'Production':
             self._custom_domain = 'https://fsinvestments.my.salesforce.com:'
         else:
@@ -125,7 +125,7 @@ class SFPlatform:
         exported_files = []
         df = self.query(sfdc_object='Attachment', fields=_AttachmentColummns, where="Id='%s'" % att_id)
 
-        my_dir = os.path.join(output, df['ParentId'][0])
+        my_dir = os.path.join(output, df['Name'][0])
         if not os.path.exists(my_dir):
             os.makedirs(my_dir)
 
