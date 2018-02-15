@@ -356,7 +356,7 @@ def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
     to_insert, to_update, to_remove = split_list(sf_c_cmp_members.values.tolist(), data, obj_id, obj)
     n_add = len(to_insert)
     n_up = len(to_update)
-    while n_added < n_add:
+    if n_added < n_add:
         n_added = session.create_records(obj='CampaignMember', fields=['ContactId', 'Status', 'CampaignId'],
                                          upload_data=to_insert)
 
