@@ -1,5 +1,3 @@
-import os
-import shutil
 import re
 import imaplib
 from email.utils import parseaddr
@@ -18,19 +16,6 @@ except:
     from utility.email_wrapper import Email
     from utility.gen_helper import determine_ext, date_parsing
     from utility.email_helper import *
-
-_objects = ['Campaign', 'BizDev Group', 'Account']
-_list_notification_elements = [
-    'An upload list has been added'
-    , 'An upload list has been added to'
-    , 'by', 'Account Link: '
-    , 'Attachment Link: '
-    , 'BizDev Group Link: '
-    , 'List Link:']
-_looking_for_elements = ['Campaign Link: ', 'Attachment Link: ']
-_acceptable_types = ['.xlsx', '.pdf', '.csv', '.xls', '.zip', '.docx', '.doc']
-_temp_save_attachments = 'C:/save_att/'
-_list_team = ["ricky.schools@fsinvestments.com", "max.charles@fsinvestments.com"]
 
 
 class ReturnDict(object):
@@ -65,7 +50,7 @@ class MailBoxReader:
                 if folder == self.new_requests_folder:
                     self.handle_new_email_requests(num, email.message_from_string(f_data[0][1].decode('utf-8')))
                 else:
-                    list_queue = self.handle_list_queue_requests(num, f_data, list_queue)
+                    list_queue = handle_list_queue_requests(num, f_data, list_queue)
 
         if folder == self.new_requests_folder:
             return
@@ -99,34 +84,25 @@ class MailBoxReader:
                 e_body = e_body[e_body.find("-->") + 3:]
                 tmp_dict['has_link'] = e_body.find(tmp_dict['search_link'])
                 if tmp_dict['has_link'] not in ['not set', -1]:
-                    tmp_dict = determine_id_and_object_from_link(tmp=tmp_dict, email_text=e_body)
+                    tmp_dict = determine_id_and_object_from_link(tmp=tmp_dict, email_text=e_body, log=self.log)
                 msg_body += re.sub(r'[^\x00-\x7F]+', ' ', e_body)
 
             if part.get_content_maintype() == "mulipart": continue
             if part.get("Content-Disposition") is None: continue
             if part.get_filename() is not None:
-                attmts.append(self.attachment_reader(raw=part, att=part.get_filename()))
+                attmts.append(attachment_reader(raw=part, att=part.get_filename()))
         self.determine_path_and_complete_processing(num=num, dict_data=tmp_dict, att=attmts, msg_body=msg_body)
-        self.attachment_reader(remove=True)
-
-    @staticmethod
-    def handle_list_queue_requests(num, f_data, list_queue):
-        raw = email.message_from_bytes(f_data[0][1])
-        subject = raw['subject']
-        if _list_notification_elements[0] in subject:
-            msg, msg_body = get_decoded_email_body(f_data[0][1])
-            list_queue.append([msg, msg_body, num])
-        return list_queue
+        attachment_reader(remove=True)
 
     def iterative_processing(self, msg_list):
         msg = msg_list[0]
         msg_body = msg_list[1]
         msg_id = msg_list[2]
 
-        if _objects[0] in msg_body:
-            obj = _objects[0]
-        elif _objects[1] in msg_body:
-            obj = _objects[1]
+        if objects[0] in msg_body:
+            obj = objects[0]
+        elif objects[1] in msg_body:
+            obj = objects[1]
         else:
             obj = 'Account'
 
@@ -136,19 +112,19 @@ class MailBoxReader:
         sender_name = parseaddr(msg['From'])[0]
         sent_from = parseaddr(msg['From'])[1]
 
-        obj_rec_name = info_parser(msg_body, _list_notification_elements[1],
-                                   _list_notification_elements[2])
+        obj_rec_name = info_parser(msg_body, list_notification_elements[1],
+                                   list_notification_elements[2])
 
         self.log.info(
             "Processing begins on %s's list attached to %s on the %s object" % (sender_name, obj_rec_name, obj))
 
-        obj_rec_link = info_parser(msg_body, _list_notification_elements[3],
-                                   _list_notification_elements[4])
+        obj_rec_link = info_parser(msg_body, list_notification_elements[3],
+                                   list_notification_elements[4])
 
-        att_link = info_parser(msg_body, _list_notification_elements[4],
-                               _list_notification_elements[-2])[39:57]
+        att_link = info_parser(msg_body, list_notification_elements[4],
+                               list_notification_elements[-2])[39:57]
 
-        list_obj = info_parser(msg_body, _list_notification_elements[-1])[40:58]
+        list_obj = info_parser(msg_body, list_notification_elements[-1])[40:58]
 
         self.log.info('Attachment Id: %s' % att_link)
         self.log.info('List Object Id: %s' % list_obj)
@@ -156,8 +132,8 @@ class MailBoxReader:
         if obj == 'Campaign':
             obj_rec_link = obj_rec_link[-18:]
         elif obj == 'BizDev Group':
-            obj_rec_link = info_parser(msg_body, _list_notification_elements[5],
-                                       _list_notification_elements[4])
+            obj_rec_link = info_parser(msg_body, list_notification_elements[5],
+                                       list_notification_elements[4])
             obj_rec_link = obj_rec_link[39:57]
         else:
             obj_rec_link = obj_rec_link[39:57]
@@ -197,7 +173,6 @@ class MailBoxReader:
         return vars_list
 
     def _move_received_list_to_processed_folder(self, num, folder):
-        # self.mailbox.copy(num, 'INBOX/Auto Processed Lists')
         self.mailbox.copy(num, folder)
         self.mailbox.store(num, '+FLAGS', r'(\Deleted)')
         self.mailbox.expunge()
@@ -205,22 +180,6 @@ class MailBoxReader:
 
     def close_mailbox(self):
         self.mailbox.logout()
-
-    @staticmethod
-    def attachment_reader(remove=False, raw=None, att=None):
-        if remove:
-            if os.path.isdir(_temp_save_attachments):
-                shutil.rmtree(_temp_save_attachments)
-        else:
-            if not os.path.isdir(_temp_save_attachments):
-                os.mkdir(_temp_save_attachments)
-            if att is not None:
-                len_ext, ext = determine_ext(att)
-                if ext in _acceptable_types:
-                    new_f_name = _temp_save_attachments + ''.join(e for e in att[:-5] if e.isalnum()) + ext
-                    with open(new_f_name, mode='wb') as f:
-                        f.write(raw.get_payload(decode=True))
-                    return new_f_name
 
     def determine_path_and_complete_processing(self, num, dict_data, att, msg_body):
         _folders = ["INBOX/FS Emails", "INBOX/Auto Lists From SFDC",
@@ -245,15 +204,15 @@ class MailBoxReader:
                        "and at least one attachment." \
                        "\n\nAll the best," % (dict_data['name'].split(' ')[0], dyn_str, dict_data['sub'])
             sub = "LMA Notification: Missing Attachments or SFDC Links for '%s'" % dict_data['sub']
-            _list_team.append(dict_data['email'])
-            Email(subject=sub, to=_list_team, body=msg_body, attachment_path=None)
+            list_team.append(dict_data['email'])
+            Email(subject=sub, to=list_team, body=msg_body, attachment_path=None)
             self._move_received_list_to_processed_folder(num, _folders[2])
             self.log.info('Mail item has no attachments. Moved to %s' % _folders[2])
         else:
-            _list_team.append('rickyschools+v3lhm65etri76gwbn0sy@boards.trello.com')
+            list_team.append('rickyschools+v3lhm65etri76gwbn0sy@boards.trello.com')
             sub = 'New List Received. Check List Management Trello Board'
             msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
-            Email(subject=sub, to=_list_team, body=msg_body, attachment_path=att)
+            Email(subject=sub, to=list_team, body=msg_body, attachment_path=att)
             self.associate_email_request_with_sf_object(dict_data=dict_data, att=att)
             self._move_received_list_to_processed_folder(num, _folders[3])
             self.log.info('Moved mail item to %s' % _folders[3])
@@ -267,7 +226,6 @@ class MailBoxReader:
             sfdc.upload_attachments(dict_data['link'], att)
         except:
             self.log.warn('There was an issue updating and uploading data to the %s record.' % dict_data['object'])
-            sfdc.close_session()
             pass
 
 # m = MailBoxReader()
