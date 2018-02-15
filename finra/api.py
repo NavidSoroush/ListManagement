@@ -3,15 +3,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 from chromedriver import CHROMEDRV_PATH
-from tqdm import tqdm
 
 try:
     from ListManagement.utility.gen_helper import create_path_name
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df
+    from ListManagement.utility.progress_bar import myprogressbar
 except:
     from utility.gen_helper import create_path_name
     from utility.pandas_helper import read_df, save_df, make_df
-
+    from utility.progress_bar import myprogressbar
 
 class Finra:
     def __init__(self, log=None):
@@ -90,8 +90,8 @@ class Finra:
         # self.log.info('Attempting to get %s meta data from an individual Finra page.' % ', '.join(xpath_keys))
         self._attempted_count = 0
         while self._attempted_count < len(self._search):
-            tqdm(iterable=self._attempted_count + 1, total=len(self._search),
-                 desc='%s FINRA scraping' % self._scrape_type.upper())
+            myprogressbar(self._attempted_count + 1, len(self._search),
+                          message='%s FINRA scraping' % self._scrape_type.upper())
 
             if self._attempts < 2:
                 try:
