@@ -52,8 +52,8 @@ class Search:
 
     def _sfdc_file_check(self):
         if not os.path.exists(_todays_sfdc_advisor_list):
-            self.log("Please wait. Downloading SFDC list, as today's file was not available.")
-            self.log(_todays_sfdc_advisor_list)
+            self.log.info("Please wait. Downloading SFDC list, as today's file was not available.")
+
             run(path_name=_todays_sfdc_advisor_list, logger=self.log)
 
     def __init_list_metadata(self):
