@@ -1,14 +1,33 @@
+import os
+import shutil
 import email
 from lxml.html import fromstring
 
+from ListManagement.utility.gen_helper import determine_ext
+
+
+objects = ['Campaign', 'BizDev Group', 'Account']
+list_notification_elements = [
+    'An upload list has been added'
+    , 'An upload list has been added to'
+    , 'by', 'Account Link: '
+    , 'Attachment Link: '
+    , 'BizDev Group Link: '
+    , 'List Link:']
+
+looking_for_elements = ['Campaign Link: ', 'Attachment Link: ']
+acceptable_types = ['.xlsx', '.pdf', '.csv', '.xls', '.zip', '.docx', '.doc']
+temp_save_attachments = 'C:/save_att/'
+list_team = ["ricky.schools@fsinvestments.com", "max.charles@fsinvestments.com"]
+
 
 def lists_in_queue(var_list):
-    '''
+    """
     determines if there are any lists in the queue.
 
     :param var_list: dictionary of list variables.
     :return: boolean TRUE / FALSE
-    '''
+    """
     if var_list['Lists_In_Queue'] > 0:
         return True
     else:
@@ -16,16 +35,16 @@ def lists_in_queue(var_list):
         return False
 
 
-def close_mailbox_connection(M):
-    '''
+def close_mailbox_connection(m):
+    """
     closes the mailbox connection
 
-    :param M: mailbox object
+    :param m: mailbox object
     :return: dictionary of mailbox information.
-    '''
-    print('Closing email_handler connection.')
-    M.close()
-    M.logout()
+    """
+
+    m.close()
+    m.logout()
     return {'Mailbox': None}
 
 
@@ -95,7 +114,7 @@ def body_parse(message, s_string):
     return mailBody
 
 
-def info_parser(body, look, look2=None, n=None, _objects=None):
+def info_parser(body, look, look2=None, n=None):
     """
     parses the body text of an email_handler message
 
@@ -103,13 +122,12 @@ def info_parser(body, look, look2=None, n=None, _objects=None):
     :param look: start / end location of the text to parse (required)
     :param look2: optional - takes a secondary substring if finding text
     :param n: length of where attachment link is
-    :param _objects: list of object names
     :return: parsed substring
     """
     if n is None:
         n = 2
 
-    if look in _objects[:1]:
+    if look in objects[:1]:
         incr = 40
     else:
         incr = 1
@@ -159,7 +177,7 @@ def get_msg_part(msg_part, array):
     return tmp
 
 
-def determine_id_and_object_from_link(self, tmp, email_text, log):
+def determine_id_and_object_from_link(tmp, email_text, log):
     end_point = tmp['has_link'] + len(tmp['search_link']) + 16
     tmp['link'] = email_text[tmp['has_link'] + len(tmp['search_link']) + 1: end_point]
     if tmp['link'][:3] == '001':
@@ -173,3 +191,28 @@ def determine_id_and_object_from_link(self, tmp, email_text, log):
         log.warn('Unable to determine object from Salesforce link. You will need to manually upload'
                  'the list Salesforce for the new list request.')
     return tmp
+
+
+def handle_list_queue_requests(num, f_data, list_queue):
+    raw = email.message_from_bytes(f_data[0][1])
+    subject = raw['subject']
+    if list_notification_elements[0] in subject:
+        msg, msg_body = get_decoded_email_body(f_data[0][1])
+        list_queue.append([msg, msg_body, num])
+    return list_queue
+
+
+def attachment_reader(remove=False, raw=None, att=None):
+    if remove:
+        if os.path.isdir(temp_save_attachments):
+            shutil.rmtree(temp_save_attachments)
+    else:
+        if not os.path.isdir(temp_save_attachments):
+            os.mkdir(temp_save_attachments)
+        if att is not None:
+            len_ext, ext = determine_ext(att)
+            if ext in acceptable_types:
+                new_f_name = temp_save_attachments + ''.join(e for e in att[:-5] if e.isalnum()) + ext
+                with open(new_f_name, mode='wb') as f:
+                    f.write(raw.get_payload(decode=True))
+                return new_f_name
