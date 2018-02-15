@@ -19,7 +19,7 @@ _steps = [
     '\nContacts will not be created. Not enough information provided.']
 _dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox', 'SFDC Session']
 
-ensure_requirements_met()
+# ensure_requirements_met()
 
 
 class ListProcessing:
