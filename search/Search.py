@@ -357,6 +357,7 @@ class Search:
                     except:
                         pass
             """
+            headers = search_list.columns.values
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = search_list["FirstName"].apply(lambda x: x.title())
                 search_list["LastName"] = search_list["LastName"].apply(lambda x: x.title())

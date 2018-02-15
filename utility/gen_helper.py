@@ -92,7 +92,7 @@ def shorten_fname_to_95chars(f_name):
     f_name = f_name[:-ext_len]
     max_len = 95 - ext_len
 
-    if len(f_name) > ():
+    if len(f_name) > max_len:
         f_name = f_name[:max_len] + file_ext
 
     return f_name
