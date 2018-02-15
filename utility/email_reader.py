@@ -226,11 +226,11 @@ class MailBoxReader:
         _folders = ["INBOX/FS Emails", "INBOX/Auto Lists From SFDC",
                     "INBOX/No Link or Attachments", "INBOX/New Lists"]
         if dict_data['name'] == 'FS Investments':
-            self._move_received_list_to_processed_folder(num, '%s' % _folders[0])
+            self._move_received_list_to_processed_folder(num, _folders[0])
             self.log.info('Moved mail item to %s' % _folders[0])
 
         elif dict_data['sub'] == 'An upload list has been added':
-            self._move_received_list_to_processed_folder(num, '%s' % _folders[1])
+            self._move_received_list_to_processed_folder(num, _folders[1])
             self.log.info('Moved mail item to %s' % _folders[1])
 
         elif len(att) == 0 or dict_data['has_link'] in [-1, 'not set']:
@@ -247,7 +247,7 @@ class MailBoxReader:
             sub = "LMA Notification: Missing Attachments or SFDC Links for '%s'" % dict_data['sub']
             _list_team.append(dict_data['email'])
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=None)
-            self._move_received_list_to_processed_folder(num, '%s' % _folders[2])
+            self._move_received_list_to_processed_folder(num, _folders[2])
             self.log.info('Mail item has no attachments. Moved to %s' % _folders[2])
         else:
             _list_team.append('rickyschools+v3lhm65etri76gwbn0sy@boards.trello.com')
@@ -255,7 +255,7 @@ class MailBoxReader:
             msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
             Email(subject=sub, to=_list_team, body=msg_body, attachment_path=att)
             self.associate_email_request_with_sf_object(dict_data=dict_data, att=att)
-            self._move_received_list_to_processed_folder(num, '%s' % _folders[3])
+            self._move_received_list_to_processed_folder(num, _folders[3])
             self.log.info('Moved mail item to %s' % _folders[3])
 
     def associate_email_request_with_sf_object(self, dict_data, att):
