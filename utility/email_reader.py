@@ -182,8 +182,8 @@ class MailBoxReader:
         self.mailbox.logout()
 
     def determine_path_and_complete_processing(self, num, dict_data, att, msg_body):
-        _folders = ["INBOX/FS Emails", "INBOX/Auto Lists From SFDC",
-                    "INBOX/No Link or Attachments", "INBOX/New Lists"]
+        _folders = ['"INBOX/FS Emails"', '"INBOX/Auto Lists From SFDC"',
+                    '"INBOX/No Link or Attachments"', '"INBOX/New Lists"']
         if dict_data['name'] == 'FS Investments':
             self._move_received_list_to_processed_folder(num, _folders[0])
             self.log.info('Moved mail item to %s' % _folders[0])
