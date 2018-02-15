@@ -118,7 +118,7 @@ class SFPlatform:
             account_name = df['Name'][0]
 
         attachment = create_dir_move_file(path=attachment)
-        print('Successfully downloaded file from SF here:\n   - %s' % attachment)
+        self.log.info('Successfully downloaded file from SF here:\n   - %s' % attachment)
         return attachment, e_date, pre_or_post, account_name, account_id
 
     def _export_attachment(self, att_id, output):
