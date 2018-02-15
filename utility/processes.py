@@ -1,3 +1,5 @@
+import traceback
+
 try:
     from ListManagement.utility.gen_helper import *
     from ListManagement.utility.email_helper import craft_notification_email
@@ -315,6 +317,7 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
             body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
                    'manually upload this file at your earliest convenience.' % (path, obj)
             log.error(body)
+            log.error(str(traceback.format_exc()))
             Email(subject=sub, to=['ricky.schools@fsinvestments.com', 'max.charles@fsinvestments.com'],
                   body=body, attachment_path=[path])
         else:
