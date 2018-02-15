@@ -111,7 +111,7 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
     list_df = read_df(path)
 
     if obj == 'Account' and is_path(path):
-        if path[-14:] == 'to_create.xlsx'
+        if path[-14:] == 'to_create.xlsx':
             list_df['AccountId'] = None
             list_df['SourceChannel'] = None
         sc_to_add = 'firm_' + record_name + '_' + yyyy_mm
