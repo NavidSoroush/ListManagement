@@ -110,7 +110,10 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
     log.info("Preparing data prep for the %s list's action files, based list type. %s" % (obj, msg))
     list_df = read_df(path)
 
-    if obj == 'Account':
+    if obj == 'Account' and is_path(path):
+        if path[-14:] == 'to_create.xlsx'
+            list_df['AccountId'] = None
+            list_df['SourceChannel'] = None
         sc_to_add = 'firm_' + record_name + '_' + yyyy_mm
         list_df = drop_unneeded_columns(list_df, obj)
         new_contact_df = list_df[list_df['AccountId'].isnull()]
