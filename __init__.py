@@ -10,4 +10,5 @@ from .utility.log_helper import ListManagementLogger
 from .utility.email_reader import MailBoxReader
 from .utility.email_wrapper import Email
 
+
 __version__ = '3.0'
