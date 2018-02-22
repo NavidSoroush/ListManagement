@@ -83,7 +83,6 @@ class ListProcessing:
                             if k not in _dict_keys_to_keep:
                                 self.vars[k] = None
 
-            self.vars['SFDC Session'].close_session()
             self._mailbox.close_mailbox()
 
     def is_bad_extension(self):

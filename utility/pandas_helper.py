@@ -55,6 +55,6 @@ def new_stat_line(value_dict):
 def determine_num_records(path):
     df = read_df(path)
     if 'found' in path:
-        num = df['ContactID'].count()
+        num = int(df['ContactID'].count())
     del df
     return num
