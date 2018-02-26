@@ -14,7 +14,7 @@ except:
     from utility.sf_helper import *
 
 
-def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
+def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_create_path=None):
     """
     parses the list into new files based on the current biz dev, campaign, or account list.
     :param path: path to original list of advisors
@@ -26,7 +26,7 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
         'cmp_upload': None, 'to_create': None, 'to_update': None, 'bdg_update': None,
         'no_update': None, 'n_cmp_upload': 0, 'n_to_create': 0, 'n_to_update': 0, 'n_bdg_update': 0,
         'n_no_update': 0, 'cmp_status': None, 'no_update_path': None, 'update_path': None,
-        'to_create_path': None, 'cmp_upload_path': None, 'bdg_update_path': None, 'Next Step': 'Data prep.'
+        'to_create_path': to_create_path, 'cmp_upload_path': None, 'bdg_update_path': None, 'Next Step': 'Data prep.'
     }
     df = read_df(path=path)
 
@@ -73,7 +73,7 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
         to_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] != 'N')]
         to_create_df = df[df['AccountId'].isnull()]
         bdg_update_df = df[(df['AccountId'].notnull()) & (
-            df['Licenses'].str.contains('Series 7') or df['Licenses'].str.contains('Series 22'))]
+            df['Licenses'].str.contains('Series 7') | df['Licenses'].str.contains('Series 22'))]
 
         dict_elements['n_no_update'] = len(no_update_df.index)
         dict_elements['n_to_update'] = len(to_update_df.index)

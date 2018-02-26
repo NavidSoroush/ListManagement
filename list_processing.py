@@ -19,6 +19,7 @@ _steps = [
     '\nContacts will not be created. Not enough information provided.']
 _dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox', 'SFDC Session']
 
+
 # ensure_requirements_met()
 
 
@@ -130,7 +131,8 @@ class ListProcessing:
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
+                                                  to_create_path=self.vars['to_create_path']))
         self.vars.update(source_channel(self.vars['cmp_upload_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'], log=self._log))
         self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
@@ -165,10 +167,13 @@ class ListProcessing:
             predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
                                                log=self._log))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        print(self.vars['to_create_path'])
+        print(type(self.vars['to_create_path']))
         self.finra_search_and_search_two()
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
+                                                  to_create_path=self.vars['to_create_path']))
         try:
             llu_data = last_list_uploaded_data(self.vars['ObjectId'])
             self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
@@ -185,12 +190,12 @@ class ListProcessing:
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['update_path'])
+            drop_in_bulk_processing(self.vars['update_path'], self._log)
             if is_path(self.vars['to_create_path']):
                 self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
                                                 self.vars['ObjectId'], self.vars['Object'],
-                                                self.vars['ObjectId'], log=self.log))
-                drop_in_bulk_processing(self.vars['to_create_path'])
+                                                self.vars['ObjectId'], log=self._log))
+                drop_in_bulk_processing(self.vars['to_create_path'], self._log)
 
         else:
             self._log.info(_steps[2])
@@ -218,7 +223,8 @@ class ListProcessing:
         self.finra_search_and_search_two()
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all', save=True))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
+                         to_create_path=self.vars['to_create_path']))
         self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
                                      obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
                                      log=self._log))
@@ -245,8 +251,8 @@ class ListProcessing:
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'])
-            drop_in_bulk_processing(self.vars['update_path'])
+            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
+            drop_in_bulk_processing(self.vars['update_path'], self._log)
         else:
             self._log.info(_steps[2])
 
