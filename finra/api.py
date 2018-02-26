@@ -82,6 +82,7 @@ class Finra:
 
         if save:
             save_df(df, self._save_to_path)
+            return df
 
         if not save and not parse_list:
             return df
