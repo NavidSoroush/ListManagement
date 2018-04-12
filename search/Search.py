@@ -12,7 +12,7 @@ except:
     from utility.gen_helper import create_path_name, today
     from utility.pandas_helper import read_df, save_df, make_df, is_null
 
-_todays_sfdc_advisor_list = 'T:\\Shared\\FS2 Business Operations\\Search Program' \
+_todays_sfdc_advisor_list = 'T:\\Shared\\FS2 Business Operations\\Python Search Program' \
                             '\\Salesforce Data Files\\SFDC Advisor List as of ' \
                             + time.strftime("%m-%d-%y") + '.csv'
 
@@ -361,16 +361,18 @@ class Search:
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = search_list["FirstName"].apply(lambda x: x.title())
                 search_list["LastName"] = search_list["LastName"].apply(lambda x: x.title())
+                search_list["Account"] = search_list["Account"].str.replace(',','')
                 search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list[
                                                                                                            "Account"].str[
                                                                                                        :10] + \
-                                          search_list["MailingState"] + search_list["MailingPostalCode"]  # .str[:-2]
+                                          search_list["MailingState"] + search_list["MailingPostalCode"]#.str[:-2]
+                print(search_list.head())
 
             else:
                 self.log.info("Advisor name or account information missing")
         try:
             search_list['FinraLookup'] = search_list["FirstName"] + ' ' + search_list["LastName"] + " " + \
-                                         search_list["Account"].str[:10]
+                                         search_list["Account"].str[:9]
         except:
             self._to_finra = False
         return search_list
