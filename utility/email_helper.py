@@ -1,13 +1,11 @@
+from __future__ import absolute_import
+
 import os
 import shutil
 import email
 from lxml.html import fromstring
 
-try:
-    from utility.gen_helper import determine_ext
-except ModuleNotFoundError:
-    from ListManagement.utility.gen_helper import determine_ext
-
+from ..utility.gen_helper import determine_ext
 
 objects = ['Campaign', 'BizDev Group', 'Account']
 list_notification_elements = [

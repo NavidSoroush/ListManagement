@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import os
 import traceback
 import shutil
@@ -13,12 +14,8 @@ try:
 except ImportError:
     from salesforce_bulk import SalesforceBulk as Bulk, CsvDictsAdapter
 
-try:
-    from ListManagement.utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name
-    from ListManagement.utility.pandas_helper import make_df
-except:
-    from utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name
-    from utility.pandas_helper import make_df
+from ..utility.gen_helper import convert_unicode_to_date, create_dir_move_file, split_name
+from ..utility.pandas_helper import make_df
 
 _AttachmentColummns = ["Id", "ParentId", "Body", "ContentType", "Name"]
 _AttachmentBaseSOL = "SELECT " + ",".join(_AttachmentColummns) + " FROM Attachment "
