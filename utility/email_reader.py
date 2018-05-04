@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import re
 import imaplib
 from email.utils import parseaddr
@@ -6,16 +8,11 @@ import datetime
 
 from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 
-try:
-    from sf.sf_wrapper import SFPlatform
-    from utility.email_wrapper import Email
-    from utility.gen_helper import determine_ext, date_parsing
-    from utility.email_helper import *
-except ModuleNotFoundError:
-    from ListManagement.sf.sf_wrapper import SFPlatform
-    from ListManagement.utility.email_wrapper import Email
-    from ListManagement.utility.gen_helper import determine_ext, date_parsing
-    from ListManagement.utility.email_helper import *
+from ..sf.sf_wrapper import SFPlatform
+from ..utility.email_wrapper import Email
+from ..utility.gen_helper import determine_ext, date_parsing
+from ..utility.email_helper import *
+from ..utility.sf_helper import get_user_id
 
 
 class ReturnDict(object):
@@ -91,7 +88,8 @@ class MailBoxReader:
             if part.get("Content-Disposition") is None: continue
             if part.get_filename() is not None:
                 attmts.append(attachment_reader(raw=part, att=part.get_filename()))
-        self.determine_path_and_complete_processing(num=num, dict_data=tmp_dict, att=attmts, msg_body=msg_body)
+        self.determine_path_and_complete_processing(num=num, dict_data=tmp_dict, att=attmts, msg_body=msg_body,
+                                                    sender_addr=tmp_dict['email'])
         attachment_reader(remove=True)
 
     def iterative_processing(self, msg_list):
@@ -181,7 +179,7 @@ class MailBoxReader:
     def close_mailbox(self):
         self.mailbox.logout()
 
-    def determine_path_and_complete_processing(self, num, dict_data, att, msg_body):
+    def determine_path_and_complete_processing(self, num, dict_data, att, msg_body, sender_addr):
         _folders = ['"INBOX/FS Emails"', '"INBOX/Auto Lists From SFDC"',
                     '"INBOX/No Link or Attachments"', '"INBOX/New Lists"']
         if dict_data['name'] == 'FS Investments':
@@ -213,17 +211,20 @@ class MailBoxReader:
             sub = 'New List Received. Check List Management Trello Board'
             msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
             Email(subject=sub, to=list_team, body=msg_body, attachment_path=att)
-            self.associate_email_request_with_sf_object(dict_data=dict_data, att=att)
+            self.associate_email_request_with_sf_object(dict_data=dict_data, att=att, sender_addr=sender_addr)
             self._move_received_list_to_processed_folder(num, _folders[3])
             self.log.info('Moved mail item to %s' % _folders[3])
 
-    def associate_email_request_with_sf_object(self, dict_data, att):
+    def associate_email_request_with_sf_object(self, dict_data, att, sender_addr):
         sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
         data_pkg = [['Id', 'List_Upload__c'], [dict_data['link'], 'True']]
         try:
             self.log.info('Attempting to upload emailed list request to SFDC and attach links.')
             sfdc.update_records(dict_data['object'], data_pkg[0], [data_pkg[1]])
             sfdc.upload_attachments(dict_data['link'], att)
+            att_owner_and_id = get_user_id(sfdc, dict_data['link'], att, sender_addr)
+            sfdc.update_records('Attachment', ['Id', 'OwnerId'], att_owner_and_id)
+
         except:
             self.log.warn('There was an issue updating and uploading data to the %s record.' % dict_data['object'])
             pass
