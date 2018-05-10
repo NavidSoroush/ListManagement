@@ -8,11 +8,16 @@ import datetime
 
 from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
 
-from ..sf.sf_wrapper import SFPlatform
-from ..utility.email_wrapper import Email
-from ..utility.gen_helper import determine_ext, date_parsing
-from ..utility.email_helper import *
-from ..utility.sf_helper import get_user_id
+try:
+    from sf.sf_wrapper import SFPlatform
+    from utility.email_wrapper import Email
+    from utility.gen_helper import determine_ext, date_parsing
+    from utility.email_helper import *
+except ModuleNotFoundError:
+    from ListManagement.sf.sf_wrapper import SFPlatform
+    from ListManagement.utility.email_wrapper import Email
+    from ListManagement.utility.gen_helper import determine_ext, date_parsing
+    from ListManagement.utility.email_helper import *
 
 
 class ReturnDict(object):
