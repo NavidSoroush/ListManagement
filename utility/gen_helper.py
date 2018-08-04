@@ -12,7 +12,6 @@ from sqlalchemy import create_engine
 
 from cred import *
 
-
 userName = userName
 userEmail = userEmail
 userPhone = userPhone
@@ -37,11 +36,19 @@ _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
                    'toAdd', 'bdg_toStay', 'current_bdg_members', 'to_remove']
 
 
+def is_path(path):
+    if os.path.isfile(path):
+        return True
+    else:
+        return False
+
+
 def duration(start, end):
     _min, _sec = divmod((end - start), 60)
     _hour, _min = divmod(_min, 60)
     string_duration = "%02d:%02d:%02d" % (_hour, _min, _sec)
     return string_duration
+
 
 def date_parsing(str_date_value):
     return datetime.datetime.strptime(str_date_value, '%a, %d %b %Y %H:%M:%S %z')
@@ -69,6 +76,11 @@ def determine_ext(f_name):
     return len(file_ext), file_ext.lower()
 
 
+def last_list_uploaded_data(object_id):
+    uploaded_date = datetime.datetime.utcnow().isoformat()
+    return [object_id, uploaded_date]
+
+
 def shorten_fname_to_95chars(f_name):
     """
     evaulates if the file name is longer than 95 characters.
@@ -80,7 +92,7 @@ def shorten_fname_to_95chars(f_name):
     f_name = f_name[:-ext_len]
     max_len = 95 - ext_len
 
-    if len(f_name) > ():
+    if len(f_name) > max_len:
         f_name = f_name[:max_len] + file_ext
 
     return f_name
@@ -290,11 +302,12 @@ def create_path_name(path, new_name):
     return root + name
 
 
-def drop_in_bulk_processing(path):
+def drop_in_bulk_processing(path, log):
     if path is not None:
         dest = '//sc12-fsphl-01/BulkImports/'
         # \\sc12-fsphl-01\BulkImports\
         name = shorten_fname_to_95chars(split_name(path=path))
+        log.info('Dropping %s for bulk processing.' % name)
         shutil.copy(path, dest + name)
 
 
@@ -328,3 +341,21 @@ def timedelta_to_processing_str(duration):
     minutes = (seconds % 3600) // 60
     seconds = (seconds % 60)
     return '{} days {} hours {} minutes {} seconds'.format(days, hours, minutes, seconds)
+
+
+def auto_maintain(directory, destination=None, ndays=30, log=None):
+    cleaned = 0
+    dt = datetime.datetime
+    for f in os.listdir(directory):
+        delta = dt.now() - dt.fromtimestamp(os.path.getmtime(os.path.join(directory, f)))
+        if delta.days > ndays:
+            cleaned += 1
+            if destination is None:
+                os.remove(os.path.join(directory, f))
+            else:
+                shutil.move(os.path.join(directory, f), os.path.join(destination, f))
+    msg = 'Removed %s old files from %s.' % (cleaned, directory)
+    if log is not None:
+        log.info(msg)
+    else:
+        print(msg)

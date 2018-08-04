@@ -1,33 +1,17 @@
 import traceback
 
-try:
-    from ListManagement.config import *
-    from ListManagement.finra.Finra import FinraScraping
-    from ListManagement.finra.api import Finra
-    from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
-    from ListManagement.search.Search import Search
-    from ListManagement.stats.record_stats import record_processing_stats
-    from ListManagement.utility.email_wrapper import Email
-    from ListManagement.utility.email_helper import lists_in_queue
-    from ListManagement.utility.email_reader import MailBoxReader
-    from ListManagement.utility.gen_helper import drop_in_bulk_processing
-    from ListManagement.utility.log_helper import ListManagementLogger
-    from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
-        sfdc_upload
-except:
-    from config import *
-    from finra.Finra import FinraScraping
-    from finra.api import Finra
-    from ml.header_predictions import predict_headers_and_pre_processing
-    from search.Search import Search
-    from stats.record_stats import record_processing_stats
-    from utility.email_wrapper import Email
-    from utility.email_helper import lists_in_queue
-    from utility.email_reader import MailBoxReader
-    from utility.gen_helper import drop_in_bulk_processing
-    from utility.log_helper import ListManagementLogger
-    from utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
-        sfdc_upload
+from ListManagement.config import *
+from ListManagement.finra.api import Finra
+from ListManagement.search.Search import Search
+from ListManagement.utility import Email
+from ListManagement.utility import ListManagementLogger
+from ListManagement.utility import MailBoxReader
+from ListManagement.utility.email_helper import lists_in_queue
+from ListManagement.stats.record_stats import record_processing_stats
+from ListManagement.utility import drop_in_bulk_processing, last_list_uploaded_data, is_path
+from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
+from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
+    sfdc_upload
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
@@ -35,7 +19,8 @@ _steps = [
     '\nContacts will not be created. Not enough information provided.']
 _dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox', 'SFDC Session']
 
-ensure_requirements_met()
+
+# ensure_requirements_met()
 
 
 class ListProcessing:
@@ -46,8 +31,7 @@ class ListProcessing:
         """
         self._log = ListManagementLogger().logger
         self._search_api = Search(log=self._log)
-        self._finra_api_deprecated = FinraScraping(log=self._log)
-        self._finra_api = Finra()
+        self._finra_api = Finra(log=self._log)
         self._mailbox = MailBoxReader(log=self._log)
         self.vars = self._mailbox.extract_pending_lists(self._mailbox.mailbox, self._mailbox.email_folder)
         self.main_contact_based_processing()
@@ -100,7 +84,6 @@ class ListProcessing:
                             if k not in _dict_keys_to_keep:
                                 self.vars[k] = None
 
-            self.vars['SFDC Session'].close_session()
             self._mailbox.close_mailbox()
 
     def is_bad_extension(self):
@@ -148,7 +131,8 @@ class ListProcessing:
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         self.finra_search_and_search_two()
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
+                                                  to_create_path=self.vars['to_create_path']))
         self.vars.update(source_channel(self.vars['cmp_upload_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'], log=self._log))
         self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
@@ -158,9 +142,9 @@ class ListProcessing:
                                      log=self._log))
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'])
+            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
         else:
-            print(_steps[2])
+            self._log.info(_steps[2])
 
     def account_processing(self):
         """
@@ -183,27 +167,38 @@ class ListProcessing:
             predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
                                                log=self._log))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        print(self.vars['to_create_path'])
+        print(type(self.vars['to_create_path']))
         self.finra_search_and_search_two()
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
-        #self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id'],upload_data= self.vars['ObjectId'])
-
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
+                                                  to_create_path=self.vars['to_create_path']))
+        try:
+            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
+            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
+                                                     upload_data=[llu_data])
+        except:
+            self._log.warn('A non-fatal error occured during the Last List Upload'
+                           'of the %s object for Id %s. The valus were %s.' % (self.vars['Object'],
+                                                                               self.vars['ObjectId'],
+                                                                               llu_data))
 
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
-
                                         self.vars['ObjectId'], self.vars['Object'], log=self._log))
-        # self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-        # self.vars['ObjectId'], self.vars['Object'],
-        # self.vars['ObjectId'], log=self.log))
+
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['update_path'])
-            drop_in_bulk_processing(self.vars['to_create_path'])
+            drop_in_bulk_processing(self.vars['update_path'], self._log)
+            if is_path(self.vars['to_create_path']):
+                self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
+                                                self.vars['ObjectId'], self.vars['Object'],
+                                                self.vars['ObjectId'], log=self._log))
+                drop_in_bulk_processing(self.vars['to_create_path'], self._log)
 
         else:
-            print(_steps[2])
+            self._log.info(_steps[2])
 
     def bizdev_processing(self):
         """
@@ -228,10 +223,22 @@ class ListProcessing:
         self.finra_search_and_search_two()
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all', save=True))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log))
+                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
+                         to_create_path=self.vars['to_create_path']))
         self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
                                      obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
                                      log=self._log))
+
+        try:
+            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
+            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
+                                                     upload_data=[llu_data])
+        except:
+            self._log.warn('A non-fatal error occured during the Last List Upload'
+                           'of the %s object for Id %s. The valus were %s.' % (self.vars['Object'],
+                                                                               self.vars['ObjectId'],
+                                                                               llu_data))
+
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'],
                                         self.vars['CmpAccountID'], log=self._log))
@@ -244,10 +251,10 @@ class ListProcessing:
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'])
-            drop_in_bulk_processing(self.vars['update_path'])
+            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
+            drop_in_bulk_processing(self.vars['update_path'], self._log)
         else:
-            print(_steps[2])
+            self._log.info(_steps[2])
 
     def finra_search_and_search_two(self):
         """
@@ -270,13 +277,13 @@ class ListProcessing:
                     self._search_api.perform_sec_search(self.vars['No CRD'], self.vars['FINRA_SEC Found']))
 
             else:
-                print(_steps[0])
+                self._log.info(_steps[0])
 
             self.vars.update(self._search_api.perform_search_two(self.vars['FINRA_SEC Found'],
                                                                  self.vars['Found Path'],
                                                                  self.vars['Object']))
         else:
-            print(_steps[1])
+            self._log.info(_steps[1])
 
     def create_log_record_of_current_list_data(self, msg):
         self._log.warning('A fatal error has occured. Printing out necessary data to restart the program and'

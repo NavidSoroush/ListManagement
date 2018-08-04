@@ -34,5 +34,3 @@ def ensure_requirements_met():
             print('Unable to install %s. Please paste the below into the command-line.\n%s' %
                   (r_name, ' '.join([sys.executable, '-m', 'pip', 'install',
                                      '=='.join([r_name, r_version])])))
-
-ensure_requirements_met()

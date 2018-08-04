@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+import traceback
+
 try:
     from ListManagement.utility.gen_helper import *
     from ListManagement.utility.email_helper import craft_notification_email
@@ -12,7 +15,7 @@ except:
     from utility.sf_helper import *
 
 
-def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
+def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_create_path=None):
     """
     parses the list into new files based on the current biz dev, campaign, or account list.
     :param path: path to original list of advisors
@@ -24,7 +27,7 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
         'cmp_upload': None, 'to_create': None, 'to_update': None, 'bdg_update': None,
         'no_update': None, 'n_cmp_upload': 0, 'n_to_create': 0, 'n_to_update': 0, 'n_bdg_update': 0,
         'n_no_update': 0, 'cmp_status': None, 'no_update_path': None, 'update_path': None,
-        'to_create_path': None, 'cmp_upload_path': None, 'bdg_update_path': None, 'Next Step': 'Data prep.'
+        'to_create_path': to_create_path, 'cmp_upload_path': None, 'bdg_update_path': None, 'Next Step': 'Data prep.'
     }
     df = read_df(path=path)
 
@@ -70,7 +73,8 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None):
         no_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] == 'N')]
         to_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] != 'N')]
         to_create_df = df[df['AccountId'].isnull()]
-        bdg_update_df = df[(df['AccountId'].notnull()) & (df['Licenses'].str.contains('Series 7') or df['Licenses'].str.contains('Series 22'))]
+        bdg_update_df = df[(df['AccountId'].notnull()) & (
+            df['Licenses'].str.contains('Series 7') | df['Licenses'].str.contains('Series 22'))]
 
         dict_elements['n_no_update'] = len(no_update_df.index)
         dict_elements['n_to_update'] = len(to_update_df.index)
@@ -109,7 +113,10 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
     log.info("Preparing data prep for the %s list's action files, based list type. %s" % (obj, msg))
     list_df = read_df(path)
 
-    if obj == 'Account':
+    if obj == 'Account' and is_path(path):
+        if path[-14:] == 'to_create.xlsx':
+            list_df['AccountId'] = None
+            list_df['SourceChannel'] = None
         sc_to_add = 'firm_' + record_name + '_' + yyyy_mm
         list_df = drop_unneeded_columns(list_df, obj)
         new_contact_df = list_df[list_df['AccountId'].isnull()]
@@ -189,6 +196,7 @@ def extract_dictionary_values(dict_data, log=None):
     '''
     log.info('Extracting stats from the %s data dictionary.' % dict_data['Object'])
     if dict_data['Object'] == 'Campaign':
+
         to_update = dict_data['n_cmp_upload']
         to_create = dict_data['n_to_create']
         obj_to_add = dict_data['Num Adding']
@@ -202,8 +210,11 @@ def extract_dictionary_values(dict_data, log=None):
         obj_to_remove = dict_data['Num Removing']
         obj_to_update = dict_data['Num Updating/Staying']
 
+    log.info(' > Organized %s specific metrics.' % dict_data['Object'])
+
     if not dict_data['Move To Bulk']:
         create_advisors_note = 'Contacts will not be created. Not enough information provided.'
+        log.info('For %s list, %s' % (dict_data['Object'], create_advisors_note))
     else:
         create_advisors_note = ''
 
@@ -246,13 +257,6 @@ def extract_dictionary_values(dict_data, log=None):
                       obj_to_remove, need_research, received, process_start,
                       completed, processing_string, create_advisors_note]
     body_string = craft_notification_email(items_to_email)
-    try:
-        log.info(
-            'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.iteritems()]))
-    except:
-        #Python3
-        log.info(
-            'Processed Vars Dictionary: \n\n%s' % '\n'.join(['{}:{}'.format(k, v) for k, v in dict_data.items()]))
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
@@ -262,6 +266,8 @@ def extract_dictionary_values(dict_data, log=None):
         , 'Unable to Find': need_research, 'Last Search Date': completed
         , 'Match Rate': match_rate, 'Processing Time': processing_string
     }
+
+    log.info('Extracted stats data:\n%s' % items_for_stats)
 
     listobj_cols = ['Id', 'Status__c', 'Advisors_on_List__c', 'Contacts_Added_to_Related_Record__c',
                     'Contacts_Created__c', 'Contacts_Found_in_SF__c', 'Contacts_Not_Found__c',
@@ -277,11 +283,10 @@ def extract_dictionary_values(dict_data, log=None):
         log.info('Attempting to attach %s files to the List record.' % len(att_paths))
         dict_data['SFDC Session'].upload_attachments(obj_id=dict_data['ListObjId'], attachments=att_paths)
 
-
     subject = "ALM Notification: %s list processed." % obj_name
 
     log.info('Sending notification email to requestor to notify of completion.')
-    Email(subject=subject, to=[sender_email,userEmail], body=body_string, attachment_path=att_paths)
+    Email(subject=subject, to=[sender_email, userEmail], body=body_string, attachment_path=att_paths)
     return {'Next Step': 'Record Stats',
             'Stats Data': items_for_stats}
 
@@ -313,6 +318,7 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
             body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
                    'manually upload this file at your earliest convenience.' % (path, obj)
             log.error(body)
+            log.error(str(traceback.format_exc()))
             Email(subject=sub, to=['ricky.schools@fsinvestments.com', 'max.charles@fsinvestments.com'],
                   body=body, attachment_path=[path])
         else:
@@ -351,7 +357,7 @@ def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
     to_insert, to_update, to_remove = split_list(sf_c_cmp_members.values.tolist(), data, obj_id, obj)
     n_add = len(to_insert)
     n_up = len(to_update)
-    while n_added < n_add:
+    if n_added < n_add:
         n_added = session.create_records(obj='CampaignMember', fields=['ContactId', 'Status', 'CampaignId'],
                                          upload_data=to_insert)
 

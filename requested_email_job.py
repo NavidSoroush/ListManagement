@@ -5,12 +5,12 @@ try:
     from utility.log_helper import ListManagementLogger
     from utility.email_wrapper import Email
     from utility.gen_helper import duration, time
-
-except:
+except ModuleNotFoundError:
     from ListManagement.utility.email_reader import MailBoxReader
     from ListManagement.utility.log_helper import ListManagementLogger
     from ListManagement.utility.email_wrapper import Email
     from ListManagement.utility.gen_helper import duration, time
+
 
 log = ListManagementLogger().logger
 start = time.time()
