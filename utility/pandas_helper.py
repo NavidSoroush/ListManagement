@@ -1,9 +1,11 @@
+from __future__ import absolute_import
 import pandas as pd
 
 try:
     from ListManagement.utility.gen_helper import determine_ext
 except:
     from utility.gen_helper import determine_ext
+
 
 def read_df(path):
     e_len, ext = determine_ext(path)
@@ -54,6 +56,6 @@ def new_stat_line(value_dict):
 def determine_num_records(path):
     df = read_df(path)
     if 'found' in path:
-        num = df['ContactID'].count()
+        num = int(df['ContactID'].count())
     del df
     return num

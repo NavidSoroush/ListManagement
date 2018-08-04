@@ -82,11 +82,10 @@ class Finra:
 
         if save:
             save_df(df, self._save_to_path)
+            return df
 
         if not save and not parse_list:
             return df
-
-
 
     def _main_scraper(self, xpath_keys):
         # self.log.info('Attempting to get %s meta data from an individual Finra page.' % ', '.join(xpath_keys))
@@ -133,8 +132,9 @@ class Finra:
                             try:
                                 code = self._wait.until(ec.visibility_of_element_located((By.CLASS_NAME,
                                                                                           xpath_keys[1])))
+                                page_src = self._sel.page_source
                                 crd_text = code.text.split()
-                                suggestions = (len(page_src.split(xpath_keys[2]))-1)
+                                suggestions = (len(page_src.split(xpath_keys[2])) - 1)
                                 if suggestions == 0:
                                     self._scraped_dict['CRDNumber'].append("CRD Not Found")
                                     self._scraped_dict['NumSuggestions'].append(suggestions)

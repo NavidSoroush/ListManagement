@@ -1,22 +1,22 @@
 import sys
-import datetime
-import logging
-import logging.handlers
 
 import sqlalchemy
-import pandas as pd
 
 try:
     from ListManagement.legacy.sf_adv_query import list_SQL
-    from ListManagement.legacy.sf_adv_formatting import lkupName, needsUpdate
+    from ListManagement.legacy.sf_adv_formatting import make_lookup_name, needs_update_flag
+    from ListManagement.utility import auto_maintain, os, duration, time
+    from ListManagement.utility.pandas_helper import pd
 except:
     from legacy.sf_adv_query import list_SQL
-    from legacy.sf_adv_formatting import lkupName, needsUpdate
+    from legacy.sf_adv_formatting import make_lookup_name, needs_update_flag
+    from utility import auto_maintain, os, duration, time
+    from utility.pandas_helper import pd
 
 
-def run(path_name):
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+def run(path_name, logger):
+    _dir, _name = os.path.split(path_name)
+    auto_maintain(_dir, log=logger)
 
     # Declaring needed variables
     lkup_strings = ['First Name', 'Last Name', 'Account Name',
@@ -38,22 +38,20 @@ def run(path_name):
         logger.error('Failed to connect to SQL database.', exc_info=True)
         sys.exit()
 
-    query_start = datetime.datetime.now()
-    logger.info('Preparing the file for use..')
+    query_start = time.time()
+    logger.info(' > Extracting data from SQL.')
     df = pd.read_sql_query(list_SQL, conn)
-    df.insert(0, 'LkupName', lkupName(df, lkup_strings))
-    df.insert(len(df.columns), 'Needs info updated?', needsUpdate(df[df.columns[-3:]], update_cols, 180, 90))
+    logger.info(' > Preparing the file for use.')
+    logger.debug('   > Making LookupName.')
+    df.insert(0, 'LkupName', make_lookup_name(df, lkup_strings))
+    logger.debug('   > Adding update flags.')
+    df.insert(len(df.columns), 'Needs info updated?', needs_update_flag(df[df.columns[-3:]], update_cols, 180, 90))
     df.columns = rep_headers
-    logger.info('Saving to FS shared drive.')
+    logger.info(' > Transformation complete. Saving to FS shared drive.')
     df.rename(columns={'CRD': 'CRDNumber'}, inplace=True)
     df = df[~df.CRDNumber.str.contains('[a-zA-Z]').fillna(False)]
     df.to_csv(path_name, header=True, index=False, encoding='utf-8')
-    logger.info('Closing SQL connection....')
-    query_end = datetime.datetime.now()
-    query_time = query_end - query_start
+    logger.info('Closing SQL connection.')
+    query_end = time.time()
     # printing success and time it took to complete query and save
-    # print "Save successful."
-    logger.info("Saving complete. Query took: " + str(query_time.min / 60) + ' minutes and ' + str(
-        query_time.seconds % 60) + ' seconds.')
-    # # logger.info('SQL query is a ', sfdcBatchComplete())
-
+    logger.info("Saving complete. Query took: %s" % duration(query_start, query_end))

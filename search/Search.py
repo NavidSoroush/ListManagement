@@ -12,14 +12,9 @@ except:
     from utility.gen_helper import create_path_name, today
     from utility.pandas_helper import read_df, save_df, make_df, is_null
 
-_todays_sfdc_advisor_list = 'T:/Shared/FS2 Business Operations/Search Program' \
-                            '/Salesforce Data Files/SFDC Advisor List as of ' \
+_todays_sfdc_advisor_list = 'T:\\Shared\\FS2 Business Operations\\Python Search Program' \
+                            '\\Salesforce Data Files\\SFDC Advisor List as of ' \
                             + time.strftime("%m-%d-%y") + '.csv'
-
-if not os.path.exists(_todays_sfdc_advisor_list):
-    print("Please wait. Downloading SFDC list, as today's file was not available.")
-    print(_todays_sfdc_advisor_list)
-    run(path_name=_todays_sfdc_advisor_list)
 
 
 class Search:
@@ -29,6 +24,7 @@ class Search:
         """
         self.log = log
         self._today = today
+        self._sfdc_file_check()
         self._SFDC_advisor_list = read_df(_todays_sfdc_advisor_list)
         self.__preprocess_sfdc_list()
         self._search_fields = ['AMPFMBRID', 'Email', 'LkupName']
@@ -51,8 +47,14 @@ class Search:
         self._to_create_path = ''
         self._list_type = ''
         self._sec_files = ''
-        self._sec_path = 'T:/Shared/FS2 Business Operations/Python Search Program/SEC_Data/' \
-                         'Individuals/processed_data/' + self._today + '/'
+        self._sec_path = 'T:\\Shared\\FS2 Business Operations\\Python Search Program\\SEC_Data\\' \
+                         'Individuals\\processed_data\\' + self._today + '\\'
+
+    def _sfdc_file_check(self):
+        if not os.path.exists(_todays_sfdc_advisor_list):
+            self.log.info("Please wait. Downloading SFDC list, as today's file was not available.")
+
+            run(path_name=_todays_sfdc_advisor_list, logger=self.log)
 
     def __init_list_metadata(self):
         """
@@ -169,7 +171,7 @@ class Search:
                     if len(self._search_list.index) != len(self._found_contacts.index):
                         self._search_one_crd_additional = True
                         self.log.info('CRD Info provided for all contacts. Will not search FINRA, but will '
-                                      'perform remaining standard searches to maximized match rate.')
+                                      'perform remaining standard searches to maximize match rate.')
                         self._search_list = self._search_list[self._search_list['ContactID'] == '']
                         # self._contacts_to_review = self._contacts_to_review.append(
                         #     self._search_list[self._search_list['ContactID'] == ''], ignore_index=True)
@@ -355,16 +357,22 @@ class Search:
                     except:
                         pass
             """
+            headers = search_list.columns.values
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = search_list["FirstName"].apply(lambda x: x.title())
                 search_list["LastName"] = search_list["LastName"].apply(lambda x: x.title())
-                search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list["Account"].str[:10] + search_list["MailingState"] + search_list["MailingPostalCode"]#.str[:-2]
+                search_list["Account"] = search_list["Account"].str.replace(',','')
+                search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list[
+                                                                                                           "Account"].str[
+                                                                                                       :10] + \
+                                          search_list["MailingState"] + search_list["MailingPostalCode"]#.str[:-2]
+                print(search_list.head())
 
             else:
                 self.log.info("Advisor name or account information missing")
         try:
             search_list['FinraLookup'] = search_list["FirstName"] + ' ' + search_list["LastName"] + " " + \
-                                         search_list["Account"].str[:10]
+                                         search_list["Account"].str[:9]
         except:
             self._to_finra = False
         return search_list
@@ -411,11 +419,11 @@ class Search:
             for index, row in search_list.iterrows():
                 if ',' in row["FullName"]:
                     if row["FullName"].index(' ') < row["FullName"].index(','):
-                        search_list.loc[index,"FirstName"] = row["FullName"].split(' ')[0]
-                        search_list.loc[index,"LastName"] = ' '.join(row["FullName"].split(' ')[1:])
+                        search_list.loc[index, "FirstName"] = row["FullName"].split(' ')[0]
+                        search_list.loc[index, "LastName"] = ' '.join(row["FullName"].split(' ')[1:])
                     else:
-                        search_list.loc[index,"LastName"] = row["FullName"].split(',')[0]
-                        search_list.loc[index,"FirstName"] = row["FullName"].split(' ')[1]
+                        search_list.loc[index, "LastName"] = row["FullName"].split(',')[0]
+                        search_list.loc[index, "FirstName"] = row["FullName"].split(' ')[1]
                 else:
                     full_name_list = row["FullName"].split()
                     for name in full_name_list:
