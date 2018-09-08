@@ -248,8 +248,8 @@ class ListProcessing:
             self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
                                                      upload_data=[llu_data])
         except:
-            self._log.warn('A non-fatal error occured during the Last List Upload'
-                           'of the %s object for Id %s. The valus were %s.' % (self.vars['Object'],
+            self._log.warn('A non-fatal error occurred during the Last List Upload'
+                           'of the %s object for Id %s. The values were %s.' % (self.vars['Object'],
                                                                                self.vars['ObjectId'],
                                                                                llu_data))
 
