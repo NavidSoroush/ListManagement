@@ -6,18 +6,22 @@ from email.utils import parseaddr
 import time
 import datetime
 
-from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
+from cred import outlook_userEmail, password  # , sfuser, sfpw, sf_token
+
+from PythonUtilities.salesforcipy import SFPy
 
 try:
-    from sf.sf_wrapper import SFPlatform
+    from utility.sf_helper import get_user_id
     from utility.email_wrapper import Email
     from utility.gen_helper import determine_ext, date_parsing
     from utility.email_helper import *
+    from config import Config as con
 except ModuleNotFoundError:
-    from ListManagement.sf.sf_wrapper import SFPlatform
+    from ListManagement.utility.sf_helper import get_user_id
     from ListManagement.utility.email_wrapper import Email
     from ListManagement.utility.gen_helper import determine_ext, date_parsing
     from ListManagement.utility.email_helper import *
+    from ListManagement.config import Config as con
 
 
 class ReturnDict(object):
@@ -143,7 +147,7 @@ class MailBoxReader:
         self.log.info('Object Id: %s' % obj_rec_link)
 
         self.log.info('Downloading attachment from SFDC.')
-        sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
+        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain)
         file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=att_link, obj=obj,
                                                                                      obj_url=obj_rec_link)
         ext_len, ext = determine_ext(f_name=file_path)
@@ -221,7 +225,7 @@ class MailBoxReader:
             self.log.info('Moved mail item to %s' % _folders[3])
 
     def associate_email_request_with_sf_object(self, dict_data, att, sender_addr):
-        sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
+        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain)
         data_pkg = [['Id', 'List_Upload__c'], [dict_data['link'], 'True']]
         try:
             self.log.info('Attempting to upload emailed list request to SFDC and attach links.')
