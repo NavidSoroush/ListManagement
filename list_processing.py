@@ -1,10 +1,11 @@
 import traceback
 
-from ListManagement.config import *
+from PythonUtilities.LoggingUtility import Logging
+from PythonUtilities.EmailHandling import EmailHandler as Email
+
+from ListManagement.config import Config as con
 from ListManagement.finra.api import Finra
 from ListManagement.search.Search import Search
-from ListManagement.utility import Email
-from ListManagement.utility import ListManagementLogger
 from ListManagement.utility import MailBoxReader
 from ListManagement.utility.email_helper import lists_in_queue
 from ListManagement.stats.record_stats import record_processing_stats
@@ -29,7 +30,7 @@ class ListProcessing:
         declare and set global objects that are leveraged through the
         actually processing of lists.
         """
-        self._log = ListManagementLogger().logger
+        self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
         self._mailbox = MailBoxReader(log=self._log)
@@ -104,7 +105,10 @@ class ListProcessing:
             msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
                   'List Management App.' % (obj_name, self.vars['ExtensionType'])
             self._log.warning(msg)
-            Email(subject=sub, to=[self.vars['Sender Email']], body=msg, attachment_path=None)
+            Email(con.SMTPUser, con.SMTPPass, self._log).send_new_email(
+                subject=sub, to=[self.vars['Sender Email']], body=msg, attachments=None
+                , name=con.FullName
+            )
             self.vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
                                                      upload_data=[[self.vars['ListObjId'], 'Unable to Process']])
             return True
@@ -129,7 +133,11 @@ class ListProcessing:
         self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
                                                             self.vars['CmpAccountName'], self._log))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
-        self.finra_search_and_search_two()
+        try:
+            self.finra_search_and_search_two()
+        except:
+            self._log.info('An error occured during FINRA or SearchTwo processing. Skipping.')
+            pass
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log,
                                                   to_create_path=self.vars['to_create_path']))
@@ -167,9 +175,11 @@ class ListProcessing:
             predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
                                                log=self._log))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
-        print(self.vars['to_create_path'])
-        print(type(self.vars['to_create_path']))
-        self.finra_search_and_search_two()
+        try:
+            self.finra_search_and_search_two()
+        except:
+            self._log.info('An error occured during FINRA or SearchTwo processing, Skipping.')
+            pass
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log,
@@ -220,11 +230,15 @@ class ListProcessing:
         self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
                                                             self.vars['CmpAccountName'], log=self._log))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
-        self.finra_search_and_search_two()
+        try:
+            self.finra_search_and_search_two()
+        except:
+            self._log.info('An error occured during FINRA or SearchTwo processing.')
+            pass
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all', save=True))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log,
-                         to_create_path=self.vars['to_create_path']))
+                                                  to_create_path=self.vars['to_create_path']))
         self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
                                      obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
                                      log=self._log))
