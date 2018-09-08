@@ -1,16 +1,19 @@
 from __future__ import absolute_import
 import traceback
 
+from PythonUtilities.EmailHandling import EmailHandler as Email
+
 try:
+    from ListManagement.config import Config as con
     from ListManagement.utility.gen_helper import *
     from ListManagement.utility.email_helper import craft_notification_email
-    from ListManagement.utility.email_wrapper import Email
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
     from ListManagement.utility.sf_helper import *
 except:
+
+    from config import Config as con
     from utility.gen_helper import *
     from utility.email_helper import craft_notification_email
-    from utility.email_wrapper import Email
     from utility.pandas_helper import read_df, save_df, make_df, determine_num_records
     from utility.sf_helper import *
 
@@ -286,7 +289,10 @@ def extract_dictionary_values(dict_data, log=None):
     subject = "ALM Notification: %s list processed." % obj_name
 
     log.info('Sending notification email to requestor to notify of completion.')
-    Email(subject=subject, to=[sender_email, userEmail], body=body_string, attachment_path=att_paths)
+    Email(con.SMTPUser, con.SMTPPass, log).send_new_email(
+        subject=subject, to=[sender_email, userEmail], body=body_string,
+        attachments=att_paths, name=con.FullName
+    )
     return {'Next Step': 'Record Stats',
             'Stats Data': items_for_stats}
 
@@ -319,8 +325,10 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
                    'manually upload this file at your earliest convenience.' % (path, obj)
             log.error(body)
             log.error(str(traceback.format_exc()))
-            Email(subject=sub, to=['ricky.schools@fsinvestments.com', 'max.charles@fsinvestments.com'],
-                  body=body, attachment_path=[path])
+            Email(con.SMTPUser, con.SMTPPass, log).send_new_email(
+                subject=sub, to=con.ListTeam, body=body,
+                attachments=[path], name=con.FullName
+            )
         else:
             log.info('There is no data to upload to the %s object.' % obj)
 
