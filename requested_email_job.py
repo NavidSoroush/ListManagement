@@ -3,12 +3,10 @@ import traceback
 try:
     from utility.email_reader import MailBoxReader
     from utility.log_helper import ListManagementLogger
-    from utility.email_wrapper import Email
     from utility.gen_helper import duration, time
 except ModuleNotFoundError:
     from ListManagement.utility.email_reader import MailBoxReader
     from ListManagement.utility.log_helper import ListManagementLogger
-    from ListManagement.utility.email_wrapper import Email
     from ListManagement.utility.gen_helper import duration, time
 
 

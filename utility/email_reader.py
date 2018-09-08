@@ -12,13 +12,11 @@ from PythonUtilities.salesforcipy import SFPy
 
 try:
     from utility.sf_helper import get_user_id
-    from utility.email_wrapper import Email
     from utility.gen_helper import determine_ext, date_parsing
     from utility.email_helper import *
     from config import Config as con
 except ModuleNotFoundError:
     from ListManagement.utility.sf_helper import get_user_id
-    from ListManagement.utility.email_wrapper import Email
     from ListManagement.utility.gen_helper import determine_ext, date_parsing
     from ListManagement.utility.email_helper import *
     from ListManagement.config import Config as con
