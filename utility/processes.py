@@ -5,6 +5,7 @@ from PythonUtilities.EmailHandling import EmailHandler as Email
 
 try:
     from ListManagement.config import Config as con
+    from ListManagement.sources import campaigns, accounts, bdgs
     from ListManagement.utility.gen_helper import *
     from ListManagement.utility.email_helper import craft_notification_email
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
@@ -12,6 +13,7 @@ try:
 except:
 
     from config import Config as con
+    from sources import campaigns, accounts, bdgs
     from utility.gen_helper import *
     from utility.email_helper import craft_notification_email
     from utility.pandas_helper import read_df, save_df, make_df, determine_num_records
@@ -35,60 +37,14 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_c
     df = read_df(path=path)
 
     if l_type == 'Campaign':
-        if pre_or_post == 'Post':
-            dict_elements['cmp_status'] = 'Needs Follow-Up'
-        else:
-            dict_elements['cmp_status'] = 'Invited'
-        dict_elements['to_create_path'] = create_path_name(path, 'cmp_to_create')
-        dict_elements['cmp_upload_path'] = create_path_name(path, 'cmp_upload')
-
-        cmp_upload_df = df[df['AccountId'].notnull()]
-        to_create_df = df[df['AccountId'].isnull()]
-
-        dict_elements['n_cmp_upload'] = len(cmp_upload_df.index)
-        dict_elements['n_to_create'] = len(to_create_df.index)
-        cmp_upload_df['Status'] = dict_elements['cmp_status']
-
-        save_df(df=cmp_upload_df, path=dict_elements['cmp_upload_path'])
-        save_df(df=to_create_df, path=dict_elements['to_create_path'])
-        files_created = ['cmp_upload_path', 'to_create_path']
+        dict_elements, files_created = campaigns.parse(path=path, frame=df, dict_elements=dict_elements,
+                                                       event_timing=pre_or_post)
 
     elif l_type == 'Account':
-        dict_elements['no_update_path'] = create_path_name(path, 'no_updates')
-        dict_elements['update_path'] = create_path_name(path, 'to_update')
-
-        no_update_df = df[df['Needs Info Updated?'] == 'N']
-        to_update_df = df[df['Needs Info Updated?'] != 'N']
-
-        dict_elements['n_no_update'] = len(no_update_df.index)
-        dict_elements['n_to_update'] = len(to_update_df.index)
-
-        save_df(df=no_update_df, path=dict_elements['no_update_path'])
-        save_df(df=to_update_df, path=dict_elements['update_path'])
-        files_created = ['no_update_path', 'update_path']
+        dict_elements, files_created = accounts.parse(path=path, frame=df, dict_elements=dict_elements)
 
     elif l_type == 'BizDev Group':
-        dict_elements['no_update_path'] = create_path_name(path=path, new_name='no_updates')
-        dict_elements['update_path'] = create_path_name(path=path, new_name='to_update')
-        dict_elements['to_create_path'] = create_path_name(path=path, new_name='to_create')
-        dict_elements['bdg_update_path'] = create_path_name(path=path, new_name='bdg_update')
-
-        no_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] == 'N')]
-        to_update_df = df[(df['AccountId'].notnull()) & (df['Needs Info Updated?'] != 'N')]
-        to_create_df = df[df['AccountId'].isnull()]
-        bdg_update_df = df[(df['AccountId'].notnull()) & (
-            df['Licenses'].str.contains('Series 7') | df['Licenses'].str.contains('Series 22'))]
-
-        dict_elements['n_no_update'] = len(no_update_df.index)
-        dict_elements['n_to_update'] = len(to_update_df.index)
-        dict_elements['n_to_create'] = len(to_create_df.index)
-        dict_elements['n_bdg_update'] = len(bdg_update_df.index)
-
-        save_df(df=no_update_df, path=dict_elements['no_update_path'])
-        save_df(df=to_update_df, path=dict_elements['update_path'])
-        save_df(df=to_create_df, path=dict_elements['to_create_path'])
-        save_df(df=bdg_update_df, path=dict_elements['bdg_update_path'])
-        files_created = ['no_update_path', 'update_path', 'to_create_path', 'bdg_update_path']
+        dict_elements, files_created = bdgs.parse(path=path, frame=df, dict_elements=dict_elements)
 
     log.info('Parsed the %s list in to the the below files: %s' % (l_type, '\n'.join(files_created)))
     return dict_elements
@@ -117,58 +73,13 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
     list_df = read_df(path)
 
     if obj == 'Account' and is_path(path):
-        if path[-14:] == 'to_create.xlsx':
-            list_df['AccountId'] = None
-            list_df['SourceChannel'] = None
-        sc_to_add = 'firm_' + record_name + '_' + yyyy_mm
-        list_df = drop_unneeded_columns(list_df, obj)
-        new_contact_df = list_df[list_df['AccountId'].isnull()]
-        crd_sc = new_contact_df[['CRDNumber', 'SourceChannel']]
-        to_create = len(new_contact_df.index)
-        list_df.loc[list_df['AccountId'].isnull(), 'AccountId'] = obj_id
-        list_df.loc[list_df['AccountId'].notnull(), 'AccountId'] = obj_id
-        list_df.loc[list_df['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
-
-        list_df = list_df.merge(crd_sc, how='left', on='CRDNumber')
-        del list_df['SourceChannel_y']
-        list_df.rename(columns={'SourceChannel_x': 'SourceChannel'}, inplace=True)
-        move_to_bulk = determine_move_to_bulk_processing(list_df)
-        del crd_sc
-        del new_contact_df
+        frame, move_to_bulk, to_create = accounts.make_sc(path, list_df, record_name, obj_id, obj)
 
     elif obj == 'Campaign':
-        sc_to_add = 'conference_' + record_name + '_' + yyyy_mm
-        if 'to_create_path' in path:
-            list_df = drop_unneeded_columns(list_df, obj)
-            to_create = 0
-            list_df.loc[list_df['AccountId'].isnull(), 'AccountId'] = obj_id
-            list_df.loc[list_df['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
-            move_to_bulk = determine_move_to_bulk_processing(list_df)
-            if move_to_bulk:
-                save_conf_creation_meta(sc=sc_to_add, objid=obj_id, status=list_df.iloc[0, 0])
-        else:
-            list_df = drop_unneeded_columns(list_df, obj, create=False)
-            to_create = 0
-            list_df['CampaignId'] = obj_id
+        frame, move_to_bulk, to_create = campaigns.make_sc(path, list_df, record_name, obj_id, obj)
 
     elif obj == 'BizDev Group':
-        sc_to_add = 'bdg_' + record_name + '_' + yyyy_mm
-        if 'to_create_path' in path:
-            list_df = drop_unneeded_columns(list_df, obj)
-            to_create = len(list_df.index)
-            list_df.loc[list_df['AccountId'].isnull(), 'AccountId'] = aid
-            list_df.loc[list_df['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
-        elif 'bdg_update_path' in path:
-            list_df = drop_unneeded_columns(list_df, obj, bdg=True)
-            to_create = 0
-            list_df['BizDev Group'] = obj_id
-        else:
-            list_df = drop_unneeded_columns(list_df, obj)
-            to_create = 0
-            list_df['AccountId'] = aid
-            list_df['BizDev Group'] = obj_id
-
-        move_to_bulk = determine_move_to_bulk_processing(list_df)
+        frame, move_to_bulk, to_create = bdgs.make_sc(path, list_df, record_name, obj_id, obj, aid)
 
     n_head = ['Phone', 'Fax']
     for ph in n_head:
