@@ -2,7 +2,7 @@ from ListManagement.utility import gen_helper as ghelp
 from ListManagement.utility import pandas_helper as phelp
 
 
-def parse_bdg(path, frame, dict_elements):
+def parse(path, frame, dict_elements):
     dict_elements['no_update_path'] = ghelp.create_path_name(path=path, new_name='no_updates')
     dict_elements['update_path'] = ghelp.create_path_name(path=path, new_name='to_update')
     dict_elements['to_create_path'] = ghelp.create_path_name(path=path, new_name='to_create')
@@ -27,7 +27,7 @@ def parse_bdg(path, frame, dict_elements):
     return dict_elements, files_created
 
 
-def make_sc_bdg(path, frame, record_name, obj_id, obj, aid):
+def make_sc(path, frame, record_name, obj_id, obj, aid):
     sc_to_add = 'bdg_' + record_name + '_' + ghelp.yyyy_mm
     if 'to_create_path' in path:
         frame = ghelp.drop_unneeded_columns(frame, obj)
@@ -45,4 +45,4 @@ def make_sc_bdg(path, frame, record_name, obj_id, obj, aid):
         frame['BizDev Group'] = obj_id
 
     move_to_bulk = ghelp.determine_move_to_bulk_processing(frame)
-    return frame, move_to_bulk
+    return frame, move_to_bulk, to_create

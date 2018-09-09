@@ -2,7 +2,7 @@ from ListManagement.utility import gen_helper as ghelp
 from ListManagement.utility import pandas_helper as phelp
 
 
-def parse_cmp(path, frame, dict_elements, event_timing):
+def parse(path, frame, dict_elements, event_timing):
     if event_timing == 'Post':
         dict_elements['cmp_status'] = 'Needs Follow-Up'
     else:
@@ -23,7 +23,7 @@ def parse_cmp(path, frame, dict_elements, event_timing):
     return dict_elements, files_created
 
 
-def make_sc_cmp(path, frame, record_name, obj_id, obj):
+def make_sc(path, frame, record_name, obj_id, obj):
     move_to_bulk = False
     sc_to_add = 'conference_' + record_name + '_' + ghelp.yyyy_mm
     if 'to_create_path' in path:
@@ -38,4 +38,4 @@ def make_sc_cmp(path, frame, record_name, obj_id, obj):
         list_df = ghelp.drop_unneeded_columns(frame, obj, create=False)
         to_create = 0
         list_df['CampaignId'] = obj_id
-    return frame, move_to_bulk
+    return frame, move_to_bulk, to_create
