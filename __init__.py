@@ -8,4 +8,4 @@ from .stats.record_stats import record_processing_stats
 from .utility.email_reader import MailBoxReader
 
 
-__version__ = '3.0'
+__version__ = '4.0a'
