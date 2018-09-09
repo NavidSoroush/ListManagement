@@ -4,11 +4,11 @@ from PythonUtilities.LoggingUtility import Logging
 from PythonUtilities.EmailHandling import EmailHandler as Email
 
 from ListManagement.config import Config as con
-from ListManagement.finra.api import Finra
-from ListManagement.search.Search import Search
+from ListManagement.search.finra import Finra
+from ListManagement.search.salesforce import Search
 from ListManagement.utility import MailBoxReader
 from ListManagement.utility.email_helper import lists_in_queue
-from ListManagement.stats.record_stats import record_processing_stats
+from ListManagement.utility.record_stats import record_processing_stats
 from ListManagement.utility import drop_in_bulk_processing, last_list_uploaded_data, is_path
 from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
 from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
