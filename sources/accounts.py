@@ -2,7 +2,7 @@ from ListManagement.utility import gen_helper as ghelp
 from ListManagement.utility import pandas_helper as phelp
 
 
-def parse_acct(path, frame, dict_elements):
+def parse(path, frame, dict_elements):
     dict_elements['no_update_path'] = ghelp.create_path_name(path, 'no_updates')
     dict_elements['update_path'] = ghelp.create_path_name(path, 'to_update')
 
@@ -18,7 +18,7 @@ def parse_acct(path, frame, dict_elements):
     return dict_elements, files_created
 
 
-def make_sc_acct(path, frame, record_name, obj_id, obj):
+def make_sc(path, frame, record_name, obj_id, obj):
     if path[-14:] == 'to_create.xlsx':
         frame['AccountId'] = None
         frame['SourceChannel'] = None
@@ -37,4 +37,4 @@ def make_sc_acct(path, frame, record_name, obj_id, obj):
     move_to_bulk = ghelp.determine_move_to_bulk_processing(frame)
     del crd_sc
     del new_contact_df
-    return frame, move_to_bulk
+    return frame, move_to_bulk, to_create
