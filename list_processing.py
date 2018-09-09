@@ -136,7 +136,7 @@ class ListProcessing:
         try:
             self.finra_search_and_search_two()
         except:
-            self._log.info('An error occured during FINRA or SearchTwo processing. Skipping.')
+            self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
             pass
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log,
@@ -178,7 +178,7 @@ class ListProcessing:
         try:
             self.finra_search_and_search_two()
         except:
-            self._log.info('An error occured during FINRA or SearchTwo processing, Skipping.')
+            self._log.info('An error occurred during FINRA or SearchTwo processing, Skipping.')
             pass
         self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
         self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
@@ -189,8 +189,8 @@ class ListProcessing:
             self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
                                                      upload_data=[llu_data])
         except:
-            self._log.warn('A non-fatal error occured during the Last List Upload'
-                           'of the %s object for Id %s. The valus were %s.' % (self.vars['Object'],
+            self._log.warn('A non-fatal error occurred during the Last List Upload'
+                           'of the %s object for Id %s. The values were %s.' % (self.vars['Object'],
                                                                                self.vars['ObjectId'],
                                                                                llu_data))
 
