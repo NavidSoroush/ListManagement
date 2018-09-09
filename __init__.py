@@ -5,7 +5,6 @@ from .ml.header_predictions import predict_headers_and_pre_processing
 from .ml.model import HeaderPredictions
 from .search.Search import Search
 from .stats.record_stats import record_processing_stats
-from .utility.log_helper import ListManagementLogger
 from .utility.email_reader import MailBoxReader
 
 
