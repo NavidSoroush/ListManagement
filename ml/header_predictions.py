@@ -65,7 +65,7 @@ def predict_headers_and_pre_processing(path, obj, log):
     # clean up this part of the code
     new_data = make_df(data=new_headers, columns=('Header Value', 'Class'))
     num_records = len(model.p_df.index)
-    new_brain = concat_dfs(read_df(model.brain), new_data)
+    new_brain = concat_dfs([read_df(model.brain), new_data])
     save_df(new_brain, model.brain)
     save_df(df=model.p_df, path=path)
 
