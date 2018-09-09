@@ -21,11 +21,8 @@ def save_df(df, path):
     df.to_excel(path, index=False)
 
 
-def concat_dfs(df1, df2, df3=None):
-    if df3 is not None:
-        return pd.concat([df1, df2, df3])
-    else:
-        return pd.concat([df1, df2])
+def concat_dfs(df_list):
+    return pd.concat(df_list)
 
 
 def make_df(data=None, columns=None):
