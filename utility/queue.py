@@ -7,8 +7,8 @@ _LIST_FIELDS = ['Id', 'Related_Account__c', 'Related_BizDev_Group__c',
                 'IsDeleted', 'Status__c']
 _LIST_WHERE = "Status__c='In Queue'"
 
-_OBJ_MAP = {'Attachment': {'fields': ['Id, CreatedDate', 'Name', 'ParentId'],
-                           'where_stmt': "ParentId='{0}' and Name='{1}'",
+_OBJ_MAP = {'Attachment': {'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
+                           'where_stmt': "ParentId='{0}' AND Name='{1}'",
                            'rename': {'Id': 'AttachmentId', 'Name': 'File_Name__c', 'ParentId': 'ObjectId'},
                            'merge_on': ['ObjectId', 'File_Name__c'],
                            'where_vars': ['ObjectId', 'File_Name__c']
@@ -23,14 +23,15 @@ _OBJ_MAP = {'Attachment': {'fields': ['Id, CreatedDate', 'Name', 'ParentId'],
                              'where_stmt': "Id='{0}'",
                              'rename': {'Id': 'ObjectId', 'Name': 'Record Name'},
                              'merge_on': 'ObjectId',
-                             'where_vars': 'ObjectId'},
+                             'where_vars': ['ObjectId']
+                             },
             }
 
 _STATIC_VARIABLES = {
     'Next Step': 'Pre-processing', 'Found Path': None, 'Found in SFDC Search #2': 0, 'Num Adding': 0,
     'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': None, 'process_start': _dt.datetime.now(),
     'CmpAccountName': None, 'CmpAccountID': None, 'Campaign Start Date': None, 'Pre_or_Post': None,
-    'ExtensionType': None,
+    'ExtensionType': None, 'File Path': None,
 }
 
 
@@ -70,13 +71,12 @@ def _build_clause(row, obj):
     Returns
     -------
         A populated, dynamic, string; used in a SOQL where clause.
-
     """
     if len(_OBJ_MAP[obj]['where_vars']) > 1:
         clause = _OBJ_MAP[obj]['where_stmt'].format(
             row[_OBJ_MAP[obj]['where_vars'][0]], row[_OBJ_MAP[obj]['where_vars'][1]])
     elif len(_OBJ_MAP[obj]['where_vars']) == 1:
-        clause = _OBJ_MAP[obj]['where_stmt'].format(row[_OBJ_MAP[obj]['where_vars']])
+        clause = _OBJ_MAP[obj]['where_stmt'].format(row[_OBJ_MAP[obj]['where_vars'][0]])
     else:
         clause = _OBJ_MAP[obj]['where_stmt']
     return clause
@@ -102,16 +102,13 @@ def _get_metadata_ids(sfdc, frame=None, obj=None, parent_obj=None):
     Returns
     -------
         Metadata regarding a Salesforce object, as defined by _OBJ_MAP['fields'] values.
-
     """
-    # TODO: make this function work. Practically it should, but there's a pandas error that doesn't make sense.
     assert obj in _OBJ_MAP
     if parent_obj is not None:
         obj = parent_obj
     meta_dfs = list()
     for index, row in frame.iterrows():
         clause = _build_clause(row, obj)
-        print(clause)
         queried_data = sfdc.query(obj, _OBJ_MAP[obj]['fields'], where=clause)
         if len(queried_data.index) > 0:
             meta_dfs.append(queried_data)
@@ -145,15 +142,12 @@ def _get_attachments(sfdc, frame):
                                                                                      obj=row['Object'],
                                                                                      obj_url=row['ObjectId'])
         ext_len, ext = _ghelp.determine_ext(f_name=file_path)
-        # ReturnDict('CmpAccountName', a_name), ReturnDict('CmpAccountID', a_id),
-        # ReturnDict('Campaign Start Date', start_date), ReturnDict('Pre_or_Post', pre_or_post),
-        # ReturnDict('ExtensionType', ext)]
-        row.loc[index, 'File Path'] = file_path
-        row.loc[index, 'Campaign Start Date'] = start_date
-        row.loc[index, 'Pre_or_Post'] = pre_or_post
-        row.loc[index, 'CmpAccountName'] = a_name
-        row.loc[index, 'CmpAccountID'] = a_id
-        row.loc[index, 'ExtensionType'] = ext
+        row['File Path'] = file_path
+        row['Campaign Start Date'] = start_date
+        row['Pre_or_Post'] = pre_or_post
+        row['CmpAccountName'] = a_name
+        row['CmpAccountID'] = a_id
+        row['ExtensionType'] = ext
     return frame
 
 
@@ -163,8 +157,10 @@ def build_queue(sfdc, log=None):
 
     Parameters
     ----------
-    sf_session
-        PythonUtilities.salesforcipy session to interact with Salesforce via REST.
+    sfdc
+        Authenticated Salesforce REST API session.
+    log
+        log object.
 
     Returns
     -------
@@ -172,12 +168,12 @@ def build_queue(sfdc, log=None):
     """
     data = sfdc.query('List__c', fields=_LIST_FIELDS, where=_LIST_WHERE)
     if len(data.index) == 0:
-        return dict()
+        return list()
     else:
         # establish all of L.I.M.A.'s required variables.
         for k, v in _STATIC_VARIABLES.items():
             data.loc[:, k] = v
-        data[:, 'SFDC Session'] = sfdc
+        data.loc[:, 'SFDC Session'] = sfdc
 
         data.loc[:, 'ObjectId'] = data.Related_Campaign__c.combine_first(
             data.Related_BizDev_Group__c.combine_first(data.Related_Account__c))
@@ -186,9 +182,18 @@ def build_queue(sfdc, log=None):
         data = _get_metadata_ids(sfdc, data, 'Attachment')
         data = _get_metadata_ids(sfdc, data, 'User')
         data = _get_attachments(sfdc, data)
-        return data.to_dict()
+        return data.to_dict('rows')
 
-# if __name__ == '__main__':
-#     from PythonUtilities.salesforcipy import SFPy
-#     sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=None, domain=con.SFDomain)
-#     extract_queue(sfdc)
+
+"""
+For testing
+
+import sys
+sys.path.append('C:/AllShare/GitHub')
+from ListManagement.utility import queue
+from PythonUtilities.salesforcipy import SFPy
+from ListManagement.config import Config as con
+sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False)
+
+queue.build_queue(sfdc)
+"""
