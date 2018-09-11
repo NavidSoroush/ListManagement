@@ -182,6 +182,7 @@ def build_queue(sfdc, log=None):
         data = _get_metadata_ids(sfdc, data, 'Attachment')
         data = _get_metadata_ids(sfdc, data, 'User')
         data = _get_attachments(sfdc, data)
+        data.insert(0, 'ListIndex', range(0, 0 + len(data)))
         return data.to_dict('rows')
 
 
