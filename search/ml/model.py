@@ -12,7 +12,7 @@ import pickle
 
 try:
     from ListManagement.utility.pandas_helper import read_df
-    from ListManagement.utility.gen_helper import path_leaf, lower_head_values
+    from ListManagement.utility.general import path_leaf, lower_head_values
 except:
     from utility.pandas_helper import read_df
     from utility.gen_helper import path_leaf, lower_head_values
