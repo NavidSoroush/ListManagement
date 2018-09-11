@@ -32,7 +32,8 @@ class ListProcessing:
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
-        tmp_sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False)
+        tmp_sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False,
+                        _dir=con.BaseDir)
         self.vars = queue.build_queue(tmp_sfdc, self._log)
         self.main_contact_based_processing()
 
@@ -54,7 +55,7 @@ class ListProcessing:
         :return: 
         """
         for _vars in self.vars:
-            if not self.is_bad_extension():
+            if not self.is_bad_extension(_vars):
                 try:
                     if _vars['Object'] == 'Campaign':
                         _vars = self.campaign_processing(_vars)
@@ -73,7 +74,7 @@ class ListProcessing:
                 finally:
                     self._log.info('List #%s processed.' % _vars['ListIndex'])
 
-    def is_bad_extension(self):
+    def is_bad_extension(self, _vars):
         """
         used to determine if the file type (based on the file extension) can be processed by the program.
         
@@ -82,21 +83,21 @@ class ListProcessing:
         
         :return: boolean
         """
-        if self.vars['ExtensionType'] in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
-            if self.vars['CmpAccountName'] is None:
-                obj_name = self.vars['Record Name']
+        if _vars['ExtensionType'] in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
+            if _vars['CmpAccountName'] is None:
+                obj_name = _vars['Record Name']
             else:
-                obj_name = self.vars['CmpAccountName']
+                obj_name = _vars['CmpAccountName']
             sub = 'LMA: Unable to Process List Attached to %s' % obj_name
             msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
-                  'List Management App.' % (obj_name, self.vars['ExtensionType'])
+                  'List Management App.' % (obj_name, _vars['ExtensionType'])
             self._log.warning(msg)
             Email(con.SMTPUser, con.SMTPPass, self._log).send_new_email(
-                subject=sub, to=[self.vars['Sender Email']], body=msg, attachments=None
+                subject=sub, to=[_vars['Sender Email']], body=msg, attachments=None
                 , name=con.FullName
             )
-            self.vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
-                                                     upload_data=[[self.vars['ListObjId'], 'Unable to Process']])
+            _vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
+                                                 upload_data=[[_vars['ListObjId'], 'Unable to Process']])
             return True
         else:
             return False
