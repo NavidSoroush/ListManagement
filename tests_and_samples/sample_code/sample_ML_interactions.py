@@ -1,6 +1,6 @@
-from ListManagement.ml.header_predictions import HeaderPredictions
+from ListManagement.search.ml.header_predictions import HeaderPredictions
 from ListManagement.utility.log_helper import ListManagementLogger
-from ListManagement.utility.gen_helper import duration, time
+from ListManagement.utility.general import duration, time
 
 log = ListManagementLogger().logger
 
