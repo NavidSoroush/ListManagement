@@ -8,8 +8,6 @@ from ListManagement.config import Config as con
 from ListManagement.search.finra import Finra
 from ListManagement.search.salesforce import Search
 from ListManagement.utility import queue
-from ListManagement.utility import MailBoxReader
-from ListManagement.utility.email_helper import lists_in_queue
 from ListManagement.utility.record_stats import record_processing_stats
 from ListManagement.utility import drop_in_bulk_processing, last_list_uploaded_data, is_path
 from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
@@ -20,7 +18,6 @@ _steps = [
     '\nSkipping step 6, because all contacts were found.',
     '\nSkipping email, LkupName, FINRA, and SEC searches.',
     '\nContacts will not be created. Not enough information provided.']
-_dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox', 'SFDC Session']
 
 
 # ensure_requirements_met()
@@ -35,10 +32,8 @@ class ListProcessing:
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
-        self._mailbox = MailBoxReader(log=self._log)
         tmp_sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False)
         self.vars = queue.build_queue(tmp_sfdc, self._log)
-        self.vars = self._mailbox.extract_pending_lists(self._mailbox.mailbox, self._mailbox.email_folder)
         self.main_contact_based_processing()
 
     def main_contact_based_processing(self):
@@ -62,13 +57,13 @@ class ListProcessing:
             if not self.is_bad_extension():
                 try:
                     if _vars['Object'] == 'Campaign':
-                        self.campaign_processing(_vars)
+                        _vars = self.campaign_processing(_vars)
 
                     elif _vars['Object'] == 'Account':
-                        self.account_processing(_vars)
+                        _vars = self.account_processing(_vars)
 
                     elif _vars['Object'] == 'BizDev Group':
-                        self.bizdev_processing(_vars)
+                        _vars = self.bizdev_processing(_vars)
 
                     record_processing_stats(_vars['Stats Data'])
 
@@ -144,6 +139,7 @@ class ListProcessing:
             drop_in_bulk_processing(_vars['to_create_path'], self._log)
         else:
             self._log.info(_steps[2])
+        return _vars
 
     def account_processing(self, _vars):
         """
@@ -200,6 +196,7 @@ class ListProcessing:
 
         else:
             self._log.info(_steps[2])
+        return _vars
 
     def bizdev_processing(self, _vars):
         """
@@ -260,6 +257,7 @@ class ListProcessing:
             drop_in_bulk_processing(_vars['update_path'], self._log)
         else:
             self._log.info(_steps[2])
+        return _vars
 
     def finra_search_and_search_two(self, _vars):
         """
@@ -289,8 +287,9 @@ class ListProcessing:
                                                              _vars['Object']))
         else:
             self._log.info(_steps[1])
+        return _vars
 
-    def create_log_record_of_current_list_data(self, msg, _vars):
+    def create_log_record_of_current_list_data(self, msg):
         self._log.warning('A fatal error has occurred. Refer to message traceback for insight into '
                           'the issue.')
         self._log.error(msg)
