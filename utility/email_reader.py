@@ -15,7 +15,7 @@ try:
     from .sf_helper import get_user_id
     from .gen_helper import determine_ext, date_parsing
     from .email_helper import *
-    from ..config import Config as con
+    from ListManagement.config import Config as con
 except (ModuleNotFoundError, ImportError):
     from ListManagement.utility.sf_helper import get_user_id
     from ListManagement.utility.gen_helper import determine_ext, date_parsing
