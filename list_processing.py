@@ -70,7 +70,7 @@ class ListProcessing:
                         elif self.vars['Object'] == 'BizDev Group':
                             self.bizdev_processing()
 
-                        self.vars.update(record_processing_stats(self.vars['Stats Data']))
+                        self.vars.update(_ghelp.record_processing_stats(self.vars['Stats Data']))
 
                     except:
                         self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
@@ -189,8 +189,8 @@ class ListProcessing:
         except:
             self._log.warn('A non-fatal error occurred during the Last List Upload'
                            'of the %s object for Id %s. The values were %s.' % (self.vars['Object'],
-                                                                               self.vars['ObjectId'],
-                                                                               llu_data))
+                                                                                self.vars['ObjectId'],
+                                                                                llu_data))
 
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'], log=self._log))
@@ -248,8 +248,8 @@ class ListProcessing:
         except:
             self._log.warn('A non-fatal error occurred during the Last List Upload'
                            'of the %s object for Id %s. The values were %s.' % (self.vars['Object'],
-                                                                               self.vars['ObjectId'],
-                                                                               llu_data))
+                                                                                self.vars['ObjectId'],
+                                                                                llu_data))
 
         self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
                                         self.vars['ObjectId'], self.vars['Object'],
