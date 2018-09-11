@@ -4,12 +4,10 @@ from PythonUtilities.LoggingUtility import Logging
 from PythonUtilities.EmailHandling import EmailHandler as Email
 
 from ListManagement.config import Config as con
-from ListManagement.search.finra import Finra
-from ListManagement.search.salesforce import Search
+from ListManagement.search import Finra, Search
 from ListManagement.utility import MailBoxReader
+from ListManagement.utility import gen_helper as _ghelp
 from ListManagement.utility.email_helper import lists_in_queue
-from ListManagement.utility.record_stats import record_processing_stats
-from ListManagement.utility import drop_in_bulk_processing, last_list_uploaded_data, is_path
 from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
 from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
     sfdc_upload
@@ -150,7 +148,7 @@ class ListProcessing:
                                      log=self._log))
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
+            _ghelp.drop_in_bulk_processing(self.vars['to_create_path'], self._log)
         else:
             self._log.info(_steps[2])
 
@@ -185,7 +183,7 @@ class ListProcessing:
                                                   pre_or_post=self.vars['Pre_or_Post'], log=self._log,
                                                   to_create_path=self.vars['to_create_path']))
         try:
-            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
+            llu_data = _ghelp.last_list_uploaded_data(self.vars['ObjectId'])
             self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
                                                      upload_data=[llu_data])
         except:
@@ -200,12 +198,12 @@ class ListProcessing:
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['update_path'], self._log)
-            if is_path(self.vars['to_create_path']):
+            _ghelp.drop_in_bulk_processing(self.vars['update_path'], self._log)
+            if _ghelp.is_path(self.vars['to_create_path']):
                 self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
                                                 self.vars['ObjectId'], self.vars['Object'],
                                                 self.vars['ObjectId'], log=self._log))
-                drop_in_bulk_processing(self.vars['to_create_path'], self._log)
+                _ghelp.drop_in_bulk_processing(self.vars['to_create_path'], self._log)
 
         else:
             self._log.info(_steps[2])
@@ -244,7 +242,7 @@ class ListProcessing:
                                      log=self._log))
 
         try:
-            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
+            llu_data = _ghelp.last_list_uploaded_data(self.vars['ObjectId'])
             self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
                                                      upload_data=[llu_data])
         except:
@@ -265,8 +263,8 @@ class ListProcessing:
         self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
 
         if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
-            drop_in_bulk_processing(self.vars['update_path'], self._log)
+            _ghelp.drop_in_bulk_processing(self.vars['to_create_path'], self._log)
+            _ghelp.drop_in_bulk_processing(self.vars['update_path'], self._log)
         else:
             self._log.info(_steps[2])
 
