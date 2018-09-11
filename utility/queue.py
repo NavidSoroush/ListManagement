@@ -142,12 +142,12 @@ def _get_attachments(sfdc, frame):
                                                                                      obj=row['Object'],
                                                                                      obj_url=row['ObjectId'])
         ext_len, ext = _ghelp.determine_ext(f_name=file_path)
-        row['File Path'] = file_path
-        row['Campaign Start Date'] = start_date
-        row['Pre_or_Post'] = pre_or_post
-        row['CmpAccountName'] = a_name
-        row['CmpAccountID'] = a_id
-        row['ExtensionType'] = ext
+        frame.at[index, 'File Path'] = file_path
+        frame.at[index, 'Campaign Start Date'] = start_date
+        frame.at[index, 'Pre_or_Post'] = pre_or_post
+        frame.at[index, 'CmpAccountName'] = a_name
+        frame.at[index, 'CmpAccountID'] = a_id
+        frame.at[index, 'ExtensionType'] = ext
     return frame
 
 
