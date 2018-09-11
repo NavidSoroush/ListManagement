@@ -8,7 +8,11 @@ except:
 _confidence = .99
 
 
-def predict_headers_and_pre_processing(path, obj, log):
+def _update_column_names_with_predictions():
+    pass
+
+
+def predict_headers_and_pre_processing(path, obj, log, mode):
     model = HeaderPredictions(log=log, use_saved=True)
     model.predict(predict_path=path, obj=obj)
     headers = model.p_df.columns.values

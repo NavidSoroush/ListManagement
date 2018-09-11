@@ -23,11 +23,12 @@ _dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox'
 
 
 class ListProcessing:
-    def __init__(self):
+    def __init__(self, mode='manual'):
         """
         declare and set global objects that are leveraged through the
         actually processing of lists.
         """
+        self.mode = mode
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
