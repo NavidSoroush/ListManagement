@@ -2,10 +2,12 @@ import traceback
 
 from PythonUtilities.LoggingUtility import Logging
 from PythonUtilities.EmailHandling import EmailHandler as Email
+from PythonUtilities.salesforcipy import SFPy
 
 from ListManagement.config import Config as con
 from ListManagement.search.finra import Finra
 from ListManagement.search.salesforce import Search
+from ListManagement.utility import queue
 from ListManagement.utility import MailBoxReader
 from ListManagement.utility.email_helper import lists_in_queue
 from ListManagement.utility.record_stats import record_processing_stats
@@ -34,6 +36,8 @@ class ListProcessing:
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
         self._mailbox = MailBoxReader(log=self._log)
+        tmp_sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False)
+        self.vars = queue.build_queue(tmp_sfdc, self._log)
         self.vars = self._mailbox.extract_pending_lists(self._mailbox.mailbox, self._mailbox.email_folder)
         self.main_contact_based_processing()
 
@@ -54,38 +58,25 @@ class ListProcessing:
         
         :return: 
         """
+        for _vars in self.vars:
+            if not self.is_bad_extension():
+                try:
+                    if _vars['Object'] == 'Campaign':
+                        self.campaign_processing(_vars)
 
-        if lists_in_queue(var_list=self.vars):
-            while self.vars['Num_Processed'] < self.vars['Lists_In_Queue']:
-                np = self.vars['Num_Processed']
-                n = np + 1
+                    elif _vars['Object'] == 'Account':
+                        self.account_processing(_vars)
 
-                self.vars.update(self._mailbox.iterative_processing(self.vars['Lists_Data'][np]))
-                if not self.is_bad_extension():
-                    try:
-                        if self.vars['Object'] == 'Campaign':
-                            self.campaign_processing()
+                    elif _vars['Object'] == 'BizDev Group':
+                        self.bizdev_processing(_vars)
 
-                        elif self.vars['Object'] == 'Account':
-                            self.account_processing()
+                    record_processing_stats(_vars['Stats Data'])
 
-                        elif self.vars['Object'] == 'BizDev Group':
-                            self.bizdev_processing()
+                except:
+                    self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
 
-                        self.vars.update(record_processing_stats(self.vars['Stats Data']))
-
-                    except:
-                        self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
-
-                    finally:
-                        np += 1
-                        self.vars.update({'Num_Processed': n})
-                        self._log.info('List #%s processed.' % self.vars['Num_Processed'])
-                        for k, v in self.vars.items():
-                            if k not in _dict_keys_to_keep:
-                                self.vars[k] = None
-
-            self._mailbox.close_mailbox()
+                finally:
+                    self._log.info('List #%s processed.' % _vars['ListIndex'])
 
     def is_bad_extension(self):
         """
@@ -115,7 +106,7 @@ class ListProcessing:
         else:
             return False
 
-    def campaign_processing(self):
+    def campaign_processing(self, _vars):
         """
         handles list processing for the campaign object. processing steps below.
         
@@ -130,31 +121,31 @@ class ListProcessing:
         
         :return: n/a
         """
-        self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], self._log))
-        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        _vars.update(predict_headers_and_pre_processing(_vars['File Path'],
+                                                        _vars['CmpAccountName'], self._log))
+        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
-            self.finra_search_and_search_two()
+            self.finra_search_and_search_two(_vars)
         except:
             self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
             pass
-        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
-                                                  to_create_path=self.vars['to_create_path']))
-        self.vars.update(source_channel(self.vars['cmp_upload_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'], log=self._log))
-        self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                        self.vars['CmpAccountID'], self.vars['Object'], log=self._log))
-        self.vars.update(sfdc_upload(path=self.vars['cmp_upload_path'], obj=self.vars['Object'],
-                                     obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
-                                     log=self._log))
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
-        if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
+        _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                              pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                              to_create_path=_vars['to_create_path']))
+        _vars.update(source_channel(_vars['cmp_upload_path'], _vars['Record Name'],
+                                    _vars['ObjectId'], _vars['Object'], log=self._log))
+        _vars.update(source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                    _vars['CmpAccountID'], _vars['Object'], log=self._log))
+        _vars.update(sfdc_upload(path=_vars['cmp_upload_path'], obj=_vars['Object'],
+                                 obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
+                                 log=self._log))
+        _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
+        if _vars['Move To Bulk']:
+            drop_in_bulk_processing(_vars['to_create_path'], self._log)
         else:
             self._log.info(_steps[2])
 
-    def account_processing(self):
+    def account_processing(self, _vars):
         """
         handles list processing for the account object. processing steps below.
         
@@ -171,46 +162,46 @@ class ListProcessing:
         
         :return: n/a
         """
-        self.vars.update(
-            predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
+        _vars.update(
+            predict_headers_and_pre_processing(_vars['File Path'], _vars['Record Name'],
                                                log=self._log))
-        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
-            self.finra_search_and_search_two()
+            self.finra_search_and_search_two(_vars)
         except:
             self._log.info('An error occurred during FINRA or SearchTwo processing, Skipping.')
             pass
-        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
-        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
-                                                  to_create_path=self.vars['to_create_path']))
+        _vars.update(self._finra_api.scrape(_vars['Found Path'], scrape_type='all'))
+        _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                              pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                              to_create_path=_vars['to_create_path']))
         try:
-            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
-            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
-                                                     upload_data=[llu_data])
+            llu_data = last_list_uploaded_data(_vars['ObjectId'])
+            _vars['SFDC Session'].update_records(obj=_vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
+                                                 upload_data=[llu_data])
         except:
             self._log.warn('A non-fatal error occurred during the Last List Upload'
-                           'of the %s object for Id %s. The values were %s.' % (self.vars['Object'],
-                                                                               self.vars['ObjectId'],
-                                                                               llu_data))
+                           'of the %s object for Id %s. The values were %s.' % (_vars['Object'],
+                                                                                _vars['ObjectId'],
+                                                                                llu_data))
 
-        self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'], log=self._log))
+        _vars.update(source_channel(_vars['update_path'], _vars['Record Name'],
+                                    _vars['ObjectId'], _vars['Object'], log=self._log))
 
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
+        _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
 
-        if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['update_path'], self._log)
-            if is_path(self.vars['to_create_path']):
-                self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                                self.vars['ObjectId'], self.vars['Object'],
-                                                self.vars['ObjectId'], log=self._log))
-                drop_in_bulk_processing(self.vars['to_create_path'], self._log)
+        if _vars['Move To Bulk']:
+            drop_in_bulk_processing(_vars['update_path'], self._log)
+            if is_path(_vars['to_create_path']):
+                _vars.update(source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                            _vars['ObjectId'], _vars['Object'],
+                                            _vars['ObjectId'], log=self._log))
+                drop_in_bulk_processing(_vars['to_create_path'], self._log)
 
         else:
             self._log.info(_steps[2])
 
-    def bizdev_processing(self):
+    def bizdev_processing(self, _vars):
         """
         handles list processing for the bizdev object. processing steps below.
 
@@ -227,50 +218,50 @@ class ListProcessing:
  
         :return: n/a
         """
-        self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], log=self._log))
-        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
+        _vars.update(predict_headers_and_pre_processing(_vars['File Path'],
+                                                        _vars['CmpAccountName'], log=self._log))
+        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
-            self.finra_search_and_search_two()
+            self.finra_search_and_search_two(_vars)
         except:
             self._log.info('An error occured during FINRA or SearchTwo processing.')
             pass
-        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all', save=True))
-        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
-                                                  to_create_path=self.vars['to_create_path']))
-        self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
-                                     obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
-                                     log=self._log))
+        _vars.update(self._finra_api.scrape(_vars['Found Path'], scrape_type='all', save=True))
+        _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                              pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                              to_create_path=_vars['to_create_path']))
+        _vars.update(sfdc_upload(path=_vars['bdg_update_path'], obj=_vars['Object'],
+                                 obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
+                                 log=self._log))
 
         try:
-            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
-            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
-                                                     upload_data=[llu_data])
+            llu_data = last_list_uploaded_data(_vars['ObjectId'])
+            _vars['SFDC Session'].update_records(obj=_vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
+                                                 upload_data=[llu_data])
         except:
             self._log.warn('A non-fatal error occurred during the Last List Upload'
-                           'of the %s object for Id %s. The values were %s.' % (self.vars['Object'],
-                                                                               self.vars['ObjectId'],
-                                                                               llu_data))
+                           'of the %s object for Id %s. The values were %s.' % (_vars['Object'],
+                                                                                _vars['ObjectId'],
+                                                                                llu_data))
 
-        self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self._log))
-        self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self._log))
-        self.vars.update(source_channel(self.vars['bdg_update_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self._log))
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
+        _vars.update(source_channel(_vars['update_path'], _vars['Record Name'],
+                                    _vars['ObjectId'], _vars['Object'],
+                                    _vars['CmpAccountID'], log=self._log))
+        _vars.update(source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                    _vars['ObjectId'], _vars['Object'],
+                                    _vars['CmpAccountID'], log=self._log))
+        _vars.update(source_channel(_vars['bdg_update_path'], _vars['Record Name'],
+                                    _vars['ObjectId'], _vars['Object'],
+                                    _vars['CmpAccountID'], log=self._log))
+        _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
 
-        if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
-            drop_in_bulk_processing(self.vars['update_path'], self._log)
+        if _vars['Move To Bulk']:
+            drop_in_bulk_processing(_vars['to_create_path'], self._log)
+            drop_in_bulk_processing(_vars['update_path'], self._log)
         else:
             self._log.info(_steps[2])
 
-    def finra_search_and_search_two(self):
+    def finra_search_and_search_two(self, _vars):
         """
         this method handles helps to decide if FINRA scraping or searching SalesForce a 2nd time
         is necessary.
@@ -280,29 +271,28 @@ class ListProcessing:
         
         :return: n/a
         """
-        if self.vars['SFDC_Found'] < self.vars['Total Records'] \
-                and self.vars['FINRA?']:
+        if _vars['SFDC_Found'] < _vars['Total Records'] \
+                and _vars['FINRA?']:
 
-            self.vars.update(self._finra_api.scrape(path=self.vars['File Path'],
-                                                    scrape_type='crd',
-                                                    parse_list=True))
-            if (self.vars['SFDC_Found'] + self.vars['FINRA_Found']) < self.vars['Total Records']:
-                self.vars.update(
-                    self._search_api.perform_sec_search(self.vars['No CRD'], self.vars['FINRA_SEC Found']))
+            _vars.update(self._finra_api.scrape(path=_vars['File Path'],
+                                                scrape_type='crd',
+                                                parse_list=True))
+            if (_vars['SFDC_Found'] + _vars['FINRA_Found']) < _vars['Total Records']:
+                _vars.update(
+                    self._search_api.perform_sec_search(_vars['No CRD'], _vars['FINRA_SEC Found']))
 
             else:
                 self._log.info(_steps[0])
 
-            self.vars.update(self._search_api.perform_search_two(self.vars['FINRA_SEC Found'],
-                                                                 self.vars['Found Path'],
-                                                                 self.vars['Object']))
+            _vars.update(self._search_api.perform_search_two(_vars['FINRA_SEC Found'],
+                                                             _vars['Found Path'],
+                                                             _vars['Object']))
         else:
             self._log.info(_steps[1])
 
-    def create_log_record_of_current_list_data(self, msg):
-        self._log.warning('A fatal error has occured. Printing out necessary data to restart the program and'
-                          'complete it manually.')
-        self._log.info(self.vars)
+    def create_log_record_of_current_list_data(self, msg, _vars):
+        self._log.warning('A fatal error has occurred. Refer to message traceback for insight into '
+                          'the issue.')
         self._log.error(msg)
         raise RuntimeError(msg)
 
