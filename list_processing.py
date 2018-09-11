@@ -6,9 +6,9 @@ from PythonUtilities.EmailHandling import EmailHandler as Email
 from ListManagement.config import Config as con
 from ListManagement.search import Finra, Search
 from ListManagement.utility import MailBoxReader
-from ListManagement.utility import gen_helper as _ghelp
+from ListManagement.utility import general as _ghelp
 from ListManagement.utility.email_helper import lists_in_queue
-from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
+from ListManagement.search.ml.header_predictions import predict_headers_and_pre_processing
 from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
     sfdc_upload
 
