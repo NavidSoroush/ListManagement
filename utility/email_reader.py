@@ -103,6 +103,9 @@ class MailBoxReader:
         attachment_reader(remove=True)
 
     def iterative_processing(self, msg_list):
+        warnings.warn('This method will be remove in version 4.0. For gathering necessary '
+                      'meta-data for a list, use the build_queue method found in /utility/queue.py',
+                      PendingDeprecationWarning)
         msg = msg_list[0]
         msg_body = msg_list[1]
         msg_id = msg_list[2]
