@@ -5,7 +5,7 @@ import numpy as np
 
 try:
     from ListManagement.legacy.get_sf_adv_list import run
-    from ListManagement.utility.gen_helper import create_path_name, today
+    from ListManagement.utility.general import create_path_name, today
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df, is_null
 except:
     from legacy.get_sf_adv_list import run

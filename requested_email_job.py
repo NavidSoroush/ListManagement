@@ -7,7 +7,7 @@ try:
 except ModuleNotFoundError:
     from ListManagement.utility.email_reader import MailBoxReader
     from ListManagement.utility.log_helper import ListManagementLogger
-    from ListManagement.utility.gen_helper import duration, time
+    from ListManagement.utility.general import duration, time
 
 
 log = ListManagementLogger().logger

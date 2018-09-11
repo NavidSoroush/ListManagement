@@ -8,7 +8,7 @@ from lxml.html import fromstring
 try:
     from utility.gen_helper import determine_ext
 except ModuleNotFoundError:
-    from ListManagement.utility.gen_helper import determine_ext
+    from ListManagement.utility.general import determine_ext
 
 objects = ['Campaign', 'BizDev Group', 'Account']
 list_notification_elements = [
