@@ -29,39 +29,42 @@ def predict_headers_and_pre_processing(path, obj, log, mode):
 
     new_headers = []
     for index, row in need_validation.iterrows():
-        if model.probability[index] > _confidence:
-            tmp = [row['Header Value'], row['Class']]
-            new_headers.append(tmp)
-            model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
-        else:
-            log.info("\nHeader given: '%s'"
-                     "\nMy prediction: '%s'"
-                     "\nMy confidence: %s." % (str(row['Header Value']), str(row['Class']),
-                                               "{0:.0f}%".format(model.probability[index] * 100)))
-            was_i_right = ""
-            while was_i_right.lower not in ('y', 'n'):
-                was_i_right = input("Was I right? Please just put 'Y' or 'N'.\n")
-                if was_i_right.lower() == 'y':
-                    tmp = [row['Header Value'], row['Class']]
-                    new_headers.append(tmp)
-                    log.info("Thanks. Updating your file and my training data.\n")
-                    break
-                elif was_i_right.lower() == 'n':
-                    expected = ""
-                    while expected not in expected_inputs:
-                        log.info("Can you tell me what it should have been?\n")
-                        expected = input("\n".join(expected_inputs) + '\n\n')
-                        if expected in expected_inputs:
-                            tmp = [row['Header Value'], expected]
-                            new_headers.append(tmp)
-                            log.info("Thanks. Updating your file and my training data.\n")
-                            break
-                        else:
-                            log.info("Sorry, I think you typed a value wrong.")
-                    break
-                else:
-                    log.info("I don't think you typed 'Y' or 'N', can you try again?")
+        if mode != 'auto':
+            if model.probability[index] > _confidence:
+                tmp = [row['Header Value'], row['Class']]
+                new_headers.append(tmp)
+                model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
+            else:
+                log.info("\nHeader given: '%s'"
+                         "\nMy prediction: '%s'"
+                         "\nMy confidence: %s." % (str(row['Header Value']), str(row['Class']),
+                                                   "{0:.0f}%".format(model.probability[index] * 100)))
+                was_i_right = ""
+                while was_i_right.lower not in ('y', 'n'):
+                    was_i_right = input("Was I right? Please just put 'Y' or 'N'.\n")
+                    if was_i_right.lower() == 'y':
+                        tmp = [row['Header Value'], row['Class']]
+                        new_headers.append(tmp)
+                        log.info("Thanks. Updating your file and my training data.\n")
+                        break
+                    elif was_i_right.lower() == 'n':
+                        expected = ""
+                        while expected not in expected_inputs:
+                            log.info("Can you tell me what it should have been?\n")
+                            expected = input("\n".join(expected_inputs) + '\n\n')
+                            if expected in expected_inputs:
+                                tmp = [row['Header Value'], expected]
+                                new_headers.append(tmp)
+                                log.info("Thanks. Updating your file and my training data.\n")
+                                break
+                            else:
+                                log.info("Sorry, I think you typed a value wrong.")
+                        break
+                    else:
+                        log.info("I don't think you typed 'Y' or 'N', can you try again?")
 
+                model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
+        else:
             model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
 
     model.p_df = pre_processing(df=model.p_df, obj=obj)
