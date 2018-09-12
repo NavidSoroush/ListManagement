@@ -8,8 +8,7 @@ from ListManagement.config import Config as con
 from ListManagement.search.finra import Finra
 from ListManagement.search.salesforce import Search
 from ListManagement.utility import queue
-from ListManagement.utility.record_stats import record_processing_stats
-from ListManagement.utility import drop_in_bulk_processing, last_list_uploaded_data, is_path
+from ListManagement.utility import general as _ghelp
 from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
 from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
     sfdc_upload
@@ -66,7 +65,7 @@ class ListProcessing:
                     elif _vars['Object'] == 'BizDev Group':
                         _vars = self.bizdev_processing(_vars)
 
-                    record_processing_stats(_vars['Stats Data'])
+                    _ghelp.record_processing_stats(_vars['Stats Data'])
 
                 except:
                     self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
@@ -125,7 +124,7 @@ class ListProcessing:
         except:
             self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
             pass
-          
+
         _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
                                               pre_or_post=_vars['Pre_or_Post'], log=self._log,
                                               to_create_path=_vars['to_create_path']))
@@ -138,7 +137,7 @@ class ListProcessing:
                                  log=self._log))
         _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
         if _vars['Move To Bulk']:
-            drop_in_bulk_processing(_vars['to_create_path'], self._log)
+            _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
         else:
             self._log.info(_steps[2])
         return _vars
@@ -174,7 +173,7 @@ class ListProcessing:
                                               pre_or_post=_vars['Pre_or_Post'], log=self._log,
                                               to_create_path=_vars['to_create_path']))
         try:
-            llu_data = last_list_uploaded_data(_vars['ObjectId'])
+            llu_data = _ghelp.last_list_uploaded_data(_vars['ObjectId'])
             _vars['SFDC Session'].update_records(obj=_vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
                                                  upload_data=[llu_data])
         except:
@@ -189,12 +188,12 @@ class ListProcessing:
         _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
 
         if _vars['Move To Bulk']:
-            drop_in_bulk_processing(_vars['update_path'], self._log)
-            if is_path(_vars['to_create_path']):
+            _ghelp.drop_in_bulk_processing(_vars['update_path'], self._log)
+            if _ghelp.is_path(_vars['to_create_path']):
                 _vars.update(source_channel(_vars['to_create_path'], _vars['Record Name'],
                                             _vars['ObjectId'], _vars['Object'],
                                             _vars['ObjectId'], log=self._log))
-                drop_in_bulk_processing(_vars['to_create_path'], self._log)
+                _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
 
         else:
             self._log.info(_steps[2])
@@ -234,7 +233,7 @@ class ListProcessing:
                                  log=self._log))
 
         try:
-            llu_data = last_list_uploaded_data(_vars['ObjectId'])
+            llu_data = _ghelp.last_list_uploaded_data(_vars['ObjectId'])
             _vars['SFDC Session'].update_records(obj=_vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
                                                  upload_data=[llu_data])
         except:
@@ -255,8 +254,8 @@ class ListProcessing:
         _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
 
         if _vars['Move To Bulk']:
-            drop_in_bulk_processing(_vars['to_create_path'], self._log)
-            drop_in_bulk_processing(_vars['update_path'], self._log)
+            _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
+            _ghelp.drop_in_bulk_processing(_vars['update_path'], self._log)
 
         else:
             self._log.info(_steps[2])
