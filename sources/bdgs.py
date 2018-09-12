@@ -1,4 +1,4 @@
-from ListManagement.utility import gen_helper as ghelp
+from ListManagement.utility import general as ghelp
 from ListManagement.utility import pandas_helper as phelp
 
 

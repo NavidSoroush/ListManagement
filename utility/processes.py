@@ -6,7 +6,7 @@ from PythonUtilities.EmailHandling import EmailHandler as Email
 try:
     from ListManagement.config import Config as con
     from ListManagement.sources import campaigns, accounts, bdgs
-    from ListManagement.utility.gen_helper import *
+    from ListManagement.utility.general import *
     from ListManagement.utility.email_helper import craft_notification_email
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
     from ListManagement.utility.sf_helper import *

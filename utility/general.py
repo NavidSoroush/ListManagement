@@ -359,3 +359,28 @@ def auto_maintain(directory, destination=None, ndays=30, log=None):
         log.info(msg)
     else:
         print(msg)
+
+
+def record_processing_stats(values, save=True):
+    '''
+    processes stats data files
+
+    :param values: data to record in stats dataframe
+    :param save: boolean, defaults to True
+    :return: dictionary items for list processing
+    '''
+    import sqlalchemy
+    _stats_file_path = 'T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
+    print('\nStep 11. Recording stats from processing.')
+    df2 = pd.DataFrame(values).transpose()
+    if save:
+        df = pd.read_excel(_stats_file_path)
+        engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
+        df2.to_sql(name='SearchStats', con=engine, if_exists='append', index=False)
+        df = df.append(df2, ignore_index=True)
+        df.to_excel(_stats_file_path, index=False)
+        del df
+        del df2
+        return {'Next Step': 'Done.'}
+    else:
+        return df2
