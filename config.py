@@ -49,6 +49,7 @@ class Config(object):
     FullName = 'ListManagementApp'
     NameAbbr = 'FS_LMA'
     LogDrive = 'T:\\Shared\\FS2 Business Operations\\Python Search Program\\logs\\'
+    BaseDir = 'T:\\Shared\\FS2 Business Operations\\Python Search Program\\New Lists\\'
     ListTeam = ['ricky.schools@fsinvestments.com']  # , salesops@fsinvestments.com]
     SFDomain = 'fsinvestments.my.salesforce.com'
     SFUser = os.environ['SFUSER']

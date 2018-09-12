@@ -5,6 +5,7 @@ import imaplib
 from email.utils import parseaddr
 import time
 import datetime
+import warnings
 
 from cred import outlook_userEmail, password  # , sfuser, sfpw, sf_token
 
@@ -12,15 +13,14 @@ from PythonUtilities.salesforcipy import SFPy
 from PythonUtilities.EmailHandling import EmailHandler as Email
 
 try:
-    from utility.sf_helper import get_user_id
-    from utility.gen_helper import determine_ext, date_parsing
-    from utility.email_helper import *
-    from config import Config as con
-except ModuleNotFoundError:
+    from .sf_helper import get_user_id
+    from .gen_helper import determine_ext, date_parsing
+    from .email_helper import *
+    from ListManagement.config import Config as con
+except (ModuleNotFoundError, ImportError):
     from ListManagement.utility.sf_helper import get_user_id
     from ListManagement.utility.general import determine_ext, date_parsing
     from ListManagement.utility.email_helper import *
-    from ListManagement.config import Config as con
 
 
 class ReturnDict(object):
@@ -39,6 +39,9 @@ class MailBoxReader:
         self.mailbox.login(self._email_account, password)
 
     def extract_pending_lists(self, mailbox, folder):
+        warnings.warn('This method will be remove in version 4.0. For gathering necessary '
+                      'meta-data for a list, use the build_queue method found in /utility/queue.py',
+                      PendingDeprecationWarning)
         list_queue = list()
         mailbox.select("%s" % folder)
         s_resp, s_data = mailbox.search(None, 'ALL')
@@ -101,6 +104,9 @@ class MailBoxReader:
         attachment_reader(remove=True)
 
     def iterative_processing(self, msg_list):
+        warnings.warn('This method will be remove in version 4.0. For gathering necessary '
+                      'meta-data for a list, use the build_queue method found in /utility/queue.py',
+                      PendingDeprecationWarning)
         msg = msg_list[0]
         msg_body = msg_list[1]
         msg_id = msg_list[2]
