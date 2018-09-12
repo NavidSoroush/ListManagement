@@ -5,13 +5,14 @@ from selenium.webdriver.common.by import By
 from chromedriver import CHROMEDRV_PATH
 
 try:
-    from ListManagement.utility.general import create_path_name
+    from ListManagement.utility import general as _ghelp
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df
     from ListManagement.utility.progress_bar import myprogressbar
 except:
-    from ..utility.general import create_path_name
+    from ..utility import general as _ghelp
     from ..utility.pandas_helper import read_df, save_df, make_df
     from ..utility.progress_bar import myprogressbar
+
 
 class Finra:
     def __init__(self, log=None):
@@ -42,7 +43,7 @@ class Finra:
         if alter_name is None:
             return path
         else:
-            return create_path_name(path, alter_name)
+            return _ghelp.create_path_name(path, alter_name)
 
     def scrape(self, path, alter_name=None, scrape_type=None, parse_list=False, save=False):
         self._init_selenium_components()
@@ -75,10 +76,10 @@ class Finra:
             found, df = self._parse_scraped_list(df=df)
             save_df(df, self._save_to_path)
             return {'Next Step': 'Search SEC',
-                    'No CRD': create_path_name(self._save_to_path, new_name='_nocrd'),
-                    'FINRA_SEC Found': create_path_name(self._save_to_path, new_name='_finrasec_found'),
+                    'No CRD': _ghelp.create_path_name(self._save_to_path, new_name='_nocrd'),
+                    'FINRA_SEC Found': _ghelp.create_path_name(self._save_to_path, new_name='_finrasec_found'),
                     'FINRA_Found': found,
-                    'FINRA Ambiguous': create_path_name(self._save_to_path, new_name='_FINRA_ambiguous')}
+                    'FINRA Ambiguous': _ghelp.create_path_name(self._save_to_path, new_name='_FINRA_ambiguous')}
 
         if save:
             save_df(df, self._save_to_path)
@@ -175,9 +176,9 @@ class Finra:
         multiple_crds = df[df['CRDNumber'] == 'Multiple CRDs Present']
         found = df[(df['CRDNumber'] != 'Multiple CRDs Present') & (df['CRDNumber'] != 'CRD Not Found')]
         df = df[(df['CRDNumber'] == 'Multiple CRDs Present') | (df['CRDNumber'] == 'CRD Not Found')]
-        save_df(df=no_crd, path=create_path_name(self._save_to_path, new_name='_nocrd'))
-        save_df(df=multiple_crds, path=create_path_name(self._save_to_path, new_name='_FINRA_ambiguous'))
-        save_df(df=found, path=create_path_name(self._save_to_path, new_name='_finrasec_found'))
+        save_df(df=no_crd, path=_ghelp.create_path_name(self._save_to_path, new_name='_nocrd'))
+        save_df(df=multiple_crds, path=_ghelp.create_path_name(self._save_to_path, new_name='_FINRA_ambiguous'))
+        save_df(df=found, path=_ghelp.create_path_name(self._save_to_path, new_name='_finrasec_found'))
         return len(found.index), df
 
     def _refreshing(self):
