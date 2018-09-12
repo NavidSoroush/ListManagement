@@ -7,11 +7,9 @@ from chromedriver import CHROMEDRV_PATH
 try:
     from ListManagement.utility import general as _ghelp
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df
-    from ListManagement.utility.progress_bar import myprogressbar
 except:
     from ..utility import general as _ghelp
     from ..utility.pandas_helper import read_df, save_df, make_df
-    from ..utility.progress_bar import myprogressbar
 
 
 class Finra:
@@ -92,8 +90,8 @@ class Finra:
         # self.log.info('Attempting to get %s meta data from an individual Finra page.' % ', '.join(xpath_keys))
         self._attempted_count = 0
         while self._attempted_count < len(self._search):
-            myprogressbar(self._attempted_count + 1, len(self._search),
-                          message='%s FINRA scraping' % self._scrape_type.upper())
+            _ghelp.myprogressbar(self._attempted_count + 1, len(self._search),
+                                 message='%s FINRA scraping' % self._scrape_type.upper())
 
             if self._attempts < 2:
                 try:
