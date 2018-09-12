@@ -9,7 +9,8 @@ _LIST_WHERE = "Status__c='In Queue'"
 
 _OBJ_MAP = {'Attachment': {'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
                            'where_stmt': "ParentId='{0}' AND Name='{1}'",
-                           'rename': {'Id': 'AttachmentId', 'Name': 'File_Name__c', 'ParentId': 'ObjectId'},
+                           'rename': {'Id': 'AttachmentId', 'Name': 'File_Name__c', 'ParentId': 'ObjectId',
+                                      'CreatedDate': 'Received Date'},
                            'merge_on': ['ObjectId', 'File_Name__c'],
                            'where_vars': ['ObjectId', 'File_Name__c']
                            },
@@ -19,7 +20,19 @@ _OBJ_MAP = {'Attachment': {'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
                      'merge_on': "OwnerId",
                      'where_vars': ['OwnerId']
                      },
-            'ParentObject': {'fields': ['Id', 'Name'],
+            'Campaign': {'fields': ['Id', 'Name'],
+                         'where_stmt': "Id='{0}'",
+                         'rename': {'Id': 'ObjectId', 'Name': 'Record Name'},
+                         'merge_on': 'ObjectId',
+                         'where_vars': ['ObjectId']
+                         },
+            'Account': {'fields': ['Id', 'Name'],
+                        'where_stmt': "Id='{0}'",
+                        'rename': {'Id': 'ObjectId', 'Name': 'Record Name'},
+                        'merge_on': 'ObjectId',
+                        'where_vars': ['ObjectId']
+                        },
+            'BizDev Group': {'fields': ['Id', 'Name'],
                              'where_stmt': "Id='{0}'",
                              'rename': {'Id': 'ObjectId', 'Name': 'Record Name'},
                              'merge_on': 'ObjectId',
@@ -29,7 +42,8 @@ _OBJ_MAP = {'Attachment': {'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
 
 _STATIC_VARIABLES = {
     'Next Step': 'Pre-processing', 'Found Path': None, 'Found in SFDC Search #2': 0, 'Num Adding': 0,
-    'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': None, 'process_start': _dt.datetime.now(),
+    'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': None,
+    'process_start': _dt.datetime.fromtimestamp(_ghelp.time.time()).strftime('%Y-%m-%d %H:%M:%S'),
     'CmpAccountName': None, 'CmpAccountID': None, 'Campaign Start Date': None, 'Pre_or_Post': None,
     'ExtensionType': None, 'File Path': None,
 }
@@ -167,6 +181,7 @@ def build_queue(sfdc, log=None):
         Dictionary of pending lists in the queue and necessary metadata.
     """
     data = sfdc.query('List__c', fields=_LIST_FIELDS, where=_LIST_WHERE)
+    data.rename(columns={'Id': 'ListObjId'}, inplace=True)
     if len(data.index) == 0:
         return list()
     else:
@@ -181,6 +196,7 @@ def build_queue(sfdc, log=None):
         data.loc[:, 'Object'] = data.ObjectId.apply(_determine_type)
         data = _get_metadata_ids(sfdc, data, 'Attachment')
         data = _get_metadata_ids(sfdc, data, 'User')
+        data = _get_metadata_ids(sfdc, data, data['Object'][0])
         data = _get_attachments(sfdc, data)
         data.insert(0, 'ListIndex', range(0, 0 + len(data)))
         return data.to_dict('rows')
