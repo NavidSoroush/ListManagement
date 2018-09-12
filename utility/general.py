@@ -445,3 +445,73 @@ def cmdorgui():
     else:
         # Running from the command line
         return ''
+
+
+# import importlib
+# import pip
+# import sys
+#
+# try:
+#     from ListManagement.utility.chromedriver_installer import install_chromedriver
+# except:
+#     from utility.chromedriver_installer import install_chromedriver
+
+
+# def ensure_requirements_met():
+#     '''
+#     this function is meant to ensure that if the requirements of the list program
+#     are automatically checked, and met, prior to running the program.
+#
+#     :return: n/a
+#     '''
+#     install_reqs = pip.req.parse_requirements('requirements.txt', session='hack')
+#     reqs = [str(ir.req) for ir in install_reqs]
+#     for r in reqs:
+#         r_name, r_version = r.split('=')[0].lower().replace('_', '-'), r.split('=')[-1]
+#         try:
+#             if r_name == 'beautifulsoup4':
+#                 r_name = 'bs4'
+#             importlib.import_module(name=r_name, package=r_version)
+#
+#         except ImportError:
+#             pip.main(['install', r_name + '==' + r_version])
+#
+#         except RuntimeError:
+#             install_chromedriver()
+#
+#         except ModuleNotFoundError:
+#             print('Unable to install %s. Please paste the below into the command-line.\n%s' %
+#                   (r_name, ' '.join([sys.executable, '-m', 'pip', 'install',
+#                                      '=='.join([r_name, r_version])])))
+
+
+# import os
+# import subprocess
+#
+# import requests
+# from bs4 import BeautifulSoup
+#
+# downloads_loc = os.path.expanduser('~\Downloads')
+#
+#
+# def download_chromewhl():
+#     whl_url = 'https://pypi.python.org/pypi/chromedriver'
+#     soup = BeautifulSoup(requests.get(whl_url).content, 'lxml')
+#     links = soup.findAll('a')
+#     whl_link = str([link for link in links if link.text[-4:] == '.whl'][0]).split('="')[1].split('">')[0]
+#     whl_name = [link.text for link in links if link.text[-4:] == '.whl'][0]
+#
+#     resp = requests.get(whl_link)
+#     with open(os.path.join(downloads_loc, whl_name), 'wb') as f:
+#         f.write(resp.content)
+#     return os.path.join(downloads_loc, whl_name)
+#
+#
+# def install_whl(loc):
+#     subprocess.call('python -m pip install %s' % loc)
+#
+#
+# def install_chromedriver():
+#     name = download_chromewhl()
+#     install_whl(name)
+
