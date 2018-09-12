@@ -1,3 +1,10 @@
+"""
+general.py
+====================================
+Houses functions that are used
+throughout the list processing process.
+"""
+
 import os
 import sys
 import re
@@ -38,6 +45,18 @@ _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
 
 
 def is_path(path):
+    """
+    Checks if a given path is a file.
+
+    Parameters
+    ----------
+    path
+        A string. Should be a path to a directory or file.
+
+    Returns
+    -------
+        Boolean (True or False)
+    """
     if os.path.isfile(path):
         return True
     else:
@@ -45,6 +64,19 @@ def is_path(path):
 
 
 def duration(start, end):
+    """
+    Creates a string representation of the time elapsed between start and end.
+
+    Parameters
+    ----------
+    start
+        Timestamp/datetime object of when a process began.
+    end
+        Timestamp/datetime object of when a process ended.
+    Returns
+    -------
+        A formatted time representing the elapsed time in hours, minutes, and seconds.
+    """
     _min, _sec = divmod((end - start), 60)
     _hour, _min = divmod(_min, 60)
     string_duration = "%02d:%02d:%02d" % (_hour, _min, _sec)
@@ -52,14 +84,32 @@ def duration(start, end):
 
 
 def date_parsing(str_date_value):
+    """
+    Converts a string to a datetime object.
+
+    Parameters
+    ----------
+    str_date_value
+        String representation of a date.
+    Returns
+    -------
+        Datetime object of given date.
+    """
     return datetime.datetime.strptime(str_date_value, '%a, %d %b %Y %H:%M:%S %z')
 
 
 def split_dir_name(full_path):
     """
-    receives a full path name splits it into directory, file name
-    :param full_path: required
-    :return: returns the file name (f_name)
+    Provides a file name given a full path.
+
+    Parameters
+    ----------
+    full_path
+        A string representation of a full file path.
+
+    Returns
+    -------
+        A file name.
     """
     f_name = os.path.split(os.path.abspath(full_path))
     return f_name[1]
@@ -67,10 +117,19 @@ def split_dir_name(full_path):
 
 def determine_ext(f_name):
     """
-    determines the extension type of the file.
+    Determines the extension of a file given a file name.
 
-    :param f_name: original file name (required)
-    :return: tuple of shorten extension length and file extension
+    Parameters
+    ----------
+    f_name
+        Name of a file.
+        Examples: ABC_1234.xlsx, my_file.csv
+
+    Returns
+    -------
+        The extension of a file and it's length.
+        Examples: (5, .xlsx), (4, .csv)
+
     """
     filename, file_ext = os.path.splitext(f_name)
     del filename
@@ -78,16 +137,35 @@ def determine_ext(f_name):
 
 
 def last_list_uploaded_data(object_id):
+    """
+    Builds a list containing the 'object_id' and the current time (in ISO-format).
+
+    Parameters
+    ----------
+    object_id
+        A string representation of a Salesforce object id.
+
+    Returns
+    -------
+        A list.
+        Examples: [object_id, current time in ISO-format.]
+    """
     uploaded_date = datetime.datetime.utcnow().isoformat()
     return [object_id, uploaded_date]
 
 
 def shorten_fname_to_95chars(f_name):
     """
-    evaulates if the file name is longer than 95 characters.
-    if so, then it shortens it so that AB's processing accepts it
-    :param f_name: original file name
-    :return: s_f_name (shortened file name)
+    Shortens a filename to less than 95 characters.
+
+    Parameters
+    ----------
+    f_name
+        A string representing a file name.
+
+    Returns
+    -------
+        A string representing a file name (updated, if necessary).
     """
     ext_len, file_ext = determine_ext(f_name)
     f_name = f_name[:-ext_len]
@@ -100,12 +178,18 @@ def shorten_fname_to_95chars(f_name):
 
 
 def split_name(path):
-    '''
-    splits the directory name into folder location and file name.
+    """
+    Splits a path into 1) the containing folder and 2) the file name.
 
-    :param path: directory to a file
-    :return: filename of path
-    '''
+    Parameters
+    ----------
+    path
+        A string representing a full file path.
+
+    Returns
+    -------
+        A string representing a file name.
+    """
     name = os.path.split(os.path.abspath(path))
     if name[1][-1] == ' ':
         name[1] = name[1][:-1]
@@ -113,13 +197,19 @@ def split_name(path):
 
 
 def convert_unicode_to_date(date_string):
-    '''
-    transforms a date-string to a date. based on the date
-    determines if a campaign has happened or if it is upcoming.
+    """
+    Transforms a string containing a date into a datetime object. Decides if
+    the date is in the future or in the past.
 
-    :param date_string: string of a date value.
-    :return: variable, is the list pre or post.
-    '''
+    Parameters
+    ----------
+    date_string
+        A string representing a date.
+
+    Returns
+    -------
+        A tuple containing the 1) datetime object and 2) if the date is in the future or past.
+    """
     date_string = parse(date_string)
     today = datetime.datetime.now()
     diff = today - date_string
@@ -131,13 +221,18 @@ def convert_unicode_to_date(date_string):
 
 
 def create_dir_move_file(path):
-    '''
-    takes a file path, and from the file's name, it creates
-    a new folder for the file.
+    """
+    Creates and moves a given file from it's current directory to a child directory.
 
-    :param path: file path
-    :return: the new path of the file passed to the function.
-    '''
+    Parameters
+    ----------
+    path
+        A string representing a full file path.
+
+    Returns
+    -------
+        A string representing the new full file path location.
+    """
     og_path = path[0]
     name = split_name(path[0])
     ext_len, file_ext = determine_ext(name)
@@ -158,6 +253,18 @@ def create_dir_move_file(path):
 
 
 def clean_phone_number(number):
+    """
+    Aims to normalize the formatting of a phone number.
+
+    Parameters
+    ----------
+    number
+        A string representation of a phone number.
+
+    Returns
+    -------
+        A normalized & updated string representation of a phone number.
+    """
     phone = re.sub(r'\D', '', str(number))
     phone = phone.lstrip('1')
     if len(phone) > 10:
@@ -170,15 +277,30 @@ def clean_phone_number(number):
 
 
 def drop_unneeded_columns(df, obj, ac=_accepted_cols, create=True, bdg=False):
-    '''
-    removes all columns that are not needed by Andrew's processing tool.
+    """
+    Removes all columns that are not needed by Business Solutions' Salesforce
+    bulk uploading tool.
 
-    :param df: list data frame
-    :param obj: SFDC object or list type
-    :param ac: accepted columns by Andrew's program
-    :param create: boolean, default is true
-    :return: updated data frame
-    '''
+    Parameters
+    ----------
+    df
+        A pandas data frame containing a list.
+    obj
+        A string representing a Salesforce object.
+    ac
+        A list containing the columns accepted by the bulk tool.
+    create
+        Boolean. Denotes if this call is coming from a 'to_create' contacts
+        request or not.
+    bdg
+        Boolean. Denotes if this call is coming from a BizDev Group request
+        or not.
+
+    Returns
+    -------
+        An updated pandas data frame object containing only the
+        bulk tool's accepted columns.
+    """
     if bdg:
         ac = _bdg_accepted_cols
     headers = df.columns.values
@@ -195,13 +317,18 @@ def drop_unneeded_columns(df, obj, ac=_accepted_cols, create=True, bdg=False):
 
 
 def determine_move_to_bulk_processing(df):
-    '''
-    identifies if the list has all the headers needed to
-    be pushed to Andrew's bulk processing tool
+    """
+    Determines of a list request contains the necessary columns (meta-data)
+    to be passed to Business Solutions' Salesforce bulk processing tool.
 
-    :param df: list data frame
-    :return: boolean
-    '''
+    Parameters
+    ----------
+    df
+        A pandas data frame containing a list.
+    Returns
+    -------
+        Boolean (True or False).
+    """
     headers = df.columns.values
     for ac in _necessary_cols:
         if ac not in headers:
@@ -225,11 +352,17 @@ def save_conf_creation_meta(sc, objid, status):
 
 
 def remove_underscores(line):
-    '''
-    replaces underscores with spaces.
-    :param line: original cell value
-    :return: transformed cell value without '_' underscores
-    '''
+    """
+    Replaces underscores with spaces.
+
+    Parameters
+    ----------
+    line
+        A string representing a single cell of a pandas data frame.
+    Returns
+    -------
+        A updated string, without underscores.
+    """
     try:
         if "_" in str(line):
             line = str(line.replace("_", " "))
@@ -446,7 +579,6 @@ def cmdorgui():
         # Running from the command line
         return ''
 
-
 # import importlib
 # import pip
 # import sys
@@ -514,4 +646,3 @@ def cmdorgui():
 # def install_chromedriver():
 #     name = download_chromewhl()
 #     install_whl(name)
-
