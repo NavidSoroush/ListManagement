@@ -1,3 +1,18 @@
+"""
+list_processing.py
+====================================
+The core module that orchestrates matching
+for 3rd party documents (excel, csv, et al) and
+updates the Salesforce CRM for FS Investments.
+
+Handles Broker Dealer (Account) and Business Development
+Group (BizDev Group) updated representative
+lists (typically received monthly and quarterly, respectively).
+
+Handles attendee lists for events and conferences (Campaigns)
+where FS Investments has committed money.
+"""
+
 import traceback
 
 from PythonUtilities.LoggingUtility import Logging
@@ -21,10 +36,22 @@ _steps = [
 
 
 class ListProcessing:
+    """Orchestrates all matching and updates for pending list requests."""
+
     def __init__(self, mode='manual'):
         """
-        declare and set global objects that are leveraged through the
-        actually processing of lists.
+        Instantiates the ListProcessing class and other objects used
+        during the matching and update process.
+
+        Can be run in two modes:
+            1) 'manual' - will require user interaction. (Likely for debugging.)
+            2) 'auto' - allows for entire process to be scheduled/cron'd.
+
+        Parameters
+        ----------
+        mode
+            A string to define how the program is being run.
+            Accepts 'manual' (default) and 'auto'.
         """
         self.mode = mode
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
@@ -37,20 +64,22 @@ class ListProcessing:
 
     def main_contact_based_processing(self):
         """
-        this method manages all potential contact based nodes of FS 
-        processing. each node has it's own method to help clearly 
-        define the processing path.
-        
-        1. determine if there are lists pending in the queue
-        (in the lists at fsinvestments mailbox)
-        2. if lists are pending, loop through each list request
-        and grab necessary metadata to process
-        3. if the file is a 'good' extension, process the 
-        request based upon the SFDC object where request originated.
-        4. record stats for each list
-        5. when all lists are processed, close all mailbox and SalesForce connections
-        
-        :return: 
+        This method determines how to route a pending list request, based on the Salesforce object type.
+
+        An abstracted path looks like the following:
+            1) Check if there are pending lists.  # TODO: Add check before looping through each list.
+            2) If lists are pending, begin looping through all available lists.
+            3) Check that each pending list is of a workable extension.
+                See Also: ListProcessing().is_bad_extension() method for extensions that
+                            will stop the processing.
+            4) If the list has an acceptable extension, enter a
+                routing statement to determine which rules to process the list request
+                through.
+            5) After completing processing, notify the requester, record stats, and
+                begin processing any additional lists.
+        Returns
+        -------
+            Nothing
         """
         for _vars in self.vars:
             if not self.is_bad_extension(_vars):
@@ -74,12 +103,17 @@ class ListProcessing:
 
     def is_bad_extension(self, _vars):
         """
-        used to determine if the file type (based on the file extension) can be processed by the program.
-        
-        1) check if the file extension is 'bad'
-        2) if it is bad, notify the team member that the list cannot be processed, and update list object record
-        
-        :return: boolean
+        Checks if the a list request has an extension that can be processed. If a list is
+        unable to be processed, notify the requester of the situation.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Boolean (True or False)
         """
         if _vars['ExtensionType'] in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
             if _vars['CmpAccountName'] is None:
@@ -102,18 +136,28 @@ class ListProcessing:
 
     def campaign_processing(self, _vars):
         """
-        handles list processing for the campaign object. processing steps below.
-        
-        1) predicts headers and pre_processes each file.
-        2) searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName
-        3) if all advisors are not found, scrape data from FINRA based on First, Last, and Account Name
-        4) if advisors are scraped, research those advisors against SalesForce
-        5) parse list into actionable pieces: a) upload to campaign b) create c) not found d) etc.
-        6) prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
-        7) extract stats from search processing, send notification email, and update SalesForce list record
-        8) if applicable, drop file in the bulk_processing network drive to create or update SaleForce contacts
-        
-        :return: n/a
+        Handles all processing for lists that are sourced from the campaign object.
+
+        Steps
+        -----
+        1) Predict headers and pre_process each file.
+        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.
+        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.
+        4) If advisors are scraped, re-search those advisors against SalesForce contact list.
+        5) Parse list into actionable pieces: a) upload to campaign b) create c) not found.
+        6) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
+        7) Extract stats from search processing, send notification email, and update SalesForce list record.
+        8) Ff applicable, drop file in the bulk_processing network drive to create or update SaleForce contacts.
+
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Nothing
         """
         _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
                                                                  _vars['CmpAccountName'], self._log, self.mode))
@@ -143,20 +187,29 @@ class ListProcessing:
 
     def account_processing(self, _vars):
         """
-        handles list processing for the account object. processing steps below.
-        
-        1) predicts headers and pre_processes each file.
-        2) searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName
-        3) if all advisors are not found, scrape data from FINRA based on First, Last, and Account Name
-        4) if advisors are scraped, research those advisors against SalesForce
-        5) for all found advisors, scrape their licenses (and other metadata) from FINRA
-        6) parse list into actionable pieces: a) upload to campaign b) create c) not found d) etc.
-        7) update the 'Last List Upload' field on the account record.
-        8) prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
-        9) extract stats from search processing, send notification email, and update SalesForce list record
-        10) if applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts
-        
-        :return: n/a
+        Handles all processing for lists that are sourced from the account object.
+
+        Steps
+        -----
+        1) Predicts headers and pre_process each file.
+        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.
+        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.
+        4) If advisors are scraped, re-search those advisors against SalesForce.
+        5) For all found advisors, scrape their licenses (and other metadata) from FINRA
+        6) Parse list into actionable pieces: a) upload to campaign b) create c) not found.
+        7) Update the 'Last List Upload' field on the account record.
+        8) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
+        9) Extract stats from search processing, send notification email, and update SalesForce list record.
+        10) If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Nothing
         """
         _vars.update(
             predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['Record Name'],
@@ -201,23 +254,33 @@ class ListProcessing:
 
     def bizdev_processing(self, _vars):
         """
-        handles list processing for the bizdev object. processing steps below.
+        Handles all processing for lists that are sourced from the BizDev Group object.
 
-        1) predicts headers and pre_processes each file.
-        2) searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName
-        3) if all advisors are not found, scrape data from FINRA based on First, Last, and Account Name
-        4) if advisors are scraped, research those advisors against SalesForce
-        5) for all found advisors, scrape their licenses (and other metadata) from FINRA
-        6) parse list into actionable pieces: a) upload to campaign b) create c) not found d) etc.
-        7) update the 'Last List Upload' field on the bizdev record and associate new contacts to the record.
-        8) prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
-        9) extract stats from search processing, send notification email, and update SalesForce list record
-        10) if applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts
- 
-        :return: n/a
+        Steps
+        -----
+        1) Predicts headers and pre_process each file.
+        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.
+        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.
+        4) If advisors are scraped, re-search those advisors against SalesForce.
+        5) For all found advisors, scrape their licenses (and other metadata) from FINRA
+        6) Parse list into actionable pieces: a) upload to campaign b) create c) not found.
+        7) Update the 'Last List Upload' field on the bizdev group record.
+        8) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
+        9) Extract stats from search processing, send notification email, and update SalesForce list record.
+        10) If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Nothing
         """
         _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
-                                                                 _vars['CmpAccountName'], log=self._log, mode=self.mode))
+                                                                 _vars['CmpAccountName'], log=self._log,
+                                                                 mode=self.mode))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
 
         try:
@@ -264,13 +327,21 @@ class ListProcessing:
 
     def finra_search_and_search_two(self, _vars):
         """
-        this method handles helps to decide if FINRA scraping or searching SalesForce a 2nd time
-        is necessary.
-        
-        1) if all advisors are not found and are missing CRDNumbers, scrape FINRA
-        2) if FINRA is scraped, search our SalesForce database to increase our likely match-rate.
-        
-        :return: n/a
+        Handles all Finra and secondary searching (if necessary).
+
+        Steps
+        -----
+        1) If advisors are not found and are missing CRDNumbers, scrape FINRA
+        2) If FINRA is scraped, search our SalesForce database to increase our likely match-rate.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Updated python dictionary containing metadata regarding a list request.
         """
         if _vars['SFDC_Found'] < _vars['Total Records'] \
                 and _vars['FINRA?']:
@@ -293,6 +364,18 @@ class ListProcessing:
         return _vars
 
     def create_log_record_of_current_list_data(self, msg):
+        """
+        Catches a 'fatal error' incurred by the list program. Halts all processing if called.
+
+        Parameters
+        ----------
+        msg
+            Error message.
+
+        Returns
+        -------
+            Nothing
+        """
         self._log.warning('A fatal error has occurred. Refer to message traceback for insight into '
                           'the issue.')
         self._log.error(msg)
