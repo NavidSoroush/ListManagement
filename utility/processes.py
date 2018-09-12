@@ -165,8 +165,8 @@ def extract_dictionary_values(dict_data, log=None):
     sender_name = dict_data['Sender Name']
     sender_email = dict_data['Sender Email']
     match_rate = (num_found_in_sfdc + to_create) / float(total)
-    items_to_email = [sender_name, obj_name, userName, userPhone,
-                      userEmail, total, num_found_in_sfdc, to_update,
+    items_to_email = [sender_name, obj_name, 'Strategy & Analytics team', 'salesops@fsinvestments.com',
+                      total, num_found_in_sfdc, to_update,
                       num_not_updating, to_create, obj_to_add, obj_to_update,
                       obj_to_remove, need_research, received, process_start,
                       completed, processing_string, create_advisors_note]
