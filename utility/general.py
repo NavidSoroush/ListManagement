@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import time
 import datetime
@@ -384,3 +385,133 @@ def record_processing_stats(values, save=True):
         return {'Next Step': 'Done.'}
     else:
         return df2
+
+
+def strip_unicode_chars(row):
+    """
+    attempts to remove all unicode data from the row values.
+
+    :param row: cell value with unicode chars
+    :return: transformed cell value without unicode chars
+    """
+    row.fillna('', inplace=True)
+    row.astype(str)
+    try:
+        row.apply([r.encode('utf-8', 'ignore').strip() for r in row], axis=1)
+    except:
+        pass
+    return row
+    # return [unicodedata.normalize('NFKD', str(r)).encode('utf-8', 'ignore') for r in row]
+
+
+def find_chrome_driver_location(filename='chromedriver'):
+    """
+    finds the file path location of the 'chromedriver' on the local machine
+    :param filename: default='chromedriver'
+    :return: file path string
+    """
+    path = os.path.join(os.path.dirname(sys._getframe(1).f_code.co_filename), filename)
+    return path
+
+
+def myprogressbar(batchsize, totalsize, barlength=25, message='', char="#"):
+    if totalsize == 0:
+        raise ZeroDivisionError('%s division by zero in denominator.' % type(totalsize))
+    addtooutput = cmdorgui()
+    percent = batchsize / float(totalsize)
+    chars = char * int(round(percent * barlength))
+    spaces = " " * (barlength - len(chars))
+    output = '\r' + message + '[{0}] {1:.1f}% ({2}/{3})'.format(chars + spaces,
+                                                                round(percent * 100, 2),
+                                                                batchsize,
+                                                                totalsize) + addtooutput
+    sys.stdout.write(output)
+    sys.stdout.flush()
+
+
+def cmdorgui():
+    a = sys.executable
+    m = '\\'
+    m = m[0]
+    while True:
+        b = len(a)
+        c = a[(b - 1)]
+        if c == m:
+            break
+        a = a[:(b - 1)]
+    if sys.executable == a + 'pythonw.exe':
+        # Running in IDLE GUI interface
+        return '\n'
+    else:
+        # Running from the command line
+        return ''
+
+
+# import importlib
+# import pip
+# import sys
+#
+# try:
+#     from ListManagement.utility.chromedriver_installer import install_chromedriver
+# except:
+#     from utility.chromedriver_installer import install_chromedriver
+
+
+# def ensure_requirements_met():
+#     '''
+#     this function is meant to ensure that if the requirements of the list program
+#     are automatically checked, and met, prior to running the program.
+#
+#     :return: n/a
+#     '''
+#     install_reqs = pip.req.parse_requirements('requirements.txt', session='hack')
+#     reqs = [str(ir.req) for ir in install_reqs]
+#     for r in reqs:
+#         r_name, r_version = r.split('=')[0].lower().replace('_', '-'), r.split('=')[-1]
+#         try:
+#             if r_name == 'beautifulsoup4':
+#                 r_name = 'bs4'
+#             importlib.import_module(name=r_name, package=r_version)
+#
+#         except ImportError:
+#             pip.main(['install', r_name + '==' + r_version])
+#
+#         except RuntimeError:
+#             install_chromedriver()
+#
+#         except ModuleNotFoundError:
+#             print('Unable to install %s. Please paste the below into the command-line.\n%s' %
+#                   (r_name, ' '.join([sys.executable, '-m', 'pip', 'install',
+#                                      '=='.join([r_name, r_version])])))
+
+
+# import os
+# import subprocess
+#
+# import requests
+# from bs4 import BeautifulSoup
+#
+# downloads_loc = os.path.expanduser('~\Downloads')
+#
+#
+# def download_chromewhl():
+#     whl_url = 'https://pypi.python.org/pypi/chromedriver'
+#     soup = BeautifulSoup(requests.get(whl_url).content, 'lxml')
+#     links = soup.findAll('a')
+#     whl_link = str([link for link in links if link.text[-4:] == '.whl'][0]).split('="')[1].split('">')[0]
+#     whl_name = [link.text for link in links if link.text[-4:] == '.whl'][0]
+#
+#     resp = requests.get(whl_link)
+#     with open(os.path.join(downloads_loc, whl_name), 'wb') as f:
+#         f.write(resp.content)
+#     return os.path.join(downloads_loc, whl_name)
+#
+#
+# def install_whl(loc):
+#     subprocess.call('python -m pip install %s' % loc)
+#
+#
+# def install_chromedriver():
+#     name = download_chromewhl()
+#     install_whl(name)
+

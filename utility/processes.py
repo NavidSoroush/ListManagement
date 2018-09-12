@@ -6,7 +6,7 @@ from PythonUtilities.EmailHandling import EmailHandler as Email
 try:
     from ListManagement.config import Config as con
     from ListManagement.sources import campaigns, accounts, bdgs
-    from ListManagement.utility.general import *
+    from ListManagement.utility import general as _ghelp
     from ListManagement.utility.email_helper import craft_notification_email
     from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
     from ListManagement.utility.sf_helper import *
@@ -14,7 +14,7 @@ except:
 
     from config import Config as con
     from sources import campaigns, accounts, bdgs
-    from utility.gen_helper import *
+    from utility import general as _ghelp
     from utility.email_helper import craft_notification_email
     from utility.pandas_helper import read_df, save_df, make_df, determine_num_records
     from utility.sf_helper import *
@@ -72,7 +72,7 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
     log.info("Preparing data prep for the %s list's action files, based list type. %s" % (obj, msg))
     list_df = read_df(path)
 
-    if obj == 'Account' and is_path(path):
+    if obj == 'Account' and _ghelp.is_path(path):
         frame, move_to_bulk, to_create = accounts.make_sc(path, list_df, record_name, obj_id, obj)
 
     elif obj == 'Campaign':
@@ -87,7 +87,7 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
             try:
                 list_df[ph].astype(str)
                 for index, row in list_df.iterrows():
-                    list_df.loc[index, ph] = clean_phone_number(row[ph])
+                    list_df.loc[index, ph] = _ghelp.clean_phone_number(row[ph])
             except:
                 log.info("Can't clean up %s numbers due to %s." % (ph, Exception.message))
 
@@ -147,26 +147,26 @@ def extract_dictionary_values(dict_data, log=None):
         att_paths = [dict_data['Review Path']]
 
     total = dict_data['Total Records']
-    file_name = split_name(dict_data['File Path'])
+    file_name = _ghelp.split_name(dict_data['File Path'])
     # num_found_in_sfdc = dictValues['Found in SFDC Search #2'] + dictValues['SFDC_Found'] - toCreate
     num_found_in_sfdc = determine_num_records(dict_data['Found Path'])
     need_research = total - num_found_in_sfdc - to_create
-    received = clean_date_values(dict_data['Received Date'])
-    ts_received = date_to_string(received)
+    received = _ghelp.clean_date_values(dict_data['Received Date'])
+    ts_received = _ghelp.date_to_string(received)
     process_start = dict_data['process_start']
 
-    completed = time_now
-    processing_completed = datetime.datetime.utcnow().isoformat()
-    processing_time = clean_date_values(process_start) - clean_date_values(completed)
-    processing_string = timedelta_to_processing_str(processing_time)
+    completed = _ghelp.time_now
+    processing_completed = _ghelp.datetime.datetime.utcnow().isoformat()
+    processing_time = _ghelp.clean_date_values(process_start) - _ghelp.clean_date_values(completed)
+    processing_string = _ghelp.timedelta_to_processing_str(processing_time)
     obj_name = dict_data['Record Name']
     obj = dict_data['Object']
     num_not_updating = dict_data['n_no_update']
     sender_name = dict_data['Sender Name']
     sender_email = dict_data['Sender Email']
     match_rate = (num_found_in_sfdc + to_create) / float(total)
-    items_to_email = [sender_name, obj_name, userName, userPhone,
-                      userEmail, total, num_found_in_sfdc, to_update,
+    items_to_email = [sender_name, obj_name, 'Strategy & Analytics team', 'salesops@fsinvestments.com',
+                      total, num_found_in_sfdc, to_update,
                       num_not_updating, to_create, obj_to_add, obj_to_update,
                       obj_to_remove, need_research, received, process_start,
                       completed, processing_string, create_advisors_note]
@@ -174,7 +174,7 @@ def extract_dictionary_values(dict_data, log=None):
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
-        , 'Created By': userName, 'File Type': obj, 'Advisors on List': total
+        , 'Created By': _ghelp.userName, 'File Type': obj, 'Advisors on List': total
         , 'Advisors w/CID': num_found_in_sfdc, 'Advisors w/CID old Contact Info': num_not_updating
         , 'CRD Found Not in SFDC': to_create, 'Creating': to_create
         , 'Unable to Find': need_research, 'Last Search Date': completed
@@ -189,7 +189,7 @@ def extract_dictionary_values(dict_data, log=None):
                     'Processed_By__c']
 
     listobj_data = [dict_data['ListObjId'], 'Process Completed', total, obj_to_add, to_create, num_found_in_sfdc,
-                    need_research, need_research, to_update, match_rate * 100, processing_completed, sf_uid]
+                    need_research, need_research, to_update, match_rate * 100, processing_completed, _ghelp.sf_uid]
 
     log.info('Updating the List record for Id: %s' % dict_data['ListObjId'])
     dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
@@ -201,7 +201,7 @@ def extract_dictionary_values(dict_data, log=None):
 
     log.info('Sending notification email to requestor to notify of completion.')
     Email(con.SMTPUser, con.SMTPPass, log).send_new_email(
-        subject=subject, to=[sender_email, userEmail], body=body_string,
+        subject=subject, to=[sender_email, _ghelp.userEmail], body=body_string,
         attachments=att_paths, name=con.FullName
     )
     return {'Next Step': 'Record Stats',
@@ -292,27 +292,27 @@ def bdg_upload(session, data, obj_id, obj, col_num, df_path, remove_path=None, a
     where = "BizDev_Group__c='%s'" % obj_id
     sf_bdg_members = session.query('Contact', ['Id', 'BizDev_Group__c '], where)
     to_insert, to_update, to_remove = split_list(sf_bdg_members.values.tolist(), data, obj_id, obj, col_num[1])
-    curr_memb = create_path_name(df_path, 'current_bdg_members')
+    curr_memb = _ghelp.create_path_name(df_path, 'current_bdg_members')
     sf_bdg_members = [sf_bdg_members[i:i + 2] for i in range(0, len(sf_bdg_members), 2)]
     save_df(df=make_df(data=sf_bdg_members, columns=['Id', 'BizDev_Group__c']), path=curr_memb)
     print('Attempting to associate %s to the BizDev Group.' % len(to_insert))
     if len(to_insert) > 0:
         df_add = make_df(to_insert, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-        add_path = create_path_name(df_path, 'toAdd')
+        add_path = _ghelp.create_path_name(df_path, 'toAdd')
         save_df(df=df_add, path=add_path)
         n_add = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_insert)
 
     if len(to_update) > 0:
         print('Attempting to update Licenses for %s advisors staying in the BizDevGroup.' % len(to_update))
         df_update = make_df(to_update, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-        update_path = create_path_name(df_path, 'bdg_toStay')
+        update_path = _ghelp.create_path_name(df_path, 'bdg_toStay')
         save_df(df=df_update, path=update_path)
         n_up = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_update)
 
     if to_remove is not None:
         print('We are not removing contacts by request of Krista Bono.')
         df_remove = make_df(data=to_remove, columns=['ContactID', 'Previous BizDevGroupID'])
-        remove_path = create_path_name(df_path, 'to_remove')
+        remove_path = _ghelp.create_path_name(df_path, 'to_remove')
         save_df(df=df_remove, path=remove_path)
         n_re = len(to_remove)
 
@@ -336,7 +336,7 @@ def id_preprocessing_needs(path):
     has_malformed_header_row = False
     has_blank_rows = False
 
-    extension = os.path.splitext(path)[1]
+    extension = _ghelp.os.path.splitext(path)[1]
     if extension not in _accepted_file_ext:
         has_bad_file_ext = True
 
