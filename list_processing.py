@@ -130,7 +130,7 @@ class ListProcessing:
         :return: n/a
         """
         self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], self._log))
+                                                            self.vars['CmpAccountName'], self._log, self.mode))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         try:
             self.finra_search_and_search_two()
@@ -172,7 +172,7 @@ class ListProcessing:
         """
         self.vars.update(
             predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
-                                               log=self._log))
+                                               log=self._log, mode=self.mode))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         try:
             self.finra_search_and_search_two()
@@ -227,7 +227,7 @@ class ListProcessing:
         :return: n/a
         """
         self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], log=self._log))
+                                                            self.vars['CmpAccountName'], log=self._log, mode=self.mode))
         self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
         try:
             self.finra_search_and_search_two()
