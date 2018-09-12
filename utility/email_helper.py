@@ -22,7 +22,7 @@ list_notification_elements = [
 looking_for_elements = ['Campaign Link: ', 'Attachment Link: ']
 acceptable_types = ['.xlsx', '.pdf', '.csv', '.xls', '.zip', '.docx', '.doc']
 temp_save_attachments = 'C:/save_att/'
-list_team = ["ricky.schools@fsinvestments.com", "max.charles@fsinvestments.com"]
+list_team = ["ricky.schools@fsinvestments.com"]  # , 'salesops@fsinvestments.com']
 
 
 def lists_in_queue(var_list):
@@ -69,7 +69,6 @@ further research, or that were requested, have been attached.
 If you have questions, please reach out to:
 %s
 %s
-%s
 
 Search results:
 Total Advisors: %s
@@ -94,8 +93,7 @@ Processing Time: %s
        items[10], items[11],
        items[12], items[13],
        items[14], items[15],
-       items[16], items[17],
-       items[18])
+       items[16], items[17])
     return body
 
 
