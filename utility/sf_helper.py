@@ -30,7 +30,7 @@ def split_list(id_in_obj, ids_from_search, obj_id, obj, col=None, remove=None, r
         for ins in insert:
             ins[1] = obj_id
 
-            remove_unique = remove_duplicates(remove)
+    remove_unique = remove_duplicates(remove)
     update_unique = remove_duplicates(update)
     insert_unique = remove_duplicates(insert)
 

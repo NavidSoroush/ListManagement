@@ -4,7 +4,7 @@ import pandas as pd
 try:
     from ListManagement.utility.general import determine_ext
 except:
-    from utility.gen_helper import determine_ext
+    from utility.general import determine_ext
 
 
 def read_df(path):
@@ -22,7 +22,7 @@ def save_df(df, path):
 
 
 def concat_dfs(df_list):
-    return pd.concat(df_list)
+    return pd.concat(df_list, sort=False)
 
 
 def make_df(data=None, columns=None):
