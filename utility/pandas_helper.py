@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import pandas as pd
 
 try:
-    from ListManagement.utility.gen_helper import determine_ext
+    from ListManagement.utility.general import determine_ext
 except:
     from utility.gen_helper import determine_ext
 

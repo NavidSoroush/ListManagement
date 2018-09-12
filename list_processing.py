@@ -125,6 +125,7 @@ class ListProcessing:
         except:
             self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
             pass
+          
         _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
                                               pre_or_post=_vars['Pre_or_Post'], log=self._log,
                                               to_create_path=_vars['to_create_path']))
@@ -256,6 +257,7 @@ class ListProcessing:
         if _vars['Move To Bulk']:
             drop_in_bulk_processing(_vars['to_create_path'], self._log)
             drop_in_bulk_processing(_vars['update_path'], self._log)
+
         else:
             self._log.info(_steps[2])
         return _vars

@@ -5,18 +5,18 @@ import sqlalchemy
 try:
     from ListManagement.legacy.sf_adv_query import list_SQL
     from ListManagement.legacy.sf_adv_formatting import make_lookup_name, needs_update_flag
-    from ListManagement.utility import auto_maintain, os, duration, time
+    from ListManagement.utility import general as _ghelp
     from ListManagement.utility.pandas_helper import pd
 except:
     from legacy.sf_adv_query import list_SQL
     from legacy.sf_adv_formatting import make_lookup_name, needs_update_flag
-    from utility import auto_maintain, os, duration, time
+    from utility import general as _ghelp
     from utility.pandas_helper import pd
 
 
 def run(path_name, logger):
-    _dir, _name = os.path.split(path_name)
-    auto_maintain(_dir, log=logger)
+    _dir, _name = _ghelp.os.path.split(path_name)
+    _ghelp.auto_maintain(_dir, log=logger)
 
     # Declaring needed variables
     lkup_strings = ['First Name', 'Last Name', 'Account Name',
@@ -38,7 +38,7 @@ def run(path_name, logger):
         logger.error('Failed to connect to SQL database.', exc_info=True)
         sys.exit()
 
-    query_start = time.time()
+    query_start = _ghelp.time.time()
     logger.info(' > Extracting data from SQL.')
     df = pd.read_sql_query(list_SQL, conn)
     logger.info(' > Preparing the file for use.')
@@ -52,6 +52,6 @@ def run(path_name, logger):
     df = df[~df.CRDNumber.str.contains('[a-zA-Z]').fillna(False)]
     df.to_csv(path_name, header=True, index=False, encoding='utf-8')
     logger.info('Closing SQL connection.')
-    query_end = time.time()
+    query_end = _ghelp.time.time()
     # printing success and time it took to complete query and save
-    logger.info("Saving complete. Query took: %s" % duration(query_start, query_end))
+    logger.info("Saving complete. Query took: %s" % _ghelp.duration(query_start, query_end))
