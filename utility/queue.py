@@ -1,3 +1,10 @@
+"""
+queue.py
+====================================
+Extracts necessary metadata from Salesforce
+for pending list requests.
+"""
+
 import datetime as _dt
 from ListManagement.utility import pandas_helper as _phelp
 from ListManagement.utility import general as _ghelp
