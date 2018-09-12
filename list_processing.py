@@ -9,8 +9,7 @@ from ListManagement.search import Search, Finra
 from ListManagement.search.ml import header_predictions as predicts
 from ListManagement.utility import queue
 from ListManagement.utility import general as _ghelp
-from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
-    sfdc_upload
+from ListManagement.utility import processes as _process
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
@@ -116,7 +115,7 @@ class ListProcessing:
         :return: n/a
         """
         _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
-                                                        _vars['CmpAccountName'], self._log))
+                                                                 _vars['CmpAccountName'], self._log))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
             self.finra_search_and_search_two(_vars)
@@ -124,17 +123,17 @@ class ListProcessing:
             self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
             pass
 
-        _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
-                                              pre_or_post=_vars['Pre_or_Post'], log=self._log,
-                                              to_create_path=_vars['to_create_path']))
-        _vars.update(source_channel(_vars['cmp_upload_path'], _vars['Record Name'],
-                                    _vars['ObjectId'], _vars['Object'], log=self._log))
-        _vars.update(source_channel(_vars['to_create_path'], _vars['Record Name'],
-                                    _vars['CmpAccountID'], _vars['Object'], log=self._log))
-        _vars.update(sfdc_upload(path=_vars['cmp_upload_path'], obj=_vars['Object'],
-                                 obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
-                                 log=self._log))
-        _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
+        _vars.update(_process.parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                                       pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                                       to_create_path=_vars['to_create_path']))
+        _vars.update(_process.source_channel(_vars['cmp_upload_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'], log=self._log))
+        _vars.update(_process.source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                             _vars['CmpAccountID'], _vars['Object'], log=self._log))
+        _vars.update(_process.sfdc_upload(path=_vars['cmp_upload_path'], obj=_vars['Object'],
+                                          obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
+                                          log=self._log))
+        _vars.update(_process.extract_dictionary_values(dict_data=_vars, log=self._log))
         if _vars['Move To Bulk']:
             _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
         else:
@@ -160,7 +159,7 @@ class ListProcessing:
         """
         _vars.update(
             predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['Record Name'],
-                                               log=self._log))
+                                                        log=self._log))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
             self.finra_search_and_search_two(_vars)
@@ -168,9 +167,9 @@ class ListProcessing:
             self._log.info('An error occurred during FINRA or SearchTwo processing, Skipping.')
             pass
         _vars.update(self._finra_api.scrape(_vars['Found Path'], scrape_type='all'))
-        _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
-                                              pre_or_post=_vars['Pre_or_Post'], log=self._log,
-                                              to_create_path=_vars['to_create_path']))
+        _vars.update(_process.parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                                       pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                                       to_create_path=_vars['to_create_path']))
         try:
             llu_data = _ghelp.last_list_uploaded_data(_vars['ObjectId'])
             _vars['SFDC Session'].update_records(obj=_vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
@@ -181,17 +180,17 @@ class ListProcessing:
                                                                                 _vars['ObjectId'],
                                                                                 llu_data))
 
-        _vars.update(source_channel(_vars['update_path'], _vars['Record Name'],
-                                    _vars['ObjectId'], _vars['Object'], log=self._log))
+        _vars.update(_process.source_channel(_vars['update_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'], log=self._log))
 
-        _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
+        _vars.update(_process.extract_dictionary_values(dict_data=_vars, log=self._log))
 
         if _vars['Move To Bulk']:
             _ghelp.drop_in_bulk_processing(_vars['update_path'], self._log)
             if _ghelp.is_path(_vars['to_create_path']):
-                _vars.update(source_channel(_vars['to_create_path'], _vars['Record Name'],
-                                            _vars['ObjectId'], _vars['Object'],
-                                            _vars['ObjectId'], log=self._log))
+                _vars.update(_process.source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                                     _vars['ObjectId'], _vars['Object'],
+                                                     _vars['ObjectId'], log=self._log))
                 _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
 
         else:
@@ -216,20 +215,20 @@ class ListProcessing:
         :return: n/a
         """
         _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
-                                                        _vars['CmpAccountName'], log=self._log))
+                                                                 _vars['CmpAccountName'], log=self._log))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
             self.finra_search_and_search_two(_vars)
         except:
-            self._log.info('An error occured during FINRA or SearchTwo processing.')
+            self._log.info('An error occurred during FINRA or SearchTwo processing.')
             pass
         _vars.update(self._finra_api.scrape(_vars['Found Path'], scrape_type='all', save=True))
-        _vars.update(parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
-                                              pre_or_post=_vars['Pre_or_Post'], log=self._log,
-                                              to_create_path=_vars['to_create_path']))
-        _vars.update(sfdc_upload(path=_vars['bdg_update_path'], obj=_vars['Object'],
-                                 obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
-                                 log=self._log))
+        _vars.update(_process.parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                                       pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                                       to_create_path=_vars['to_create_path']))
+        _vars.update(_process.sfdc_upload(path=_vars['bdg_update_path'], obj=_vars['Object'],
+                                          obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
+                                          log=self._log))
 
         try:
             llu_data = _ghelp.last_list_uploaded_data(_vars['ObjectId'])
@@ -241,16 +240,16 @@ class ListProcessing:
                                                                                 _vars['ObjectId'],
                                                                                 llu_data))
 
-        _vars.update(source_channel(_vars['update_path'], _vars['Record Name'],
-                                    _vars['ObjectId'], _vars['Object'],
-                                    _vars['CmpAccountID'], log=self._log))
-        _vars.update(source_channel(_vars['to_create_path'], _vars['Record Name'],
-                                    _vars['ObjectId'], _vars['Object'],
-                                    _vars['CmpAccountID'], log=self._log))
-        _vars.update(source_channel(_vars['bdg_update_path'], _vars['Record Name'],
-                                    _vars['ObjectId'], _vars['Object'],
-                                    _vars['CmpAccountID'], log=self._log))
-        _vars.update(extract_dictionary_values(dict_data=_vars, log=self._log))
+        _vars.update(_process.source_channel(_vars['update_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'],
+                                             _vars['CmpAccountID'], log=self._log))
+        _vars.update(_process.source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'],
+                                             _vars['CmpAccountID'], log=self._log))
+        _vars.update(_process.source_channel(_vars['bdg_update_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'],
+                                             _vars['CmpAccountID'], log=self._log))
+        _vars.update(_process.extract_dictionary_values(dict_data=_vars, log=self._log))
 
         if _vars['Move To Bulk']:
             _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
