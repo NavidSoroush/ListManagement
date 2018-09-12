@@ -5,11 +5,10 @@ from PythonUtilities.EmailHandling import EmailHandler as Email
 from PythonUtilities.salesforcipy import SFPy
 
 from ListManagement.config import Config as con
-from ListManagement.search.finra import Finra
-from ListManagement.search.salesforce import Search
+from ListManagement.search import Search, Finra
+from ListManagement.search.ml import header_predictions as predicts
 from ListManagement.utility import queue
 from ListManagement.utility import general as _ghelp
-from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
 from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
     sfdc_upload
 
@@ -116,7 +115,7 @@ class ListProcessing:
         
         :return: n/a
         """
-        _vars.update(predict_headers_and_pre_processing(_vars['File Path'],
+        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
                                                         _vars['CmpAccountName'], self._log))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
@@ -160,7 +159,7 @@ class ListProcessing:
         :return: n/a
         """
         _vars.update(
-            predict_headers_and_pre_processing(_vars['File Path'], _vars['Record Name'],
+            predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['Record Name'],
                                                log=self._log))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
@@ -216,7 +215,7 @@ class ListProcessing:
  
         :return: n/a
         """
-        _vars.update(predict_headers_and_pre_processing(_vars['File Path'],
+        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
                                                         _vars['CmpAccountName'], log=self._log))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
