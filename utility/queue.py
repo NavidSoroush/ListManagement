@@ -1,6 +1,6 @@
 import datetime as _dt
 from ListManagement.utility import pandas_helper as _phelp
-from ListManagement.utility import gen_helper as _ghelp
+from ListManagement.utility import general as _ghelp
 
 _LIST_FIELDS = ['Id', 'Related_Account__c', 'Related_BizDev_Group__c',
                 'Related_Campaign__c', 'OwnerId', 'File_Name__c',
