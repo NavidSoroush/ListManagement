@@ -6,9 +6,9 @@ import email
 from lxml.html import fromstring
 
 try:
-    from utility.gen_helper import determine_ext
+    from utility import general as _ghelp
 except ModuleNotFoundError:
-    from ListManagement.utility.general import determine_ext
+    from ListManagement.utility import general as _ghelp
 
 objects = ['Campaign', 'BizDev Group', 'Account']
 list_notification_elements = [
@@ -212,7 +212,7 @@ def attachment_reader(remove=False, raw=None, att=None):
         if not os.path.isdir(temp_save_attachments):
             os.mkdir(temp_save_attachments)
         if att is not None:
-            len_ext, ext = determine_ext(att)
+            len_ext, ext = _ghelp.determine_ext(att)
             if ext in acceptable_types:
                 new_f_name = temp_save_attachments + ''.join(e for e in att[:-5] if e.isalnum()) + ext
                 with open(new_f_name, mode='wb') as f:
