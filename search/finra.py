@@ -1,3 +1,10 @@
+"""
+finra.py
+======================================================
+Provides an 'API' via Selenium for extracting metadata
+on registered financial advisors from Finra BrokerCheck.
+"""
+
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
@@ -13,6 +20,12 @@ except:
 
 
 class Finra:
+    """
+    A web scraper that leverages FINRA to:
+        1) Find the CRD of a financial advisor given a 'Lookup Name'. (First, Last, Firm Name)
+        2) Find metadata (see self._x_paths keys below) on a financial advisor, given their CRD Number.
+    """
+
     def __init__(self, log=None):
         self._log = log
         self._sel = None
@@ -38,12 +51,51 @@ class Finra:
         }
 
     def _determine_save_path(self, path, alter_name):
+        """
+        Helper function to determine where to save the results of their scrape.
+        Parameters
+        ----------
+        path
+            A string; Represents a full file path.
+        alter_name
+            A string; Represents a suffix to append to a full file path.
+        Returns
+        -------
+            A string representing the original (or updated) full file path.
+        """
         if alter_name is None:
             return path
         else:
             return _ghelp.create_path_name(path, alter_name)
 
     def scrape(self, path, alter_name=None, scrape_type=None, parse_list=False, save=False):
+        """
+        User level method allowing them access to the Finra 'API'. Given a tabular file (Excel, CSV),
+        a user can specify:
+            1) The scrape type ('all', see self._x_paths above, or 'crdnumber') they desire to perform.
+            2) If they want to save the results of the file.
+            3) An option to parse the results of the scrape into 3 parts: (typically for scrape_type='crdnumber'
+                a) Found
+                b) Not found
+                c) Ambiguous (due to multiple advisors having the same name)
+        Parameters
+        ----------
+        path
+            A string; Represents a full file path.
+        alter_name
+            A string; Represents a suffix to append to a full file path.
+        scrape_type
+            A string; The scrape type ('all', see self._x_paths above, or 'crdnumber') they desire to perform.
+        parse_list
+            Boolean; Used to enable the list parsing (see 3) above).
+        save
+            Boolean; Determines whether scraped results are saved to a file path or returned to the user in a console.
+
+        Returns
+        -------
+            Dependent on save parameter above.
+            Scraped results are saved to a file path or returned to the user in a console.
+        """
         self._init_selenium_components()
         self._save_to_path = self._determine_save_path(path=path, alter_name=alter_name)
         df = read_df(path)
@@ -87,6 +139,19 @@ class Finra:
             return df
 
     def _main_scraper(self, xpath_keys):
+        """
+        Worker that loops through all available requests (dependent on scrape_type) and returns
+        the available data for that scrape type.
+
+        Parameters
+        ----------
+        xpath_keys
+            A list of HTML xpath keys to extract from a HTML web-page.
+
+        Returns
+        -------
+            Nothing.
+        """
         # self.log.info('Attempting to get %s meta data from an individual Finra page.' % ', '.join(xpath_keys))
         self._attempted_count = 0
         while self._attempted_count < len(self._search):
@@ -165,11 +230,32 @@ class Finra:
         self._sel.close()
 
     def _init_selenium_components(self):
+        """
+        Helper function. Instantiates Selenium driver and Wait objects.
+
+        Returns
+        -------
+            Updated Finra object.
+        """
         self._sel = webdriver.Chrome(CHROMEDRV_PATH)
         self._wait = WebDriverWait(self._sel, 1)
         return self
 
     def _parse_scraped_list(self, df):
+        """
+        Given a scraped list, a pandas data frame parsed into:
+            1) Found
+            2) Not found (No CRD)
+            3) Ambiguous
+        Parameters
+        ----------
+        df
+            A pandas data frame containing scraped metadata from FINRA.
+
+        Returns
+        -------
+            A tuple, (number of advisors found, updated data frame of Found reps only.)
+        """
         no_crd = df[df['CRDNumber'] == 'CRD Not Found']
         multiple_crds = df[df['CRDNumber'] == 'Multiple CRDs Present']
         found = df[(df['CRDNumber'] != 'Multiple CRDs Present') & (df['CRDNumber'] != 'CRD Not Found')]
@@ -180,9 +266,27 @@ class Finra:
         return len(found.index), df
 
     def _refreshing(self):
+        """
+        Helper function to refresh a web page via Selenium.
+        Returns
+        -------
+        Nothing.
+        """
         self._sel.refresh()
 
     def return_scraped_data(self, df, on):
+        """
+        Transforms a dictionary (containing scraped advisor metadata) into a pandas data frame.
+        Parameters
+        ----------
+        df
+            A pandas data frame containing the original information/advisors to scrape.
+        on
+            A string; Represents what we should
+        Returns
+        -------
+            The original pandas data frame joined with the scraped data frame.
+        """
         scraped_df = make_df(self._scraped_dict)
         df = df.merge(scraped_df, how='left', left_on=on, right_on=on, suffixes=['_og', '_finra'])
         return df
