@@ -372,12 +372,18 @@ def remove_underscores(line):
 
 
 def split_by_uppers(line):
-    '''
-    takes row of dataframe and if the entire word is upper case
-    it attempts to split it if there are no spaces.
-    :param line: dataframe cell value
-    :return: split cell value
-    '''
+    """
+    Takes a string and if no spaces are present, splits them by the present
+    upper case values.
+
+    Parameters
+    ----------
+    line
+        A string value.
+    Returns
+    -------
+        An updated string value.
+    """
     line = remove_underscores(line)
     try:
         x = 0
@@ -395,12 +401,17 @@ def split_by_uppers(line):
 
 
 def lower_head_values(lname):
-    '''
-    transforms dataframe cell value to all lowercase letters.
+    """
+    Converts a string to lower-case.
+    Parameters
+    ----------
+    lname
+        A string.
 
-    :param lname: value
-    :return: returns lower-case format of value.
-    '''
+    Returns
+    -------
+        A lower-case string.
+    """
     tmp = []
     for i in lname:
         i = split_by_uppers(i)
@@ -414,8 +425,14 @@ def lower_head_values(lname):
 
 def path_leaf(path):
     """
-    :param path: path to a file
-    :return: file name or file directory.
+    Dynamic function to return a file or folder name.
+    Parameters
+    ----------
+    path
+        A string representing a file name.
+    Returns
+    -------
+        A file name or a directory.
     """
     head, tail = ntpath.split(path)
     return tail or ntpath.basename(head)
@@ -423,10 +440,16 @@ def path_leaf(path):
 
 def create_path_name(path, new_name):
     """
-    create a new file name, dynamically, based on the path and the name provided
-    :param path: orignal dir and name of file
-    :param new_name: name to append
-    :return: new file name
+    Creates a new file name given a path and a new name.
+    Parameters
+    ----------
+    path
+        A string representing the original name of a file.
+    new_name
+        A string representing a new suffix to append to the existing file name.
+    Returns
+    -------
+        An updated string representing the new file name.
     """
     if new_name not in _new_path_names:
         raise TypeError("new_name of '%s' is not valid. Must be in %s." % (new_name, ', '.join(_new_path_names)))
@@ -437,6 +460,18 @@ def create_path_name(path, new_name):
 
 
 def drop_in_bulk_processing(path, log):
+    """
+    Drops a file and passes it to the bulk tool Business Solution built.
+    Parameters
+    ----------
+    path
+        A string representing a full file name.
+    log
+        A log instance.
+    Returns
+    -------
+        Nothing
+    """
     if path is not None:
         dest = '//sc12-fsphl-01/BulkImports/'
         # \\sc12-fsphl-01\BulkImports\
@@ -447,9 +482,15 @@ def drop_in_bulk_processing(path, log):
 
 def clean_date_values(d_value):
     """
-    parses time value and returns date
-    :param d_value: timestamp
-    :return: transformed timestamp value
+    Transforms a string into a datetime object.
+    Parameters
+    ----------
+    d_value
+        A string representing a date.
+    Returns
+    -------
+        A datetime object.
+
     """
     d_value = parse(d_value)
     return d_value
@@ -457,18 +498,28 @@ def clean_date_values(d_value):
 
 def date_to_string(d_value):
     """
-    take timestamp and return string version of value.
-    :param d_value: timestamp
-    :return: string value of time stamp
+    Turns a datetime object into a string.
+    Parameters
+    ----------
+    d_value
+        A datetime object.
+    Returns
+    -------
+        The string representation of a date.
     """
     return datetime.datetime.strftime(d_value, '%m/%d/%Y %H:%M:%S')
 
 
 def timedelta_to_processing_str(duration):
     """
-    returns the elapsed time for list processing
-    :param duration: end time - start time
-    :return: string of elapsed time
+    Transforms a timestamp into a string representing the time in days, hours, minutes, & seconds.
+    Parameters
+    ----------
+    duration
+        A timestamp object.
+    Returns
+    -------
+        String representation of duration.
     """
     days, seconds = duration.days, duration.seconds
     hours = days * 24 + seconds // 3600
@@ -478,6 +529,24 @@ def timedelta_to_processing_str(duration):
 
 
 def auto_maintain(directory, destination=None, ndays=30, log=None):
+    """
+    This function helps to maintain a given directory by deleting files older than ndays old.
+
+    Parameters
+    ----------
+    directory
+        A string representing the directory (folder) to maintain.
+    destination
+        Optional. A string representing the directory to move a file to.
+    ndays
+        An integer representing a ceiling for the age of files to keep.
+    log
+        A logger instance.
+
+    Returns
+    -------
+        Nothing
+    """
     cleaned = 0
     dt = datetime.datetime
     for f in os.listdir(directory):
@@ -496,13 +565,20 @@ def auto_maintain(directory, destination=None, ndays=30, log=None):
 
 
 def record_processing_stats(values, save=True):
-    '''
-    processes stats data files
+    """
+    Records a backup of the metadata associated from processing a list in SQL and Excel.
 
-    :param values: data to record in stats dataframe
-    :param save: boolean, defaults to True
-    :return: dictionary items for list processing
-    '''
+    Parameters
+    ----------
+    values
+        A collection of values to record related to a lists processing.
+    save
+        Boolean (True or False). Dictates whether to save or return a data frame.
+    Returns
+    -------
+        A dictionary (if save=True) or pandas data frame representing
+        the stats recorded during list processing (if save=False).
+    """
     import sqlalchemy
     _stats_file_path = 'T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
     print('\nStep 11. Recording stats from processing.')
@@ -522,10 +598,15 @@ def record_processing_stats(values, save=True):
 
 def strip_unicode_chars(row):
     """
-    attempts to remove all unicode data from the row values.
+    Attempts to coerce all data to UTF-8.
 
-    :param row: cell value with unicode chars
-    :return: transformed cell value without unicode chars
+    Parameters
+    ----------
+    row
+        A string value, representing a single cell (value)
+    Returns
+    -------
+        A coerced string value.
     """
     row.fillna('', inplace=True)
     row.astype(str)
@@ -539,6 +620,17 @@ def strip_unicode_chars(row):
 
 def find_chrome_driver_location(filename='chromedriver'):
     """
+    Helper method to find the location of 'chromedriver'.
+
+    Parameters
+    ----------
+    filename
+        The name of a file to find.
+    Returns
+    -------
+        Location where given file is found.
+    """
+    """
     finds the file path location of the 'chromedriver' on the local machine
     :param filename: default='chromedriver'
     :return: file path string
@@ -548,6 +640,25 @@ def find_chrome_driver_location(filename='chromedriver'):
 
 
 def myprogressbar(batchsize, totalsize, barlength=25, message='', char="#"):
+    """
+    Helper method to display a progress bar.
+
+    Parameters
+    ----------
+    batchsize
+        An integer representing the number of records processed.
+    totalsize
+        An integer representing the size of a list.
+    barlength
+        A customizable integer representing the length of a bar.
+    message
+        A string customizing representing the name of the bar.
+    char
+        A string. The character to populate the progress bar.
+    Returns
+    -------
+        Nothing
+    """
     if totalsize == 0:
         raise ZeroDivisionError('%s division by zero in denominator.' % type(totalsize))
     addtooutput = cmdorgui()
@@ -563,6 +674,13 @@ def myprogressbar(batchsize, totalsize, barlength=25, message='', char="#"):
 
 
 def cmdorgui():
+    """
+    Helper method to itentify if the running version of python is command line or GUI.
+
+    Returns
+    -------
+        Nothing
+    """
     a = sys.executable
     m = '\\'
     m = m[0]
