@@ -242,6 +242,7 @@ def extract_dictionary_values(dict_data, log=None):
 
 
 def sfdc_upload(path, obj, obj_id, session, log=None):
+    # Todo: consider refactoring.
     """
     A routing method which performs final preparation and orchestrates a Salesforce upload
     for a given file.
@@ -308,6 +309,7 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
 
 
 def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
+    # Todo: consider refactoring.
     """
     Helps to perform an actual salesforce upload.
 
@@ -348,6 +350,30 @@ def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
 
 
 def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
+    # Todo: consider refactoring.
+    """
+    Adds/updates campaign members (and their statuses) in a Salesforce campaign.
+
+    Parameters
+    ----------
+    session
+        An authenticated Salesforce REST API session.
+    data
+        A list containing the data which will be uploaded to Salesforce.
+    obj_id
+        An 18-char string; Represents an Id of a Salesforce object.
+    obj
+        A string; Represents the name of a Salesforce object.
+    n_re
+        An integer; Represents the number of advisors removing from a campaign.
+    n_added
+        An integer; Represents the number of advisors adding to a campaign.
+    n_uptd
+        An integer; Represents the number of advisors updating in a campaign.
+    Returns
+    -------
+        A tuple lists containing [paths], and [num records]
+    """
     print('\nStep 10. Salesforce Campaign Upload.')
     where = "Id='%s' AND Contact.Territory_Manager__c!='Max Prown'" % obj_id
     sf_c_cmp_members = session.query('CampaignMember', ['ContactId', 'Status', 'Id'], where)
@@ -366,6 +392,42 @@ def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
 
 def bdg_upload(session, data, obj_id, obj, col_num, df_path, remove_path=None, add_path=None, update_path=None,
                curr_memb=None, n_add=0, n_up=0, n_re=0):
+    """
+    Adds/updates advisors in a Salesforce BizDev Group.
+    Parameters
+    ----------
+    session
+        An authenticated Salesforce REST API session.
+    data
+        A list containing the data which will be uploaded to Salesforce.
+    obj_id
+        An 18-char string; Represents an Id of a Salesforce object.
+    obj
+        A string; Represents the name of a Salesforce object.
+    col_num
+        An integer; The column to use for when parsing a list.
+    df_path
+        A string; Represents the a full file path.
+    remove_path
+        A string; Represents the name of the 'to_remove' file name.
+    add_path
+        A string; Represents the name of the 'to_add' file name.
+    update_path
+        A string; Represents the name of the 'to_update' file name.
+    curr_memb
+        REMOVE; NOT USED.
+    n_add
+        An integer; Represents the number of advisors adding to a campaign.
+    n_up
+        An integer; Represents the number of advisors updating in a campaign.
+    n_re
+        An integer; Represents the number of advisors removing from a campaign.
+
+    Returns
+    -------
+        A tuple lists containing [paths], and [num records]
+    """
+    # Todo: consider refactoring.
     print('\nStep 10. Salesforce BizDev Group Upload.')
     where = "BizDev_Group__c='%s'" % obj_id
     sf_bdg_members = session.query('Contact', ['Id', 'BizDev_Group__c '], where)
