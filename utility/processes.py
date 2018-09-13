@@ -22,11 +22,24 @@ except:
 
 def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_create_path=None):
     """
-    parses the list into new files based on the current biz dev, campaign, or account list.
-    :param path: path to original list of advisors
-    :param l_type: SFDC object (campaign or biz dev group)
-    :param pre_or_post: if object is Campaign, pre or post
-    :return: updated dictionary values for the main_module list processing.
+    Serves as a routing point to parse a list, dependent on the sources object.
+
+    Parameters
+    ----------
+    path
+        A string representing a full file path.
+    l_type
+        A string containing the source Salesforce object for the list request.
+    pre_or_post
+        A string containing 'Pre' or 'Post'.
+    log
+        A logger instance.
+    to_create_path
+        The name of file ending with the '_to_create' suffix.
+
+    Returns
+    -------
+        An updated dictionary mapper object.
     """
     dict_elements = {
         'cmp_upload': None, 'to_create': None, 'to_update': None, 'bdg_update': None,
@@ -51,17 +64,28 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_c
 
 
 def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
-    '''
-    prepares the list for SFDC /upload and contact creation.
+    """
+    Prepares a list for Salesforce upload and/or contact creation.
 
-    :param path: path of file to be processed
-    :param record_name: SFDC object record name
-    :param obj_id: SFDC object id
-    :param obj: SFDC object type
-    :param aid: SFDC account id if SFDC object is BizDev Group
-    :param log: logging object, passed from main processing
-    :return:
-    '''
+    Parameters
+    ----------
+    path
+        A string representing a full file path.
+    record_name
+        A string; name of a Salesforce record.
+    obj_id
+        An 18-char string; Id of a Salesforce Object.
+    obj
+        A string; Name of a Salesforce Object.
+    aid
+        An 18-char string; Optional. Parent Id (or Account Id) related to an Object in Salesforce.
+    log
+        A logger instance.
+
+    Returns
+    -------
+        A python dictionary containing next steps for the list processing tool.
+    """
     move_to_bulk = False
     if obj == 'Campaign':
         msg = 'Will be performed twice.'
@@ -100,14 +124,23 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
 
 
 def extract_dictionary_values(dict_data, log=None):
-    '''
-    from all values created by list processing, creates email
-    to send by to list requester.
+    """
+    This function leverages the dictionary, filled with meta data regarding a list and it's processing
+    and extracts specific elements that will be used to:
+        1) Organize all list processing statistics to record and store. Ex. (Num names on list, match rate, et al).
+        2) Send a notification of process completion to the originator of a list request.
 
-    :param dict_data: dictionary of values created by list program processing.
-    :param log: logging object, passed from main processing
-    :return: stats for record keeping
-    '''
+    Parameters
+    ----------
+    dict_data
+        A python dictionary containing meta data regarding a single list in the queue.
+    log
+        A logger instance.
+
+    Returns
+    -------
+        A python dictionary containing next steps for the list program.
+    """
     log.info('Extracting stats from the %s data dictionary.' % dict_data['Object'])
     if dict_data['Object'] == 'Campaign':
 
@@ -209,6 +242,27 @@ def extract_dictionary_values(dict_data, log=None):
 
 
 def sfdc_upload(path, obj, obj_id, session, log=None):
+    """
+    A routing method which performs final preparation and orchestrates a Salesforce upload
+    for a given file.
+
+    Parameters
+    ----------
+    path
+        A string representing a full file path.
+    obj
+        A string representing the name of a Salesforce object.
+    obj_id
+        An 18-char string; The id of a Salesforce object.
+    session
+        An authenticated Salesforce REST API session.
+    log
+        A logger instance.
+
+    Returns
+    -------
+        A python dictionary containing metadata and next steps for the list program.
+    """
     paths = ['', '', '', '']
     stats = ['', '', '']
     col_nums = []
@@ -254,6 +308,30 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
 
 
 def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
+    """
+    Helps to perform an actual salesforce upload.
+
+    Parameters
+    ----------
+    session
+        An authenticated Salesforce REST API session.
+    headers
+        A list of strings representing column names in a Salesforce table.
+        Should consider removing, as it doesn't seem used.
+    data
+        A list containing the data which will be uploaded to Salesforce.
+    obj_id
+        An 18-char string; Represents an Id of a Salesforce object.
+    obj
+        A string; Represents the name of a Salesforce object.
+    col_num
+        TBD
+    df_path
+        A string representing the a full file path.
+    Returns
+    -------
+        TBD
+    """
     if len(data) > 0:
         if obj == 'Campaign':
             paths, stats = cmp_upload(session, data, obj_id, obj)
