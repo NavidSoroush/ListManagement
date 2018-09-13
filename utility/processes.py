@@ -1,3 +1,11 @@
+"""
+processes.py
+====================================
+Contains core processes that are used
+throughout the processing of a given list.
+"""
+
+
 from __future__ import absolute_import
 import traceback
 
