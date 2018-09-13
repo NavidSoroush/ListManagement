@@ -1,3 +1,10 @@
+"""
+salesforce.py
+======================================================
+Provides a set of actions to compare the Contact object
+of a Salesforce CRM to a 3rd party list (excel, csv).
+"""
+
 import os
 import time
 
@@ -18,9 +25,15 @@ _todays_sfdc_advisor_list = 'T:\\Shared\\FS2 Business Operations\\Python Search 
 
 
 class Search:
+    """
+    Search object that orchestrates comparisons and parsing between
+    source (3rd party, Finra, et al) data sets and target
+    (Salesforce contact object) data sets.
+    """
+
     def __init__(self, log=None):
         """
-        declare instance variables for the search class and child methods.
+        Instantiates a bare Search object.
         """
         self.log = log
         self._today = today
@@ -51,6 +64,14 @@ class Search:
                          'Individuals\\processed_data\\' + self._today + '\\'
 
     def _sfdc_file_check(self):
+        """
+        Helper method to see the Salesforce advisor list has been extracted and kicks off
+        the appropriate processing if it has not.
+
+        Returns
+        -------
+            Nothing
+        """
         if not os.path.exists(_todays_sfdc_advisor_list):
             self.log.info("Please wait. Downloading SFDC list, as today's file was not available.")
 
@@ -58,19 +79,24 @@ class Search:
 
     def __init_list_metadata(self):
         """
-        helper method which stores the list file's column names and determines if it's known, or not.
+        Helper method which stores the list file's column names and determines if it's known, or not.
 
-        :return: n/a
+        Returns
+        -------
+            Nothing
         """
+
         self._headers = self._search_list.columns.values
         self._keep_cols = [c for c in self._headers if 'unknown' not in c.lower()]
 
     def __preprocess_sfdc_list(self):
         """
-        helper method that pre-preprocesses our source SalesForce contact file.
-        1) identify and keep only unique records (rows)
-        2) convert the CRDNumber column to string type
-        :return: n/a
+        Helper method that pre-preprocesses our source SalesForce contact file.
+            1) identify and keep only unique records (rows)
+            2) convert the CRDNumber column to string type
+        Returns
+        -------
+            Nothing
         """
         _, i = np.unique(self._SFDC_advisor_list.columns, return_index=True)
         self._SFDC_advisor_list = self._SFDC_advisor_list.iloc[:, i]
@@ -78,15 +104,15 @@ class Search:
 
     def __data_preprocessing(self, additional=False):
         """
-        helper method that attempts to clean the 3rd party list file.
+        Helper method that attempts to clean the 3rd party list file.
 
-        1) slice and keep only the 'known' columns
-        2) fill NaN/NULL (blank) values and drop all rows that don't have at least 3 full columns
-        3) if Full Name is a column, attempt to split into First and Last name columns to improve match-rates
-        4) if First Name, Last Name, Account Name, State, and Zip are present attempt to make LkupName
-
-        :param additional: boolean, default=False
-        :return: n/a
+        Parameters
+        ----------
+        additional
+            Boolean; default=False
+        Returns
+        -------
+            Nothing
         """
         self._search_list = self._search_list[self._keep_cols]
         self._search_list.fillna('', inplace=True)
@@ -99,19 +125,27 @@ class Search:
 
     def __check_list_type(self):
         """
-        helper method to subset the fields returned upon merging 3rd party list with SF, based on the source object.
+        Helper method to subset the fields returned upon merging 3rd party list with SF,
+        based on the source object.
 
-        :return: n/a
+        Returns
+        -------
+            Nothing
         """
         if self._list_type != 'BizDev Group':
             del self._return_fields[-1]
 
     def _df_column_preprocessing(self, df):
         """
-        helper method to encode columns in a data frame to 'utf-8' based on the column's data type
+        Helper method to encode columns in a data frame to 'utf-8' based on the column's data type.
 
-        :param df: data frame object
-        :return: transformed data frame
+        Parameters
+        ----------
+        df
+            A pandas data frame object
+        Returns
+        -------
+            A transformed (and preprocessed) data frame object.
         """
         count = 0
         for col in df.columns:
@@ -124,11 +158,18 @@ class Search:
 
     def __join_headers(self, header):
         """
-        helper method to combine merge key (header) and the metadata we want from SFDC to associate with
+        Helper method to combine merge key (header) and the metadata we want from SFDC to associate with
         an individual record (row) from a 3rd party list.
 
-        :param header: merge key, i.e. a column we will merge on
-        :return: key and joined headers (ex. [CRDNumber, ContactId, AccountId, SourceChannel, etc.])
+        Parameters
+        ----------
+        header
+            A string; Merge key, i.e. a column we will merge on
+        Returns
+        -------
+            List; Our key and the joined headers
+            Examples
+                (ex. [CRDNumber, ContactId, AccountId, SourceChannel, etc.])
         """
         joined_headers = [header]
         [joined_headers.append(rf) for rf in self._return_fields]
@@ -136,22 +177,30 @@ class Search:
 
     def __create_meta_data(self, headers=None, search_two=False):
         """
-        helper method to determine how a merged list (3rd party & FS SFDC data) get's handled.
-        
-        1) determine if this is the first, or second, set of searches against SFDC.
-        2) if this is the second set of searches, then 'found contacts' are only records that have a ContactID
-        3) if this is the first set of searches then:
-            a) if a CRD search is passed to the 'create_meta_data' method:
+        Helper method to determine how a merged list (3rd party & FS SFDC data) get's handled.
+
+        Steps:
+        ------
+        1) Determine if this is the first, or second, set of searches against SFDC.
+        2) If this is the second set of searches, then 'found contacts' are only records that have a ContactID
+        3) If this is the first set of searches then:
+            a) If a CRD search is passed to the 'create_meta_data' method:
                 1a. 'found contacts' are records that have a ContactID merged with the original data
-                2a. if CRD's are provided for all records, set 'to_finra' to False and rename the CRDNumber column
-                3a. if the length of the search list and found contact list are not the same, we need to 
+                2a. If CRD's are provided for all records, set 'to_finra' to False and rename the CRDNumber column
+                3a. If the length of the search list and found contact list are not the same, we need to
                     perform additional searches to attempt to identify additional matches & duplicate records.
-            
-        :param headers: 
-        :param search_two: 
-        :return: 
+
+        Parameters
+        ----------
+        headers
+            List; Contains the headers in a given pandas data frame.
+        search_two
+            Boolean; defaults to False. Used to denote if this is the second search or not.
+        Returns
+        -------
+            Nothing.
         """
-        # may need to try and clean this method up, it's a bit confusing and messy.
+        # TODO: may need to try and clean this method up, it's a bit confusing and messy.
         if search_two:
             self._found_contacts = read_df(self._found_contact_path)
             finra_matched_to_sf = self._search_list[self._search_list['ContactID'] != '']
@@ -164,7 +213,7 @@ class Search:
                     self._search_list[self._search_list['ContactID'] != ''], ignore_index=True)
 
                 if self._search_list['CRDNumber'].count() == len(self._search_list.index) and \
-                                len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list.index):
+                        len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list.index):
 
                     self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
                     self._to_finra = False
@@ -209,11 +258,16 @@ class Search:
 
     def _identify_to_review_records(self):
         """
-        a method that's used to help identify records that need to be manually reviewed
-        
+        Helper method that's used to help identify records that need to be manually reviewed.
+
+        Steps:
+        ------
         1) flag a record as needing review if:
-            a) a SFDC CRDNumber is not null doesn't equal the CRD Provided by List Number
-        :return: 
+            a) a SFDC CRDNumber is not null doesn't equal the CRD Provided by List Number.
+
+        Returns
+        -------
+            Nothing
         """
         self._search_list['ToReview'] = 0
         self._search_list['ToReview'] = self._search_list.apply(
@@ -231,26 +285,43 @@ class Search:
 
     def __num_found(self, found_df):
         """
-        records the number of records found during the search process
-    
-        :param found_df: data frame
-        :return: n/a
+        Helper method to aggregate the number of found contacts throughout all iterations of the search process.
+
+        Parameters
+        ----------
+        found_df
+            A pandas data frame.
+
+        Returns
+        -------
+            Nothing
         """
+
         self._num_found_contacts = len(found_df)
         self._total_found += self._num_found_contacts
 
     def __search_and_merge(self, search_fields, search_two=False):
         """
-        helper method that actually performs the merging of data from 3rd party and SF list files.
+        Helper method that actually performs the merging of data from 3rd party and SF list files.
+
+        Steps:
+        ------
         1) for each search field, determine if it's present in the 3rd party file's column names
         2) create a sliced data frame of SF data to include only columns we need in 'n'th search (via join_headers)
         3) merge data from 3rd party and SF subsetted data frame, merging on the search header
         4) submit the merged 3rd party list to the create_metadata method to determine how the list
             should be further sliced for subsequent processing, or if all records were found.
-    
-        :param search_fields: list of columns to search (pandas merge) on
-        :param search_two: boolean, default=False
-        :return: n/a
+
+        Parameters
+        ----------
+        search_fields
+            list of columns to search (pandas merge) on
+        search_two
+            Boolean; defaults to False. Used to denote if this is the second search or not.
+
+        Returns
+        -------
+            Nothing
         """
         if len(search_fields) > 1:
             self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?',
@@ -276,13 +347,21 @@ class Search:
 
     def _crd_search(self, search_field=['CRDNumber']):
         """
-        helper method to help properly guide the search process when matching on CRDNumbers
-    
+        Helper method to help properly guide the search process when matching on CRDNumbers.
+
+        Steps:
+        ------
         1) set the fields that will be returned to the 3rd party list from the SFDC file, and fill blank values
         2) merge the 3rd party list and SFDC file, leveraging the __search_and_merge method.
-    
-        :param search_field:
-        :return:
+
+        Parameters
+        ----------
+        search_field
+            List; The field to use as our 'join on'/'merge on' key during a search.
+
+        Returns
+        -------
+            Updated Search object.
         """
         self._is_crd_check = True
         self._return_fields = ['AccountId', 'SourceChannel',
@@ -293,18 +372,28 @@ class Search:
 
     def _lkup_name_address_processing(self, headers, search_list):
         """
-        helper method to create the LkupName search field, if the necessary columns are present, and pre-process them.
-    
-        1) check if PostalCode and State are available in the data frame, and convert the data types to strings
-        2) loop through each row, and attempt to clean the Postal code.
-        3) attempt to clean the State column, if the name (rather than abbr.) is provided. leverage us.states.lookup
-        4) check if FirstName and LastName are present
-            a) if all columns are present combine first 3 chars of First Name, Last Name, Account, State, and Postal
-            b) ex. RicSchools FS Investm PA 19112
-    
-        :param headers: list of column headers of the data frame
-        :param search_list: data frame value
-        :return: transformed data frame
+        Helper method to create the LkupName search field, if the necessary columns are present,
+        and pre-process them.
+
+        Steps:
+        ------
+        1) Check if PostalCode and State are available in the data frame, and convert the data types to strings
+        2) Loop through each row, and attempt to clean the Postal code.
+        3) Attempt to clean the State column, if the name (rather than abbr.) is provided. leverage us.states.lookup
+        4) Check if FirstName and LastName are present
+            a) If all columns are present combine first 3 chars of First Name, Last Name, Account, State, and Postal
+            b) Ex. RicSchools FS Investm PA 19112
+
+        Parameters
+        ----------
+        headers
+            List; list of column headers of the data frame.
+        search_list
+            A pandas data frame.
+
+        Returns
+        -------
+            An updated (enriched) pandas data frame object.
         """
         if "MailingPostalCode" in headers and "MailingState" in headers:
             import us
@@ -361,11 +450,11 @@ class Search:
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = search_list["FirstName"].apply(lambda x: x.title())
                 search_list["LastName"] = search_list["LastName"].apply(lambda x: x.title())
-                search_list["Account"] = search_list["Account"].str.replace(',','')
+                search_list["Account"] = search_list["Account"].str.replace(',', '')
                 search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list[
                                                                                                            "Account"].str[
                                                                                                        :10] + \
-                                          search_list["MailingState"] + search_list["MailingPostalCode"]#.str[:-2]
+                                          search_list["MailingState"] + search_list["MailingPostalCode"]  # .str[:-2]
                 print(search_list.head())
 
             else:
@@ -379,10 +468,16 @@ class Search:
 
     def _clean_comma_and_space(self, row):
         """
-        helper method to remove spaces and commas from a row of data.
-    
-        :param row: data frame row of data
-        :return: transformed row
+        Helper method to remove spaces and commas from a row within a data frame.
+
+        Parameters
+        ----------
+        row
+            An un-normalized pandas data frame row containing spaces and commas.
+
+        Returns
+        -------
+            A normalized pandas data frame row void of spaces and commas.
         """
         if ' ' in row:
             row.replace(' ', '')
@@ -392,8 +487,10 @@ class Search:
 
     def _name_preprocessing(self, headers, search_list):
         """
-        helper method to split and clean the FullName column of the 3rd party data frame.
-    
+        Helper method to split and clean the FullName column of the 3rd party data frame.
+
+        Steps:
+        ------
         1) if FullName is present, create a column for First and Last Name.
         2) iterate through the data frame and if a comma is present in the Full Name, check if:
             a) a space preceeds a comma. if so, assume the 1st element of the split FullName is the First Name
@@ -402,11 +499,17 @@ class Search:
         3) if no comma is present, assume First Last / (suffix or middle) - splitting the FullName on spaces (' ')
         4) attempt to remove potential suffixes (which may include .jr, iii, cfa, etc.)
         5) finally, attempt to appropriately assign the First and Last Name fields to the appropriate columns.
-    
-    
-        :param headers: columns of the data frame
-        :param search_list: data frame
-        :return: transformed data frame
+
+        Parameters
+        ----------
+        headers
+            List; columns names of a pandas data frame
+        search_list
+            A pandas data frame.
+
+        Returns
+        -------
+            An updated (enriched) pandas data frame object.
         """
         names_to_remove = ["jr", "jr.", "sr", "sr.", "ii", "iii", "iv", 'aams', 'aif', 'aifa', 'bcm', 'caia',
                            'casl', 'ccps', 'cdfa', 'cea', 'cebs', 'ces', 'cfa', 'cfe', 'cfp', 'cfs', 'chfc',
@@ -438,6 +541,20 @@ class Search:
         return search_list
 
     def perform_search_one(self, searching_list_path, list_type):
+        """
+        User method to implement the first comparison between a 3rd party list and Salesforce.
+
+        Parameters
+        ----------
+        searching_list_path
+            String; Represents a full file path.
+        list_type
+            String; Represents the name of a Salesforce object.
+
+        Returns
+        -------
+            A python dictionary containing next steps for list processing.
+        """
         self.log.info('Implementing search_one method on the %s list. Search 1 pre-processing begins.' % list_type)
         self._search_list = read_df(searching_list_path)
         self.__init_list_metadata()
@@ -481,6 +598,25 @@ class Search:
         return ret_item
 
     def perform_search_two(self, searching_list_path, found_path, list_type):
+        """
+        User method to implement the second comparison between a 3rd party list and Salesforce.
+
+        All advisors found during the call of this method are moved from the searching_list_path
+        to the found_path.
+
+        Parameters
+        ----------
+        searching_list_path
+            String; Represents a full file path of the un-matched advisors.
+        found_path
+            String; Represents a full file path of the matched advisors.
+        list_type
+            String; Represents the name of a Salesforce object.
+
+        Returns
+        -------
+            A python dictionary containing next steps for list processing.
+        """
         self.log.info('Implementing search_two method on the %s list. Search 2 pre-processing begins.' % list_type)
         self._search_fields = ['CRDNumber']
         self._return_fields = ['AccountId', 'SourceChannel', 'ContactID',
