@@ -174,7 +174,7 @@ def extract_dictionary_values(dict_data, log=None):
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
-        , 'Created By': _ghelp.userName, 'File Type': obj, 'Advisors on List': total
+        , 'Created By': _ghelp.os.environ['USERNAME'], 'File Type': obj, 'Advisors on List': total
         , 'Advisors w/CID': num_found_in_sfdc, 'Advisors w/CID old Contact Info': num_not_updating
         , 'CRD Found Not in SFDC': to_create, 'Creating': to_create
         , 'Unable to Find': need_research, 'Last Search Date': completed
@@ -189,7 +189,8 @@ def extract_dictionary_values(dict_data, log=None):
                     'Processed_By__c']
 
     listobj_data = [dict_data['ListObjId'], 'Process Completed', total, obj_to_add, to_create, num_found_in_sfdc,
-                    need_research, need_research, to_update, match_rate * 100, processing_completed, _ghelp.sf_uid]
+                    need_research, need_research, to_update, match_rate * 100, processing_completed,
+                    _ghelp.os.environ['SFUSERID']]
 
     log.info('Updating the List record for Id: %s' % dict_data['ListObjId'])
     dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
