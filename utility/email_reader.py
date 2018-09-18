@@ -14,7 +14,7 @@ from PythonUtilities.EmailHandling import EmailHandler as Email
 
 try:
     from .sf_helper import get_user_id
-    from .gen_helper import determine_ext, date_parsing
+    from .general import determine_ext, date_parsing
     from .email_helper import *
     from ListManagement.config import Config as con
 except (ModuleNotFoundError, ImportError):

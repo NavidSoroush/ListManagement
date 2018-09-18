@@ -2,9 +2,9 @@ from __future__ import absolute_import
 import pandas as pd
 
 try:
-    from ListManagement.utility.general import determine_ext
+    from .general import determine_ext
 except:
-    from utility.general import determine_ext
+    from ListManagement.utility.general import determine_ext
 
 
 def read_df(path):
