@@ -373,12 +373,12 @@ def record_processing_stats(values, save=True):
     import sqlalchemy
     _stats_file_path = 'T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
     print('\nStep 11. Recording stats from processing.')
-    df2 = pd.DataFrame(values).transpose()
+    df2 = pd.DataFrame.from_dict(values, orient='index').transpose()
     if save:
         df = pd.read_excel(_stats_file_path)
         engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
         df2.to_sql(name='SearchStats', con=engine, if_exists='append', index=False)
-        df = df.append(df2, ignore_index=True)
+        df = df.append(df2, ignore_index=True, sort=False)
         df.to_excel(_stats_file_path, index=False)
         del df
         del df2
@@ -445,7 +445,6 @@ def cmdorgui():
     else:
         # Running from the command line
         return ''
-
 
 # import importlib
 # import pip
@@ -514,4 +513,3 @@ def cmdorgui():
 # def install_chromedriver():
 #     name = download_chromewhl()
 #     install_whl(name)
-
