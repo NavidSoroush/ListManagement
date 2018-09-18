@@ -258,7 +258,6 @@ def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
     if len(data) > 0:
         if obj == 'Campaign':
             paths, stats = cmp_upload(session, data, obj_id, obj)
-            print(data)
             if data[0][2] == 'Needs Follow-Up':
                 session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
                                        upload_data=[[data[0][1], 'true']])
