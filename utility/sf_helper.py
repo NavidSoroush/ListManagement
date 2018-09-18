@@ -1,6 +1,9 @@
 def remove_duplicates(mbr_list):
-    unique_data = [list(x) for x in set(tuple(x) for x in mbr_list)]
-    return unique_data
+    if mbr_list is None:
+        return mbr_list
+    else:
+        unique_data = [list(x) for x in set(tuple(x) for x in mbr_list)]
+        return unique_data
 
 
 def split_list(id_in_obj, ids_from_search, obj_id, obj, col=None, remove=None, remove_unique=None):
