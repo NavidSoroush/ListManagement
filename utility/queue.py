@@ -180,9 +180,11 @@ def build_queue(sfdc, log=None):
     -------
         Dictionary of pending lists in the queue and necessary metadata.
     """
+    log.info('Attempting to build list queue.')
     data = sfdc.query('List__c', fields=_LIST_FIELDS, where=_LIST_WHERE)
     data.rename(columns={'Id': 'ListObjId'}, inplace=True)
     if len(data.index) == 0:
+        log.info('There are no pending lists.')
         return list()
     else:
         # establish all of L.I.M.A.'s required variables.
@@ -199,6 +201,7 @@ def build_queue(sfdc, log=None):
         data = _get_metadata_ids(sfdc, data, data['Object'][0])
         data = _get_attachments(sfdc, data)
         data.insert(0, 'ListIndex', range(0, 0 + len(data)))
+        log.info('There are {0} items pending in the queue.'.format(len(data.index)))
         return data.to_dict('rows')
 
 
