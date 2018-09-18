@@ -156,7 +156,7 @@ class Search:
             self._found_contacts = read_df(self._found_contact_path)
             finra_matched_to_sf = self._search_list[self._search_list['ContactID'] != '']
             self.log.info('\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf))
-            self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True)
+            self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True, sort=False)
 
         else:
             if self._is_crd_check and 'CRD Provided by List' not in self._headers:
@@ -164,7 +164,7 @@ class Search:
                     self._search_list[self._search_list['ContactID'] != ''], ignore_index=True)
 
                 if self._search_list['CRDNumber'].count() == len(self._search_list.index) and \
-                                len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list.index):
+                        len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list.index):
 
                     self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
                     self._to_finra = False
@@ -197,8 +197,6 @@ class Search:
                     self._found_contacts = self._found_contacts.append(
                         self._search_list[self._search_list['CRDNumber'] != ''],
                         ignore_index=True)
-                    print(self._found_contacts.head())
-                    print("these were found")
                     self._search_list = self._search_list[self._search_list['CRDNumber'] == '']
 
             for r_field in self._return_fields:
@@ -219,14 +217,12 @@ class Search:
         self._search_list['ToReview'] = self._search_list.apply(
             lambda x: 1 if x['CRDNumber'] != '' and x['CRDNumber'] != x["CRD Provided by List"] else x[
                 'ToReview'], axis=1)
-        print(self._search_list.head())
         self._contacts_to_review = self._contacts_to_review.append(
             self._search_list[self._search_list['ToReview'] == 1], ignore_index=True)
         self._search_list = self._search_list[self._search_list['ToReview'] == 0]
         del self._search_list['CRDNumber']
         del self._search_list['ToReview']
         self._save_to_review_df = True
-        print(self._search_list.head())
         self.log.info('Identified %s contacts that need to be reviewed.' % len(self._contacts_to_review.index))
 
     def __num_found(self, found_df):
@@ -263,7 +259,7 @@ class Search:
 
                 self._headers_and_ids = make_df()
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
-                self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
+                self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header, sort=False)
                 self._search_list.fillna('', inplace=True)
                 self._num_searched_on = len(self._search_list)
                 self.__create_meta_data(self._headers, search_two=search_two)
@@ -361,12 +357,11 @@ class Search:
             if "FirstName" in headers and "LastName" in headers:
                 search_list["FirstName"] = search_list["FirstName"].apply(lambda x: x.title())
                 search_list["LastName"] = search_list["LastName"].apply(lambda x: x.title())
-                search_list["Account"] = search_list["Account"].str.replace(',','')
+                search_list["Account"] = search_list["Account"].str.replace(',', '')
                 search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list[
                                                                                                            "Account"].str[
                                                                                                        :10] + \
-                                          search_list["MailingState"] + search_list["MailingPostalCode"]#.str[:-2]
-                print(search_list.head())
+                                          search_list["MailingState"] + search_list["MailingPostalCode"]  # .str[:-2]
 
             else:
                 self.log.info("Advisor name or account information missing")
