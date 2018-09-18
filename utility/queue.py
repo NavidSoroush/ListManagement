@@ -41,11 +41,11 @@ _OBJ_MAP = {'Attachment': {'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
             }
 
 _STATIC_VARIABLES = {
-    'Next Step': 'Pre-processing', 'Found Path': None, 'Found in SFDC Search #2': 0, 'Num Adding': 0,
-    'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': None,
+    'Next Step': 'Pre-processing', 'Found Path': str(), 'Found in SFDC Search #2': 0, 'Num Adding': 0,
+    'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': str(),
     'process_start': _dt.datetime.fromtimestamp(_ghelp.time.time()).strftime('%Y-%m-%d %H:%M:%S'),
-    'CmpAccountName': None, 'CmpAccountID': None, 'Campaign Start Date': None, 'Pre_or_Post': None,
-    'ExtensionType': None, 'File Path': None,
+    'CmpAccountName': str(), 'CmpAccountID': str(), 'Campaign Start Date': None, 'Pre_or_Post': str(),
+    'ExtensionType': str(), 'File Path': str(),
 }
 
 
