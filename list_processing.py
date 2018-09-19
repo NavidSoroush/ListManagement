@@ -1,8 +1,12 @@
+import os
+import sys
 import traceback
 
 from PythonUtilities.LoggingUtility import Logging
 from PythonUtilities.EmailHandling import EmailHandler as Email
 from PythonUtilities.salesforcipy import SFPy
+
+sys.path.append(os.path.abspath('.'))
 
 from ListManagement.config import Config as con
 from ListManagement.search import Search, Finra
