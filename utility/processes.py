@@ -19,6 +19,53 @@ except:
     from utility.pandas_helper import read_df, save_df, make_df, determine_num_records
     from utility.sf_helper import *
 
+upload_map = {
+    'Campaign': {
+        'sf_query': {
+            'object': 'CampaignMember'
+            , 'fields': ['ContactId', 'Status', 'Id']
+            , 'where': "Id='{0}' AND Contact.Territory__c !='Prospect Accounts'"
+        }
+        , 'sf_create': {
+            'object': 'CampaignMember'
+            , 'fields': ['ContactId', 'Status', 'CampaignId']
+        }
+        , 'sf_update': {
+            'object': 'CampaignMember'
+            , 'fields': ['Id', 'Status', 'CampaignId']
+
+        }
+        , 'filenames': {
+            'current_members': 'current_members'
+            , 'to_add': 'to_add'
+            , 'to_stay': 'to_stay'
+            , 'to_remove': 'to_remove'
+        }
+    }
+    , 'BizDev Group': {
+        'sf_query': {
+            'object': 'Contact'
+            , 'fields': ['Id', 'Biz_Dev_Group__c', 'Licences__c']
+            , 'where': "Biz_Dev_Group__c ='{0}'"
+        }
+        , 'sf_create': {
+            'object': 'Contact'
+            , 'fields': ['Id', 'Biz_Dev_Group__c', 'Licences__c']
+        }
+        , 'sf_update': {
+            'object': 'Contact'
+            , 'fields': ['Id', 'Biz_Dev_Group__c', 'Licences__c']
+        }
+        , 'filenames': {
+            'current_members': 'current_members'
+            , 'to_add': 'to_add'
+            , 'to_stay': 'to_stay'
+            , 'to_remove': 'to_remove'
+        }
+
+    }
+}
+
 
 def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_create_path=None):
     """
@@ -210,28 +257,18 @@ def extract_dictionary_values(dict_data, log=None):
 
 
 def sfdc_upload(path, obj, obj_id, session, log=None):
-    paths = ['', '', '', '']
-    stats = ['', '', '']
-    col_nums = []
+    paths, stats = ['', '', '', ''], ['', '', '']
     df = read_df(path=path)
     if obj == 'BizDev Group':
         df.rename(columns={'BizDev Group': 'BizDev_Group__c', 'Licenses': 'Licenses__c'}, inplace=True)
         df = df[['ContactID', 'BizDev_Group__c', 'Licenses__c']]
-        col_nums.append(df.columns.get_loc('BizDev_Group__c'))
-        col_nums.append(df.columns.get_loc('ContactID'))
-        col_nums.append(df.columns.get_loc('Licenses__c'))
     df_values = df.values.tolist()
-    df_headers = df.columns.values.tolist()
 
-    log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
-    try:
-        if obj == 'Campaign':
-            paths, stats = upload(session, df_headers, df_values, obj_id, obj)
-
-        elif obj == 'BizDev Group':
-            paths, stats = upload(session, df_headers, df_values, obj_id, obj, col_nums, path)
-    except:
-        if len(df_values) > 0:
+    if len(df_values) > 0:
+        log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
+        try:
+            paths, stats = upload(session, df_values, obj_id, obj, path)
+        except:
             sub = 'LMA: %s upload fail for %s' % (path, obj)
             body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
                    'manually upload this file at your earliest convenience.' % (path, obj)
@@ -241,8 +278,8 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
                 subject=sub, to=con.ListTeam, body=body,
                 attachments=[path], name=con.FullName
             )
-        else:
-            log.info('There is no data to upload to the %s object.' % obj)
+    else:
+        log.info('There is no data to upload to the %s object.' % obj)
 
     return {'Next Step': 'Send Email',
             'BDG Remove': paths[0],
@@ -254,71 +291,53 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
             'Num Updating/Staying': stats[2]}
 
 
-def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
+def upload(session, data, obj_id, obj, path):
+    """
+
+    Parameters
+    ----------
+    session
+    data
+    obj_id
+    obj
+    path
+
+    Returns
+    -------
+
+    """
+    current_path, add_path, update_path, remove_path = '', '', '', ''
     if len(data) > 0:
-        if obj == 'Campaign':
-            paths, stats = cmp_upload(session, data, obj_id, obj)
-            if data[0][2] == 'Needs Follow-Up':
+        current_members = session.query(object=upload_map[obj]['sf_query']['object']
+                                        , fields=upload_map[obj]['sf_query']['fields']
+                                        , where=upload_map[obj]['sf_query']['where'].format(obj_id))
+        save_df(current_members, _ghelp.create_path_name(path, 'current_members'))
+        insert, update, remove = _ghelp.list_crud(source=data, target=current_members)
+        n_add, n_up, n_re = len(insert), len(update), len(remove)
+        if n_up > 0:
+            update_path = _ghelp.create_path_name(path, 'to_stay')
+            save_df(make_df(update, columns=upload_map[obj]['sf_update']['fields']), update_path)
+            session.update_records(upload_map[obj]['sf_update']['object'], upload_map[obj]['sf_create']['fields'],
+                                   update)
+
+        if n_re > 0:
+            remove_path = _ghelp.create_path_name(path, 'to_remove')
+            save_df(make_df(remove, columns=upload_map[obj]['sf_update']['fields']), remove_path)
+
+        if n_add > 0:
+            add_path = _ghelp.create_path_name(path, 'to_add')
+            save_df(make_df(insert, columns=upload_map[obj]['sf_create']['fields']), add_path)
+            if obj == 'Campaign':
+                session.create_records(upload_map[obj]['sf_create']['object'], upload_map[obj]['sf_create']['fields'],
+                                       insert)
                 session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
                                        upload_data=[[data[0][1], 'true']])
-        elif obj == 'BizDev Group':
-            headers = headers_clean_up(headers)
-            paths, stats = bdg_upload(session, data, obj_id, obj, col_num, df_path)
-        return paths, stats
-    else:
-        return
+            else:
+                session.update_records(upload_map[obj]['sf_create']['object'], upload_map[obj]['sf_create']['fields'],
+                                       insert)
 
-
-def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
-    print('\nStep 10. Salesforce Campaign Upload.')
-    where = "Id='%s' AND Contact.Territory_Manager__c!='Max Prown'" % obj_id
-    sf_c_cmp_members = session.query('CampaignMember', ['ContactId', 'Status', 'Id'], where)
-    to_insert, to_update, to_remove = split_list(sf_c_cmp_members.values.tolist(), data, obj_id, obj)
-    n_add = len(to_insert)
-    n_up = len(to_update)
-    if n_added < n_add:
-        n_added = session.create_records(obj='CampaignMember', fields=['ContactId', 'Status', 'CampaignId'],
-                                         upload_data=to_insert)
-
-    if n_uptd < n_up:
-        n_uptd = session.update_records(obj='CampaignMember', fields=['Id', 'Status', 'CampaignId'],
-                                        upload_data=to_update)
-    return ['', '', '', ''], [n_re, n_add, n_up]
-
-
-def bdg_upload(session, data, obj_id, obj, col_num, df_path, remove_path=None, add_path=None, update_path=None,
-               curr_memb=None, n_add=0, n_up=0, n_re=0):
-    print('\nStep 10. Salesforce BizDev Group Upload.')
-    where = "BizDev_Group__c='%s'" % obj_id
-    sf_bdg_members = session.query('Contact', ['Id', 'BizDev_Group__c '], where)
-    to_insert, to_update, to_remove = split_list(sf_bdg_members.values.tolist(), data, obj_id, obj, col_num[1])
-    curr_memb = _ghelp.create_path_name(df_path, 'current_bdg_members')
-    sf_bdg_members = [sf_bdg_members[i:i + 2] for i in range(0, len(sf_bdg_members), 2)]
-    save_df(df=make_df(data=sf_bdg_members, columns=['Id', 'BizDev_Group__c']), path=curr_memb)
-    print('Attempting to associate %s to the BizDev Group.' % len(to_insert))
-    if len(to_insert) > 0:
-        df_add = make_df(to_insert, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-        add_path = _ghelp.create_path_name(df_path, 'toAdd')
-        save_df(df=df_add, path=add_path)
-        n_add = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_insert)
-
-    if len(to_update) > 0:
-        print('Attempting to update Licenses for %s advisors staying in the BizDevGroup.' % len(to_update))
-        df_update = make_df(to_update, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-        update_path = _ghelp.create_path_name(df_path, 'bdg_toStay')
-        save_df(df=df_update, path=update_path)
-        n_up = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_update)
-
-    if to_remove is not None:
-        print('We are not removing contacts by request of Krista Bono.')
-        df_remove = make_df(data=to_remove, columns=['ContactID', 'Previous BizDevGroupID'])
-        remove_path = _ghelp.create_path_name(df_path, 'to_remove')
-        save_df(df=df_remove, path=remove_path)
-        n_re = len(to_remove)
-
-    session.last_list_uploaded(obj_id=obj_id, obj=obj)
-
-    return [remove_path, add_path, update_path, curr_memb], [n_re, n_add, n_up]
+                session.last_list_uploaded(obj_id=obj_id, obj=obj)
+        return [remove_path, add_path, update_path, current_path], [n_re, n_add, n_up]
 
 
 def id_preprocessing_needs(path):
