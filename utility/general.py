@@ -362,6 +362,27 @@ def auto_maintain(directory, destination=None, ndays=30, log=None):
         print(msg)
 
 
+def list_crud(source, target):
+    """
+    Utility function to take given source and target lists and compare them to generate
+    actions for create, update, and delete (remove).
+    Parameters
+    ----------
+    source
+        List; Input we are receiving and want to compare
+    target
+        List; What we currently know and would like to maintain
+
+    Returns
+    -------
+        Tuple; Lists containing actions for create, update, and delete (remove)
+    """
+    create = [item for item in source if item not in target]
+    update = [item for item in source if item in target]
+    remove = [item for item in target if item not in source]
+    return create, update, remove
+
+
 def record_processing_stats(values, save=True):
     '''
     processes stats data files
