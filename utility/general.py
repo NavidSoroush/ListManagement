@@ -34,7 +34,7 @@ _cmp_accepted_cols = ['ContactID', 'CampaignId', 'Status']
 _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
                    '_review_contacts', '_foundcontacts', 'cmp_to_create',
                    'cmp_upload', 'no_updates', 'to_update', 'to_create', 'bdg_update',
-                   'toAdd', 'bdg_toStay', 'current_bdg_members', 'to_remove']
+                   'to_add', 'to_stay', 'current_members', 'to_remove']
 
 
 def is_path(path):
