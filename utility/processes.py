@@ -8,7 +8,7 @@ try:
     from ListManagement.sources import campaigns, accounts, bdgs
     from ListManagement.utility import general as _ghelp
     from ListManagement.utility.email_helper import craft_notification_email
-    from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
+    from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records, crud
     from ListManagement.utility.sf_helper import *
 except:
 
@@ -23,8 +23,8 @@ upload_map = {
     'Campaign': {
         'sf_query': {
             'object': 'CampaignMember'
-            , 'fields': ['ContactId', 'Status', 'Id']
-            , 'where': "Id='{0}' AND Contact.Territory__c !='Prospect Accounts'"
+            , 'fields': ['ContactId', 'Status', 'CampaignId', 'Id']
+            , 'where': "CampaignId='{0}'"
         }
         , 'sf_create': {
             'object': 'CampaignMember'
@@ -32,7 +32,7 @@ upload_map = {
         }
         , 'sf_update': {
             'object': 'CampaignMember'
-            , 'fields': ['Id', 'Status', 'CampaignId']
+            , 'fields': ['ContactId', 'Status', 'CampaignId', 'ID']
 
         }
         , 'filenames': {
@@ -41,6 +41,7 @@ upload_map = {
             , 'to_stay': 'to_stay'
             , 'to_remove': 'to_remove'
         }
+        , 'slicer': 3
     }
     , 'BizDev Group': {
         'sf_query': {
@@ -62,6 +63,7 @@ upload_map = {
             , 'to_stay': 'to_stay'
             , 'to_remove': 'to_remove'
         }
+        , 'slicer': 0
 
     }
 }
@@ -262,12 +264,14 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
     if obj == 'BizDev Group':
         df.rename(columns={'BizDev Group': 'BizDev_Group__c', 'Licenses': 'Licenses__c'}, inplace=True)
         df = df[['ContactID', 'BizDev_Group__c', 'Licenses__c']]
-    df_values = df.values.tolist()
+    elif obj == 'Campaign':
+        df.rename(columns={'ContactID': 'ContactId'}, inplace=True)
+        df = df[['ContactId', 'Status', 'CampaignId']]
 
-    if len(df_values) > 0:
+    if len(df.index) > 0:
         log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
         try:
-            paths, stats = upload(session, df_values, obj_id, obj, path)
+            paths, stats = upload(session, df, obj_id, obj, path)
         except:
             sub = 'LMA: %s upload fail for %s' % (path, obj)
             body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
@@ -293,7 +297,11 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
 
 def upload(session, data, obj_id, obj, path):
     """
-
+    import pandas as pd
+    source_data = {'A': [1, 2, 3], 'B': ['X', 'Y', 'Z']}
+    target_data = {'A': [2, 3, 4], 'B': ['A', 'Z', 'S'], 'C': [9, 7, 3]}
+    source, target = pd.DataFrame(source_data), pd.DataFrame(target_data)
+    on = 'A'
     Parameters
     ----------
     session
@@ -307,35 +315,34 @@ def upload(session, data, obj_id, obj, path):
 
     """
     current_path, add_path, update_path, remove_path = '', '', '', ''
-    if len(data) > 0:
-        current_members = session.query(object=upload_map[obj]['sf_query']['object']
+    if len(data.index) > 0:
+        current_members = session.query(sfdc_object=upload_map[obj]['sf_query']['object']
                                         , fields=upload_map[obj]['sf_query']['fields']
                                         , where=upload_map[obj]['sf_query']['where'].format(obj_id))
         save_df(current_members, _ghelp.create_path_name(path, 'current_members'))
-        insert, update, remove = _ghelp.list_crud(source=data, target=current_members)
-        n_add, n_up, n_re = len(insert), len(update), len(remove)
+        insert, update, remove = crud(data, current_members, on=upload_map[obj]['sf_query']['fields'][0])
+        n_add, n_up, n_re = len(insert.index), len(update.index), len(remove.index)
         if n_up > 0:
             update_path = _ghelp.create_path_name(path, 'to_stay')
-            save_df(make_df(update, columns=upload_map[obj]['sf_update']['fields']), update_path)
-            session.update_records(upload_map[obj]['sf_update']['object'], upload_map[obj]['sf_create']['fields'],
-                                   update)
+            save_df(update, update_path)
+            session.update_records(upload_map[obj]['sf_update']['object'], upload_map[obj]['sf_update']['fields'],
+                                   update.values.tolist())
 
         if n_re > 0:
             remove_path = _ghelp.create_path_name(path, 'to_remove')
-            save_df(make_df(remove, columns=upload_map[obj]['sf_update']['fields']), remove_path)
+            save_df(remove, remove_path)
 
         if n_add > 0:
             add_path = _ghelp.create_path_name(path, 'to_add')
-            save_df(make_df(insert, columns=upload_map[obj]['sf_create']['fields']), add_path)
-            if obj == 'Campaign':
-                session.create_records(upload_map[obj]['sf_create']['object'], upload_map[obj]['sf_create']['fields'],
-                                       insert)
-                session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
-                                       upload_data=[[data[0][1], 'true']])
-            else:
-                session.update_records(upload_map[obj]['sf_create']['object'], upload_map[obj]['sf_create']['fields'],
-                                       insert)
+            save_df(insert, add_path)
+            session.create_records(upload_map[obj]['sf_create']['object'], upload_map[obj]['sf_create']['fields'],
+                                   insert.values.tolist())
 
+        if any(x > 0 for x in [n_up, n_add]):
+            if obj == 'Campaign':
+                session.update_records(obj='Campaign', fields=['Id', 'Post_Event_Leads_Uploaded__c'],
+                                       upload_data=[[data.values.tolist()[0][2], 'true']])
+            else:
                 session.last_list_uploaded(obj_id=obj_id, obj=obj)
         return [remove_path, add_path, update_path, current_path], [n_re, n_add, n_up]
 
