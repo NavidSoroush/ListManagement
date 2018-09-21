@@ -65,6 +65,12 @@ class Search:
         self._headers = self._search_list.columns.values
         self._keep_cols = [c for c in self._headers if 'unknown' not in c.lower()]
 
+    @staticmethod
+    def _crd_formatter(_series):
+        _series = _series.astype(str)
+        _series = _series.fillna('').replace('nan', '').apply(lambda x: x.split('.')[0] if '.' in x else x)
+        return _series
+
     def __preprocess_sfdc_list(self):
         """
         helper method that pre-preprocesses our source SalesForce contact file.
@@ -74,7 +80,7 @@ class Search:
         """
         _, i = np.unique(self._SFDC_advisor_list.columns, return_index=True)
         self._SFDC_advisor_list = self._SFDC_advisor_list.iloc[:, i]
-        self._SFDC_advisor_list['CRDNumber'].astype(str)
+        self._SFDC_advisor_list['CRDNumber'] = self._crd_formatter(self._SFDC_advisor_list['CRDNumber'])
 
     def __data_preprocessing(self, additional=False):
         """
@@ -88,6 +94,12 @@ class Search:
         :param additional: boolean, default=False
         :return: n/a
         """
+        for col in self._search_list.columns.tolist():
+            if col in self._SFDC_advisor_list.columns.tolist():
+                if col == 'CRDNumber':
+                    self._search_list[col] = self._crd_formatter(self._search_list[col])
+                else:
+                    self._search_list[col] = self._search_list[col].astype(self._SFDC_advisor_list[col].dtypes.name)
         self._search_list = self._search_list[self._keep_cols]
         self._search_list.fillna('', inplace=True)
         if len(self._search_list.columns) > 3:
@@ -259,6 +271,8 @@ class Search:
 
                 self._headers_and_ids = make_df()
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
+                if header == 'CRDNumber':
+                    self._headers_and_ids = self._headers_and_ids[self._headers_and_ids[header] != '']
                 self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header, sort=False)
                 self._search_list.fillna('', inplace=True)
                 self._num_searched_on = len(self._search_list)
