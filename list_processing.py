@@ -302,6 +302,6 @@ class ListProcessing:
         self._log.error(msg)
         raise RuntimeError(msg)
 
-
-if __name__ == '__main__':
-    lp = ListProcessing()
+#
+# if __name__ == '__main__':
+#     lp = ListProcessing()
