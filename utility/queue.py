@@ -198,6 +198,7 @@ def build_queue(sfdc, log=None):
         data.loc[:, 'Object'] = data.ObjectId.apply(_determine_type)
         data = _get_metadata_ids(sfdc, data, 'Attachment')
         data = _get_metadata_ids(sfdc, data, 'User')
+        data.drop_duplicates(inplace=True)
         data = _get_metadata_ids(sfdc, data, data['Object'][0])
         data = _get_attachments(sfdc, data)
         data.insert(0, 'ListIndex', range(0, 0 + len(data)))
