@@ -13,11 +13,16 @@ Handles attendee lists for events and conferences (Campaigns)
 where FS Investments has committed money.
 """
 
+import os
+import sys
+
 import traceback
 
 from PythonUtilities.LoggingUtility import Logging
 from PythonUtilities.EmailHandling import EmailHandler as Email
 from PythonUtilities.salesforcipy import SFPy
+
+sys.path.append(os.path.abspath('.'))
 
 from ListManagement.config import Config as con
 from ListManagement.search import Search, Finra
@@ -57,9 +62,9 @@ class ListProcessing:
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
-        tmp_sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False,
-                        _dir=con.BaseDir)
-        self.vars = queue.build_queue(tmp_sfdc, self._log)
+        self.vars = queue.build_queue(sfdc=SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken,
+                                                domain=con.SFDomain, verbose=False, _dir=con.BaseDir),
+                                      log=self._log)
         self.main_contact_based_processing()
 
     def main_contact_based_processing(self):
@@ -278,9 +283,9 @@ class ListProcessing:
         -------
             Nothing
         """
-        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
-                                                                 _vars['CmpAccountName'], log=self._log,
-                                                                 mode=self.mode))
+
+        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['CmpAccountName'],
+                                                                 log=self._log, mode=self.mode))
         _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
 
         try:
@@ -381,6 +386,6 @@ class ListProcessing:
         self._log.error(msg)
         raise RuntimeError(msg)
 
-
-if __name__ == '__main__':
-    lp = ListProcessing()
+#
+# if __name__ == '__main__':
+#     lp = ListProcessing()
