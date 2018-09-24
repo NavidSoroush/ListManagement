@@ -1,8 +1,33 @@
+"""
+accounts.py
+======================================
+Contains functions relative to processing
+lists requests sourced from the Account
+object in Salesforce.
+"""
+
 from ListManagement.utility import general as ghelp
 from ListManagement.utility import pandas_helper as phelp
 
 
 def parse(path, frame, dict_elements):
+    """
+    Function to help parse Account list requests into
+    actionable Salesforce jobs (update, create).
+
+    Parameters
+    ----------
+    path
+        String; Represents a full file path to the source list.
+    frame
+        Pandas data frame
+    dict_elements
+        Dictionary; Contains metadata generated during list processing.
+
+    Returns
+    -------
+        Tuple; updated dictionary and list of files created.
+    """
     dict_elements['no_update_path'] = ghelp.create_path_name(path, 'no_updates')
     dict_elements['update_path'] = ghelp.create_path_name(path, 'to_update')
 
@@ -19,6 +44,30 @@ def parse(path, frame, dict_elements):
 
 
 def make_sc(path, frame, record_name, obj_id, obj):
+    """
+    Function to manufacture a 'source_channel' for contacts
+    that need to be created.
+
+    A source channel gives FS Investments the ability to see
+    from where and when a contact record was sourced from.
+
+    Parameters
+    ----------
+    path
+        String; Represents a full file path.
+    frame
+        Pandas data frame; Object containing relational data.
+    record_name
+        String; Represents the name of a salesforce record.
+    obj_id
+        String; Represents the id of a Salesforce record
+    obj
+        String; Represents the name of a Salesforce object.
+
+    Returns
+    -------
+        Tuple; updated pandas dataframe, move to bulk (boolean), and to_create_path (string)
+    """
     if path[-14:] == 'to_create.xlsx':
         frame['AccountId'] = None
         frame['SourceChannel'] = None
