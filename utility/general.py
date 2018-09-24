@@ -41,7 +41,7 @@ _cmp_accepted_cols = ['ContactID', 'CampaignId', 'Status']
 _new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
                    '_review_contacts', '_foundcontacts', 'cmp_to_create',
                    'cmp_upload', 'no_updates', 'to_update', 'to_create', 'bdg_update',
-                   'toAdd', 'bdg_toStay', 'current_bdg_members', 'to_remove']
+                   'to_add', 'to_stay', 'current_members', 'to_remove']
 
 
 def is_path(path):
@@ -582,12 +582,12 @@ def record_processing_stats(values, save=True):
     import sqlalchemy
     _stats_file_path = 'T:/Shared/FS2 Business Operations/Python Search Program/Search Program Stats2.xlsx'
     print('\nStep 11. Recording stats from processing.')
-    df2 = pd.DataFrame(values).transpose()
+    df2 = pd.DataFrame.from_dict(values, orient='index').transpose()
     if save:
         df = pd.read_excel(_stats_file_path)
         engine = sqlalchemy.create_engine('mssql+pyodbc://DPHL-PROPSCORE/ListManagement?driver=SQL+Server')
         df2.to_sql(name='SearchStats', con=engine, if_exists='append', index=False)
-        df = df.append(df2, ignore_index=True)
+        df = df.append(df2, ignore_index=True, sort=False)
         df.to_excel(_stats_file_path, index=False)
         del df
         del df2

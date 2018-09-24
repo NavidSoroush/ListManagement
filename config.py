@@ -19,6 +19,7 @@ class Config(object):
     SFUser = os.environ['SFUSER']
     SFPass = os.environ['SFPASS']
     SFToken = os.environ['SFTOKEN']
+    SFUserId = os.environ['SFUSERID']
     SMTPUser = os.environ['SMTP_EMAIL']
     SMTPPass = os.environ['SMTP_PASS']
     RunningUser = os.environ.get("USERNAME")

@@ -16,7 +16,7 @@ try:
     from ListManagement.sources import campaigns, accounts, bdgs
     from ListManagement.utility import general as _ghelp
     from ListManagement.utility.email_helper import craft_notification_email
-    from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records
+    from ListManagement.utility.pandas_helper import read_df, save_df, make_df, determine_num_records, crud
     from ListManagement.utility.sf_helper import *
 except:
 
@@ -26,6 +26,55 @@ except:
     from utility.email_helper import craft_notification_email
     from utility.pandas_helper import read_df, save_df, make_df, determine_num_records
     from utility.sf_helper import *
+
+upload_map = {
+    'Campaign': {
+        'sf_query': {
+            'object': 'CampaignMember'
+            , 'fields': ['ContactId', 'Status', 'CampaignId', 'Id']
+            , 'where': "CampaignId='{0}'"
+        }
+        , 'sf_create': {
+            'object': 'CampaignMember'
+            , 'fields': ['ContactId', 'Status', 'CampaignId']
+        }
+        , 'sf_update': {
+            'object': 'CampaignMember'
+            , 'fields': ['ContactId', 'Status', 'CampaignId', 'ID']
+
+        }
+        , 'filenames': {
+            'current_members': 'current_members'
+            , 'to_add': 'to_add'
+            , 'to_stay': 'to_stay'
+            , 'to_remove': 'to_remove'
+        }
+        , 'slicer': 3
+    }
+    , 'BizDev Group': {
+        'sf_query': {
+            'object': 'Contact'
+            , 'fields': ['Id', 'Biz_Dev_Group__c', 'Licences__c']
+            , 'where': "Biz_Dev_Group__c ='{0}'"
+        }
+        , 'sf_create': {
+            'object': 'Contact'
+            , 'fields': ['Id', 'Biz_Dev_Group__c', 'Licences__c']
+        }
+        , 'sf_update': {
+            'object': 'Contact'
+            , 'fields': ['Id', 'Biz_Dev_Group__c', 'Licences__c']
+        }
+        , 'filenames': {
+            'current_members': 'current_members'
+            , 'to_add': 'to_add'
+            , 'to_stay': 'to_stay'
+            , 'to_remove': 'to_remove'
+        }
+        , 'slicer': 0
+
+    }
+}
 
 
 def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_create_path=None):
@@ -215,7 +264,7 @@ def extract_dictionary_values(dict_data, log=None):
 
     items_for_stats = {
         'File Name': file_name, 'Received Date': ts_received, 'Received From': sender_name
-        , 'Created By': _ghelp.userName, 'File Type': obj, 'Advisors on List': total
+        , 'Created By': _ghelp.os.environ['USERNAME'], 'File Type': obj, 'Advisors on List': total
         , 'Advisors w/CID': num_found_in_sfdc, 'Advisors w/CID old Contact Info': num_not_updating
         , 'CRD Found Not in SFDC': to_create, 'Creating': to_create
         , 'Unable to Find': need_research, 'Last Search Date': completed
@@ -230,7 +279,8 @@ def extract_dictionary_values(dict_data, log=None):
                     'Processed_By__c']
 
     listobj_data = [dict_data['ListObjId'], 'Process Completed', total, obj_to_add, to_create, num_found_in_sfdc,
-                    need_research, need_research, to_update, match_rate * 100, processing_completed, _ghelp.sf_uid]
+                    need_research, need_research, to_update, match_rate * 100, processing_completed,
+                    _ghelp.os.environ['SFUSERID']]
 
     log.info('Updating the List record for Id: %s' % dict_data['ListObjId'])
     dict_data['SFDC Session'].update_records(obj='List__c', fields=listobj_cols, upload_data=[listobj_data])
@@ -272,28 +322,20 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
     -------
         A python dictionary containing metadata and next steps for the list program.
     """
-    paths = ['', '', '', '']
-    stats = ['', '', '']
-    col_nums = []
+    paths, stats = ['', '', '', ''], ['', '', '']
     df = read_df(path=path)
     if obj == 'BizDev Group':
         df.rename(columns={'BizDev Group': 'BizDev_Group__c', 'Licenses': 'Licenses__c'}, inplace=True)
         df = df[['ContactID', 'BizDev_Group__c', 'Licenses__c']]
-        col_nums.append(df.columns.get_loc('BizDev_Group__c'))
-        col_nums.append(df.columns.get_loc('ContactID'))
-        col_nums.append(df.columns.get_loc('Licenses__c'))
-    df_values = df.values.tolist()
-    df_headers = df.columns.values.tolist()
+    elif obj == 'Campaign':
+        df.rename(columns={'ContactID': 'ContactId'}, inplace=True)
+        df = df[['ContactId', 'Status', 'CampaignId']]
 
-    log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
-    try:
-        if obj == 'Campaign':
-            paths, stats = upload(session, df_headers, df_values, obj_id, obj)
-
-        elif obj == 'BizDev Group':
-            paths, stats = upload(session, df_headers, df_values, obj_id, obj, col_nums, path)
-    except:
-        if len(df_values) > 0:
+    if len(df.index) > 0:
+        log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
+        try:
+            paths, stats = upload(session, df, obj_id, obj, path)
+        except:
             sub = 'LMA: %s upload fail for %s' % (path, obj)
             body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
                    'manually upload this file at your earliest convenience.' % (path, obj)
@@ -303,8 +345,8 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
                 subject=sub, to=con.ListTeam, body=body,
                 attachments=[path], name=con.FullName
             )
-        else:
-            log.info('There is no data to upload to the %s object.' % obj)
+    else:
+        log.info('There is no data to upload to the %s object.' % obj)
 
     return {'Next Step': 'Send Email',
             'BDG Remove': paths[0],
@@ -316,157 +358,56 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
             'Num Updating/Staying': stats[2]}
 
 
-def upload(session, headers, data, obj_id, obj, col_num=None, df_path=None):
-    # Todo: consider refactoring.
+def upload(session, data, obj_id, obj, path):
     """
-    Helps to perform an actual salesforce upload.
-
+    import pandas as pd
+    source_data = {'A': [1, 2, 3], 'B': ['X', 'Y', 'Z']}
+    target_data = {'A': [2, 3, 4], 'B': ['A', 'Z', 'S'], 'C': [9, 7, 3]}
+    source, target = pd.DataFrame(source_data), pd.DataFrame(target_data)
+    on = 'A'
     Parameters
     ----------
     session
-        An authenticated Salesforce REST API session.
-    headers
-        A list of strings representing column names in a Salesforce table.
-        Should consider removing, as it doesn't seem used.
     data
-        A list containing the data which will be uploaded to Salesforce.
     obj_id
-        An 18-char string; Represents an Id of a Salesforce object.
     obj
-        A string; Represents the name of a Salesforce object.
-    col_num
-        TBD
-    df_path
-        A string representing the a full file path.
-    Returns
-    -------
-        TBD
-    """
-    if len(data) > 0:
-        if obj == 'Campaign':
-            paths, stats = cmp_upload(session, data, obj_id, obj)
-            print(data)
-            if data[0][2] == 'Needs Follow-Up':
-                session.update_records(obj='Campaign', fields=['Post_Event_Leads_Uploaded__c'],
-                                       upload_data=[[data[0][1], 'true']])
-        elif obj == 'BizDev Group':
-            headers = headers_clean_up(headers)
-            paths, stats = bdg_upload(session, data, obj_id, obj, col_num, df_path)
-        return paths, stats
-    else:
-        return
-
-
-def cmp_upload(session, data, obj_id, obj, n_re=0, n_added=0, n_uptd=0):
-    # Todo: consider refactoring.
-    """
-    Adds/updates campaign members (and their statuses) in a Salesforce campaign.
-
-    Parameters
-    ----------
-    session
-        An authenticated Salesforce REST API session.
-    data
-        A list containing the data which will be uploaded to Salesforce.
-    obj_id
-        An 18-char string; Represents an Id of a Salesforce object.
-    obj
-        A string; Represents the name of a Salesforce object.
-    n_re
-        An integer; Represents the number of advisors removing from a campaign.
-    n_added
-        An integer; Represents the number of advisors adding to a campaign.
-    n_uptd
-        An integer; Represents the number of advisors updating in a campaign.
-    Returns
-    -------
-        A tuple lists containing [paths], and [num records]
-    """
-    print('\nStep 10. Salesforce Campaign Upload.')
-    where = "Id='%s' AND Contact.Territory_Manager__c!='Max Prown'" % obj_id
-    sf_c_cmp_members = session.query('CampaignMember', ['ContactId', 'Status', 'Id'], where)
-    to_insert, to_update, to_remove = split_list(sf_c_cmp_members.values.tolist(), data, obj_id, obj)
-    n_add = len(to_insert)
-    n_up = len(to_update)
-    if n_added < n_add:
-        n_added = session.create_records(obj='CampaignMember', fields=['ContactId', 'Status', 'CampaignId'],
-                                         upload_data=to_insert)
-
-    if n_uptd < n_up:
-        n_uptd = session.update_records(obj='CampaignMember', fields=['Id', 'Status', 'CampaignId'],
-                                        upload_data=to_update)
-    return ['', '', '', ''], [n_re, n_add, n_up]
-
-
-def bdg_upload(session, data, obj_id, obj, col_num, df_path, remove_path=None, add_path=None, update_path=None,
-               curr_memb=None, n_add=0, n_up=0, n_re=0):
-    """
-    Adds/updates advisors in a Salesforce BizDev Group.
-    Parameters
-    ----------
-    session
-        An authenticated Salesforce REST API session.
-    data
-        A list containing the data which will be uploaded to Salesforce.
-    obj_id
-        An 18-char string; Represents an Id of a Salesforce object.
-    obj
-        A string; Represents the name of a Salesforce object.
-    col_num
-        An integer; The column to use for when parsing a list.
-    df_path
-        A string; Represents the a full file path.
-    remove_path
-        A string; Represents the name of the 'to_remove' file name.
-    add_path
-        A string; Represents the name of the 'to_add' file name.
-    update_path
-        A string; Represents the name of the 'to_update' file name.
-    curr_memb
-        REMOVE; NOT USED.
-    n_add
-        An integer; Represents the number of advisors adding to a campaign.
-    n_up
-        An integer; Represents the number of advisors updating in a campaign.
-    n_re
-        An integer; Represents the number of advisors removing from a campaign.
+    path
 
     Returns
     -------
-        A tuple lists containing [paths], and [num records]
+
     """
-    # Todo: consider refactoring.
-    print('\nStep 10. Salesforce BizDev Group Upload.')
-    where = "BizDev_Group__c='%s'" % obj_id
-    sf_bdg_members = session.query('Contact', ['Id', 'BizDev_Group__c '], where)
-    to_insert, to_update, to_remove = split_list(sf_bdg_members.values.tolist(), data, obj_id, obj, col_num[1])
-    curr_memb = _ghelp.create_path_name(df_path, 'current_bdg_members')
-    sf_bdg_members = [sf_bdg_members[i:i + 2] for i in range(0, len(sf_bdg_members), 2)]
-    save_df(df=make_df(data=sf_bdg_members, columns=['Id', 'BizDev_Group__c']), path=curr_memb)
-    print('Attempting to associate %s to the BizDev Group.' % len(to_insert))
-    if len(to_insert) > 0:
-        df_add = make_df(to_insert, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-        add_path = _ghelp.create_path_name(df_path, 'toAdd')
-        save_df(df=df_add, path=add_path)
-        n_add = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_insert)
+    current_path, add_path, update_path, remove_path = '', '', '', ''
+    if len(data.index) > 0:
+        current_members = session.query(sfdc_object=upload_map[obj]['sf_query']['object']
+                                        , fields=upload_map[obj]['sf_query']['fields']
+                                        , where=upload_map[obj]['sf_query']['where'].format(obj_id))
+        save_df(current_members, _ghelp.create_path_name(path, 'current_members'))
+        insert, update, remove = crud(data, current_members, on=upload_map[obj]['sf_query']['fields'][0])
+        n_add, n_up, n_re = len(insert.index), len(update.index), len(remove.index)
+        if n_up > 0:
+            update_path = _ghelp.create_path_name(path, 'to_stay')
+            save_df(update, update_path)
+            session.update_records(upload_map[obj]['sf_update']['object'], upload_map[obj]['sf_update']['fields'],
+                                   update.values.tolist())
 
-    if len(to_update) > 0:
-        print('Attempting to update Licenses for %s advisors staying in the BizDevGroup.' % len(to_update))
-        df_update = make_df(to_update, columns=['ContactID', 'BizDevGroupID', 'Licenses'])
-        update_path = _ghelp.create_path_name(df_path, 'bdg_toStay')
-        save_df(df=df_update, path=update_path)
-        n_up = session.update_records('Contact', ['BizDev_Group__c', 'Licenses__c'], to_update)
+        if n_re > 0:
+            remove_path = _ghelp.create_path_name(path, 'to_remove')
+            save_df(remove, remove_path)
 
-    if to_remove is not None:
-        print('We are not removing contacts by request of Krista Bono.')
-        df_remove = make_df(data=to_remove, columns=['ContactID', 'Previous BizDevGroupID'])
-        remove_path = _ghelp.create_path_name(df_path, 'to_remove')
-        save_df(df=df_remove, path=remove_path)
-        n_re = len(to_remove)
+        if n_add > 0:
+            add_path = _ghelp.create_path_name(path, 'to_add')
+            save_df(insert, add_path)
+            session.create_records(upload_map[obj]['sf_create']['object'], upload_map[obj]['sf_create']['fields'],
+                                   insert.values.tolist())
 
-    session.last_list_uploaded(obj_id=obj_id, obj=obj)
-
-    return [remove_path, add_path, update_path, curr_memb], [n_re, n_add, n_up]
+        if any(x > 0 for x in [n_up, n_add]):
+            if obj == 'Campaign':
+                session.update_records(obj='Campaign', fields=['Id', 'Post_Event_Leads_Uploaded__c'],
+                                       upload_data=[[data.values.tolist()[0][2], 'true']])
+            else:
+                session.last_list_uploaded(obj_id=obj_id, obj=obj)
+        return [remove_path, add_path, update_path, current_path], [n_re, n_add, n_up]
 
 
 def id_preprocessing_needs(path):

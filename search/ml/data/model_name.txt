@@ -1,1 +1,1 @@
-Extra Trees Classifier
+Random Forest

@@ -6,7 +6,7 @@ import email
 from lxml.html import fromstring
 
 try:
-    from utility import general as _ghelp
+    from . import general as _ghelp
 except ModuleNotFoundError:
     from ListManagement.utility import general as _ghelp
 

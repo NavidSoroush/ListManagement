@@ -48,11 +48,11 @@ _OBJ_MAP = {'Attachment': {'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
             }
 
 _STATIC_VARIABLES = {
-    'Next Step': 'Pre-processing', 'Found Path': None, 'Found in SFDC Search #2': 0, 'Num Adding': 0,
-    'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': None,
+    'Next Step': 'Pre-processing', 'Found Path': str(), 'Found in SFDC Search #2': 0, 'Num Adding': 0,
+    'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': str(),
     'process_start': _dt.datetime.fromtimestamp(_ghelp.time.time()).strftime('%Y-%m-%d %H:%M:%S'),
-    'CmpAccountName': None, 'CmpAccountID': None, 'Campaign Start Date': None, 'Pre_or_Post': None,
-    'ExtensionType': None, 'File Path': None,
+    'CmpAccountName': str(), 'CmpAccountID': str(), 'Campaign Start Date': None, 'Pre_or_Post': str(),
+    'ExtensionType': str(), 'File Path': str(),
 }
 
 
@@ -187,9 +187,11 @@ def build_queue(sfdc, log=None):
     -------
         Dictionary of pending lists in the queue and necessary metadata.
     """
+    log.info('Attempting to build list queue.')
     data = sfdc.query('List__c', fields=_LIST_FIELDS, where=_LIST_WHERE)
     data.rename(columns={'Id': 'ListObjId'}, inplace=True)
     if len(data.index) == 0:
+        log.info('There are no pending lists.')
         return list()
     else:
         # establish all of L.I.M.A.'s required variables.
@@ -203,9 +205,11 @@ def build_queue(sfdc, log=None):
         data.loc[:, 'Object'] = data.ObjectId.apply(_determine_type)
         data = _get_metadata_ids(sfdc, data, 'Attachment')
         data = _get_metadata_ids(sfdc, data, 'User')
+        data.drop_duplicates(inplace=True)
         data = _get_metadata_ids(sfdc, data, data['Object'][0])
         data = _get_attachments(sfdc, data)
         data.insert(0, 'ListIndex', range(0, 0 + len(data)))
+        log.info('There are {0} items pending in the queue.'.format(len(data.index)))
         return data.to_dict('rows')
 
 

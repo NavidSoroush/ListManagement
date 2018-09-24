@@ -89,6 +89,12 @@ class Search:
         self._headers = self._search_list.columns.values
         self._keep_cols = [c for c in self._headers if 'unknown' not in c.lower()]
 
+    @staticmethod
+    def _crd_formatter(_series):
+        _series = _series.astype(str)
+        _series = _series.fillna('').replace('nan', '').apply(lambda x: x.split('.')[0] if '.' in x else x)
+        return _series
+
     def __preprocess_sfdc_list(self):
         """
         Helper method that pre-preprocesses our source SalesForce contact file.
@@ -100,7 +106,7 @@ class Search:
         """
         _, i = np.unique(self._SFDC_advisor_list.columns, return_index=True)
         self._SFDC_advisor_list = self._SFDC_advisor_list.iloc[:, i]
-        self._SFDC_advisor_list['CRDNumber'].astype(str)
+        self._SFDC_advisor_list['CRDNumber'] = self._crd_formatter(self._SFDC_advisor_list['CRDNumber'])
 
     def __data_preprocessing(self, additional=False):
         """
@@ -114,6 +120,12 @@ class Search:
         -------
             Nothing
         """
+        for col in self._search_list.columns.tolist():
+            if col in self._SFDC_advisor_list.columns.tolist():
+                if col == 'CRDNumber':
+                    self._search_list[col] = self._crd_formatter(self._search_list[col])
+                else:
+                    self._search_list[col] = self._search_list[col].astype(self._SFDC_advisor_list[col].dtypes.name)
         self._search_list = self._search_list[self._keep_cols]
         self._search_list.fillna('', inplace=True)
         if len(self._search_list.columns) > 3:
@@ -205,7 +217,7 @@ class Search:
             self._found_contacts = read_df(self._found_contact_path)
             finra_matched_to_sf = self._search_list[self._search_list['ContactID'] != '']
             self.log.info('\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf))
-            self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True)
+            self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True, sort=False)
 
         else:
             if self._is_crd_check and 'CRD Provided by List' not in self._headers:
@@ -246,8 +258,6 @@ class Search:
                     self._found_contacts = self._found_contacts.append(
                         self._search_list[self._search_list['CRDNumber'] != ''],
                         ignore_index=True)
-                    print(self._found_contacts.head())
-                    print("these were found")
                     self._search_list = self._search_list[self._search_list['CRDNumber'] == '']
 
             for r_field in self._return_fields:
@@ -273,14 +283,12 @@ class Search:
         self._search_list['ToReview'] = self._search_list.apply(
             lambda x: 1 if x['CRDNumber'] != '' and x['CRDNumber'] != x["CRD Provided by List"] else x[
                 'ToReview'], axis=1)
-        print(self._search_list.head())
         self._contacts_to_review = self._contacts_to_review.append(
             self._search_list[self._search_list['ToReview'] == 1], ignore_index=True)
         self._search_list = self._search_list[self._search_list['ToReview'] == 0]
         del self._search_list['CRDNumber']
         del self._search_list['ToReview']
         self._save_to_review_df = True
-        print(self._search_list.head())
         self.log.info('Identified %s contacts that need to be reviewed.' % len(self._contacts_to_review.index))
 
     def __num_found(self, found_df):
@@ -334,7 +342,9 @@ class Search:
 
                 self._headers_and_ids = make_df()
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
-                self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header)
+                if header == 'CRDNumber':
+                    self._headers_and_ids = self._headers_and_ids[self._headers_and_ids[header] != '']
+                self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header, sort=False)
                 self._search_list.fillna('', inplace=True)
                 self._num_searched_on = len(self._search_list)
                 self.__create_meta_data(self._headers, search_two=search_two)
@@ -455,7 +465,6 @@ class Search:
                                                                                                            "Account"].str[
                                                                                                        :10] + \
                                           search_list["MailingState"] + search_list["MailingPostalCode"]  # .str[:-2]
-                print(search_list.head())
 
             else:
                 self.log.info("Advisor name or account information missing")
