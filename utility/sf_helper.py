@@ -18,8 +18,8 @@ def remove_duplicates(mbr_list):
     -------
         A unique set of lists.
     """
-        unique_data = [list(x) for x in set(tuple(x) for x in mbr_list)]
-        return unique_data
+    unique_data = [list(x) for x in set(tuple(x) for x in mbr_list)]
+    return unique_data
 
 
 def headers_clean_up(headers, to_remove='ContactID'):
