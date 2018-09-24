@@ -11,12 +11,12 @@ At it's core, LIMA is a matching system that can push necessary updates, given a
 - [us](https://pypi.org/project/us/)
 - [uszipcode](https://pypi.org/project/uszipcode/)
 
-###How lists are processed
+### How lists are processed
 ![Representation of list processing](static/list_process.png)
 
-###Usage
+### Usage
 
-####Full process
+#### Full process
 To leverage the entire functionality of the list program (LIMA), you need only perform the below.
 New in version 4.0 is the ability to specify if you're manually running (ad-hoc) or if it's being controlled by a bot (cron'd/scheduled).
 ```python
@@ -29,10 +29,10 @@ lp = ListProcessing(mode='manual').main_contact_based_processing()
 lp = ListProcessing(mode='auto').main_contact_based_processing()
 ```
 
-####Individual components
+#### Individual components
 The modules within the search node of LIMA lend themselves well to ad-hoc/one-off searches. Using the tools like the below will parse your input file into one (or more) output files. 
 
-#####Finra
+##### Finra
 If you have a list of advisors where your data contains either a CRD number, or has the advisor's First, Last, and Company name, you can leverage the power of the Finra API. See the documentation for more details. 
 ```python
 from ListManagement.search.finra import Finra
@@ -46,7 +46,7 @@ path = '~/your/path/to/a/file.xlsx'
 fin.scrape(path=path, parse_list=True, save=True)
 ```
 
-#####Salesforce
+##### Salesforce
 Similar to the Finra scenario, if you have a file with CRD, Email, or or has the advisor's First, Last, and Company name, you can leverage the power of the Salesforce Search API. See the documentation for more details.
 ```python
 from ListManagement.search.salesforce import Search
@@ -61,7 +61,7 @@ search.perform_search_one(searching_list_path=path, list_type='Campaign')
 
 ```
 
-#####Search chaining
+##### Search chaining
 Similar to how the LIMA uses these modules, you can manufacture (if necessary) a similar process to take a given file, search it against 1) Salesforce, 2) attempt to identify any not found via a BrokerCheck search (Finra) and 3) research against Salesforce.
 ```python
 from ListManagement.search import salesforce, finra
