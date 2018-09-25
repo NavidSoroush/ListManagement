@@ -1,0 +1,156 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ListManagement.legacy.sf_adv_formatting &#8212; List Management 4.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ListManagement.legacy.sf_adv_formatting</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">ListManagement.utility.pandas_helper</span> <span class="k">import</span> <span class="n">pd</span>
+
+
+<span class="c1"># create functions to manage creation of lookup name for each advisor</span>
+<div class="viewcode-block" id="shorten_data"><a class="viewcode-back" href="../../../index.html#ListManagement.legacy.sf_adv_formatting.shorten_data">[docs]</a><span class="k">def</span> <span class="nf">shorten_data</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">df2</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="c1"># df2 = df2.astype(str).str.split(&#39;,&#39;)</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">x</span><span class="p">:</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">[:</span><span class="n">x</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tmp</span></div>
+
+
+<div class="viewcode-block" id="make_lookup_name"><a class="viewcode-back" href="../../../index.html#ListManagement.legacy.sf_adv_formatting.make_lookup_name">[docs]</a><span class="k">def</span> <span class="nf">make_lookup_name</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">jstr</span><span class="p">):</span>
+    <span class="n">var</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">var</span> <span class="o">=</span> <span class="n">shorten_data</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">jstr</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="n">jstr</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="n">shorten_data</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">jstr</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">10</span><span class="p">)</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="n">jstr</span><span class="p">[</span><span class="mi">3</span><span class="p">]]</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="n">jstr</span><span class="p">[</span><span class="mi">4</span><span class="p">]]</span>
+    <span class="k">return</span> <span class="n">var</span></div>
+
+
+<span class="c1"># create function to evalute last time an advisor was contact / updated</span>
+<div class="viewcode-block" id="needs_update_flag"><a class="viewcode-back" href="../../../index.html#ListManagement.legacy.sf_adv_formatting.needs_update_flag">[docs]</a><span class="k">def</span> <span class="nf">needs_update_flag</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">activity_range</span><span class="p">,</span> <span class="n">sales_range</span><span class="p">):</span>
+    <span class="n">df2</span> <span class="o">=</span> <span class="n">clean_dates</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">headers</span><span class="p">)</span>
+    <span class="n">activ_day</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">activity_range</span><span class="p">)</span>
+    <span class="n">sale_day</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">sales_range</span><span class="p">)</span>
+    <span class="n">var</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">df2</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">colcount</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">:</span>
+            <span class="n">word</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">colcount</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">activ_day</span> <span class="ow">and</span> <span class="s1">&#39;NaTType&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+                    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">colcount</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">sale_day</span> <span class="ow">and</span> <span class="s1">&#39;NaTType&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+                    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">colcount</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">var</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;N&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">var</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;Y&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">var</span></div>
+
+
+<span class="c1"># this function will coerce the dates from an object format to datetime</span>
+<div class="viewcode-block" id="clean_dates"><a class="viewcode-back" href="../../../index.html#ListManagement.legacy.sf_adv_formatting.clean_dates">[docs]</a><span class="k">def</span> <span class="nf">clean_dates</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">headers</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">)):</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">headers</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">headers</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">frame</span></div>
+
+
+<span class="c1"># This function is used to evaluate the last business date of a file</span>
+<span class="c1"># so that it can be moved from one directory to another</span>
+<div class="viewcode-block" id="date_for_move"><a class="viewcode-back" href="../../../index.html#ListManagement.legacy.sf_adv_formatting.date_for_move">[docs]</a><span class="k">def</span> <span class="nf">date_for_move</span><span class="p">(</span><span class="n">loc_orig</span><span class="p">,</span> <span class="n">loc_to</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="n">tmp_files</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">loc_orig</span><span class="p">):</span>
+        <span class="n">tmp_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc_to</span> <span class="o">+</span> <span class="n">tmp_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">loc_orig</span> <span class="o">+</span> <span class="n">tmp_files</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">loc_to</span> <span class="o">+</span> <span class="n">tmp_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">List Management</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ricky Schools.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

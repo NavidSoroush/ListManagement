@@ -1,4 +1,4 @@
-from ListManagement.finra.api import Finra
+from ListManagement.search.finra import Finra
 from ListManagement.utility.log_helper import ListManagementLogger
 
 logger = ListManagementLogger().logger

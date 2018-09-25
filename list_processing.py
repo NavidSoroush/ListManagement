@@ -1,297 +1,391 @@
+"""
+list_processing.py
+====================================
+The core module that orchestrates matching
+for 3rd party documents (excel, csv, et al) and
+updates the Salesforce CRM for FS Investments.
+
+Handles Broker Dealer (Account) and Business Development
+Group (BizDev Group) updated representative
+lists (typically received monthly and quarterly, respectively).
+
+Handles attendee lists for events and conferences (Campaigns)
+where FS Investments has committed money.
+"""
+
+import os
+import sys
+
 import traceback
 
-from ListManagement.config import *
-from ListManagement.finra.api import Finra
-from ListManagement.search.Search import Search
-from ListManagement.utility import Email
-from ListManagement.utility import ListManagementLogger
-from ListManagement.utility import MailBoxReader
-from ListManagement.utility.email_helper import lists_in_queue
-from ListManagement.stats.record_stats import record_processing_stats
-from ListManagement.utility import drop_in_bulk_processing, last_list_uploaded_data, is_path
-from ListManagement.ml.header_predictions import predict_headers_and_pre_processing
-from ListManagement.utility.processes import parse_list_based_on_type, source_channel, extract_dictionary_values, \
-    sfdc_upload
+from PythonUtilities.LoggingUtility import Logging
+from PythonUtilities.EmailHandling import EmailHandler as Email
+from PythonUtilities.salesforcipy import SFPy
+
+sys.path.append(os.path.abspath('.'))
+
+from ListManagement.config import Config as con
+from ListManagement.search import Search, Finra
+from ListManagement.search.ml import header_predictions as predicts
+from ListManagement.utility import queue
+from ListManagement.utility import general as _ghelp
+from ListManagement.utility import processes as _process
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
     '\nSkipping email, LkupName, FINRA, and SEC searches.',
     '\nContacts will not be created. Not enough information provided.']
-_dict_keys_to_keep = ['Num_Processed', 'Lists_In_Queue', 'Lists_Data', 'Mailbox', 'SFDC Session']
 
 
 # ensure_requirements_met()
 
 
 class ListProcessing:
-    def __init__(self):
+    """Orchestrates all matching and updates for pending list requests."""
+
+    def __init__(self, mode='manual'):
         """
-        declare and set global objects that are leveraged through the
-        actually processing of lists.
+        Instantiates the ListProcessing class and other objects used
+        during the matching and update process.
+
+        Can be run in two modes:
+            1) 'manual' - will require user interaction. (Likely for debugging.)
+            2) 'auto' - allows for entire process to be scheduled/cron'd.
+
+        Parameters
+        ----------
+        mode
+            A string to define how the program is being run.
+            Accepts 'manual' (default) and 'auto'.
         """
-        self._log = ListManagementLogger().logger
+        self.mode = mode
+        self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
-        self._mailbox = MailBoxReader(log=self._log)
-        self.vars = self._mailbox.extract_pending_lists(self._mailbox.mailbox, self._mailbox.email_folder)
+        self.vars = queue.build_queue(sfdc=SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken,
+                                                domain=con.SFDomain, verbose=False, _dir=con.BaseDir),
+                                      log=self._log)
         self.main_contact_based_processing()
 
     def main_contact_based_processing(self):
         """
-        this method manages all potential contact based nodes of FS 
-        processing. each node has it's own method to help clearly 
-        define the processing path.
-        
-        1. determine if there are lists pending in the queue
-        (in the lists at fsinvestments mailbox)
-        2. if lists are pending, loop through each list request
-        and grab necessary metadata to process
-        3. if the file is a 'good' extension, process the 
-        request based upon the SFDC object where request originated.
-        4. record stats for each list
-        5. when all lists are processed, close all mailbox and SalesForce connections
-        
-        :return: 
+        This method determines how to route a pending list request, based on the Salesforce object type.
+
+        An abstracted path looks like the following:
+            1) Check if there are pending lists.  # TODO: Add check before looping through each list.
+            2) If lists are pending, begin looping through all available lists.
+            3) Check that each pending list is of a workable extension.
+                See Also: ListProcessing().is_bad_extension() method for extensions that
+                            will stop the processing.
+            4) If the list has an acceptable extension, enter a
+                routing statement to determine which rules to process the list request
+                through.
+            5) After completing processing, notify the requester, record stats, and
+                begin processing any additional lists.
+        Returns
+        -------
+            Nothing
         """
+        for _vars in self.vars:
+            if not self.is_bad_extension(_vars):
+                try:
+                    if _vars['Object'] == 'Campaign':
+                        _vars = self.campaign_processing(_vars)
 
-        if lists_in_queue(var_list=self.vars):
-            while self.vars['Num_Processed'] < self.vars['Lists_In_Queue']:
-                np = self.vars['Num_Processed']
-                n = np + 1
+                    elif _vars['Object'] == 'Account':
+                        _vars = self.account_processing(_vars)
 
-                self.vars.update(self._mailbox.iterative_processing(self.vars['Lists_Data'][np]))
-                if not self.is_bad_extension():
-                    try:
-                        if self.vars['Object'] == 'Campaign':
-                            self.campaign_processing()
+                    elif _vars['Object'] == 'BizDev Group':
+                        _vars = self.bizdev_processing(_vars)
 
-                        elif self.vars['Object'] == 'Account':
-                            self.account_processing()
+                    _ghelp.record_processing_stats(_vars['Stats Data'])
 
-                        elif self.vars['Object'] == 'BizDev Group':
-                            self.bizdev_processing()
+                except:
+                    self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
 
-                        self.vars.update(record_processing_stats(self.vars['Stats Data']))
+                finally:
+                    self._log.info('List #%s processed.' % _vars['ListIndex'])
 
-                    except:
-                        self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
-
-                    finally:
-                        np += 1
-                        self.vars.update({'Num_Processed': n})
-                        self._log.info('List #%s processed.' % self.vars['Num_Processed'])
-                        for k, v in self.vars.items():
-                            if k not in _dict_keys_to_keep:
-                                self.vars[k] = None
-
-            self._mailbox.close_mailbox()
-
-    def is_bad_extension(self):
+    def is_bad_extension(self, _vars):
         """
-        used to determine if the file type (based on the file extension) can be processed by the program.
-        
-        1) check if the file extension is 'bad'
-        2) if it is bad, notify the team member that the list cannot be processed, and update list object record
-        
-        :return: boolean
+        Checks if the a list request has an extension that can be processed. If a list is
+        unable to be processed, notify the requester of the situation.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Boolean (True or False)
         """
-        if self.vars['ExtensionType'] in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
-            if self.vars['CmpAccountName'] is None:
-                obj_name = self.vars['Record Name']
+        if _vars['ExtensionType'] in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
+            if _vars['CmpAccountName'] is None:
+                obj_name = _vars['Record Name']
             else:
-                obj_name = self.vars['CmpAccountName']
+                obj_name = _vars['CmpAccountName']
             sub = 'LMA: Unable to Process List Attached to %s' % obj_name
             msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
-                  'List Management App.' % (obj_name, self.vars['ExtensionType'])
+                  'List Management App.' % (obj_name, _vars['ExtensionType'])
             self._log.warning(msg)
-            Email(subject=sub, to=[self.vars['Sender Email']], body=msg, attachment_path=None)
-            self.vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
-                                                     upload_data=[[self.vars['ListObjId'], 'Unable to Process']])
+            Email(con.SMTPUser, con.SMTPPass, self._log).send_new_email(
+                subject=sub, to=[_vars['Sender Email']], body=msg, attachments=None
+                , name=con.FullName
+            )
+            _vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
+                                                 upload_data=[[_vars['ListObjId'], 'Unable to Process']])
             return True
         else:
             return False
 
-    def campaign_processing(self):
+    def campaign_processing(self, _vars):
         """
-        handles list processing for the campaign object. processing steps below.
-        
-        1) predicts headers and pre_processes each file.
-        2) searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName
-        3) if all advisors are not found, scrape data from FINRA based on First, Last, and Account Name
-        4) if advisors are scraped, research those advisors against SalesForce
-        5) parse list into actionable pieces: a) upload to campaign b) create c) not found d) etc.
-        6) prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
-        7) extract stats from search processing, send notification email, and update SalesForce list record
-        8) if applicable, drop file in the bulk_processing network drive to create or update SaleForce contacts
-        
-        :return: n/a
-        """
-        self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], self._log))
-        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
-        self.finra_search_and_search_two()
-        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
-                                                  to_create_path=self.vars['to_create_path']))
-        self.vars.update(source_channel(self.vars['cmp_upload_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'], log=self._log))
-        self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                        self.vars['CmpAccountID'], self.vars['Object'], log=self._log))
-        self.vars.update(sfdc_upload(path=self.vars['cmp_upload_path'], obj=self.vars['Object'],
-                                     obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
-                                     log=self._log))
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
-        if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
-        else:
-            self._log.info(_steps[2])
+        Handles all processing for lists that are sourced from the campaign object.
 
-    def account_processing(self):
+        Steps
+        -----
+        1) Predict headers and pre_process each file.
+        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.
+        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.
+        4) If advisors are scraped, re-search those advisors against SalesForce contact list.
+        5) Parse list into actionable pieces: a) upload to campaign b) create c) not found.
+        6) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
+        7) Extract stats from search processing, send notification email, and update SalesForce list record.
+        8) Ff applicable, drop file in the bulk_processing network drive to create or update SaleForce contacts.
+
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Nothing
         """
-        handles list processing for the account object. processing steps below.
-        
-        1) predicts headers and pre_processes each file.
-        2) searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName
-        3) if all advisors are not found, scrape data from FINRA based on First, Last, and Account Name
-        4) if advisors are scraped, research those advisors against SalesForce
-        5) for all found advisors, scrape their licenses (and other metadata) from FINRA
-        6) parse list into actionable pieces: a) upload to campaign b) create c) not found d) etc.
-        7) update the 'Last List Upload' field on the account record.
-        8) prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
-        9) extract stats from search processing, send notification email, and update SalesForce list record
-        10) if applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts
-        
-        :return: n/a
-        """
-        self.vars.update(
-            predict_headers_and_pre_processing(self.vars['File Path'], self.vars['Record Name'],
-                                               log=self._log))
-        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
-        print(self.vars['to_create_path'])
-        print(type(self.vars['to_create_path']))
-        self.finra_search_and_search_two()
-        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all'))
-        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
-                                                  to_create_path=self.vars['to_create_path']))
+        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
+                                                                 _vars['CmpAccountName'], self._log, self.mode))
+        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
         try:
-            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
-            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
-                                                     upload_data=[llu_data])
+            self.finra_search_and_search_two(_vars)
         except:
-            self._log.warn('A non-fatal error occured during the Last List Upload'
-                           'of the %s object for Id %s. The valus were %s.' % (self.vars['Object'],
-                                                                               self.vars['ObjectId'],
-                                                                               llu_data))
+            self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
+            pass
 
-        self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'], log=self._log))
-
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
-
-        if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['update_path'], self._log)
-            if is_path(self.vars['to_create_path']):
-                self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                                self.vars['ObjectId'], self.vars['Object'],
-                                                self.vars['ObjectId'], log=self._log))
-                drop_in_bulk_processing(self.vars['to_create_path'], self._log)
-
+        _vars.update(_process.parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                                       pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                                       to_create_path=_vars['to_create_path']))
+        _vars.update(_process.source_channel(_vars['cmp_upload_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'], log=self._log))
+        _vars.update(_process.source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                             _vars['CmpAccountID'], _vars['Object'], log=self._log))
+        _vars.update(_process.sfdc_upload(path=_vars['cmp_upload_path'], obj=_vars['Object'],
+                                          obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
+                                          log=self._log))
+        _vars.update(_process.extract_dictionary_values(dict_data=_vars, log=self._log))
+        if _vars['Move To Bulk']:
+            _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
         else:
             self._log.info(_steps[2])
+        return _vars
 
-    def bizdev_processing(self):
+    def account_processing(self, _vars):
         """
-        handles list processing for the bizdev object. processing steps below.
+        Handles all processing for lists that are sourced from the account object.
 
-        1) predicts headers and pre_processes each file.
-        2) searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName
-        3) if all advisors are not found, scrape data from FINRA based on First, Last, and Account Name
-        4) if advisors are scraped, research those advisors against SalesForce
-        5) for all found advisors, scrape their licenses (and other metadata) from FINRA
-        6) parse list into actionable pieces: a) upload to campaign b) create c) not found d) etc.
-        7) update the 'Last List Upload' field on the bizdev record and associate new contacts to the record.
-        8) prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
-        9) extract stats from search processing, send notification email, and update SalesForce list record
-        10) if applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts
- 
-        :return: n/a
+        Steps
+        -----
+        1) Predicts headers and pre_process each file.
+        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.
+        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.
+        4) If advisors are scraped, re-search those advisors against SalesForce.
+        5) For all found advisors, scrape their licenses (and other metadata) from FINRA
+        6) Parse list into actionable pieces: a) upload to campaign b) create c) not found.
+        7) Update the 'Last List Upload' field on the account record.
+        8) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
+        9) Extract stats from search processing, send notification email, and update SalesForce list record.
+        10) If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Nothing
         """
-        self.vars.update(predict_headers_and_pre_processing(self.vars['File Path'],
-                                                            self.vars['CmpAccountName'], log=self._log))
-        self.vars.update(self._search_api.perform_search_one(self.vars['File Path'], self.vars['Object']))
-        self.finra_search_and_search_two()
-        self.vars.update(self._finra_api.scrape(self.vars['Found Path'], scrape_type='all', save=True))
-        self.vars.update(parse_list_based_on_type(path=self.vars['Found Path'], l_type=self.vars['Object'],
-                                                  pre_or_post=self.vars['Pre_or_Post'], log=self._log,
-                         to_create_path=self.vars['to_create_path']))
-        self.vars.update(sfdc_upload(path=self.vars['bdg_update_path'], obj=self.vars['Object'],
-                                     obj_id=self.vars['ObjectId'], session=self.vars['SFDC Session'],
-                                     log=self._log))
+        _vars.update(
+            predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['Record Name'],
+                                                        log=self._log, mode=self.mode))
+        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
 
         try:
-            llu_data = last_list_uploaded_data(self.vars['ObjectId'])
-            self.vars['SFDC Session'].update_records(obj=self.vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
-                                                     upload_data=[llu_data])
+            self.finra_search_and_search_two(_vars)
         except:
-            self._log.warn('A non-fatal error occured during the Last List Upload'
-                           'of the %s object for Id %s. The valus were %s.' % (self.vars['Object'],
-                                                                               self.vars['ObjectId'],
-                                                                               llu_data))
+            self._log.info('An error occurred during FINRA or SearchTwo processing, Skipping.')
+            pass
+        _vars.update(self._finra_api.scrape(_vars['Found Path'], scrape_type='all'))
+        _vars.update(_process.parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                                       pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                                       to_create_path=_vars['to_create_path']))
+        try:
+            llu_data = _ghelp.last_list_uploaded_data(_vars['ObjectId'])
+            _vars['SFDC Session'].update_records(obj=_vars['Object'], fields=['Id', 'Last_Rep_List_Upload__c'],
+                                                 upload_data=[llu_data])
+        except:
+            self._log.warn('A non-fatal error occurred during the Last List Upload'
+                           'of the %s object for Id %s. The values were %s.' % (_vars['Object'],
+                                                                                _vars['ObjectId'],
+                                                                                llu_data))
 
-        self.vars.update(source_channel(self.vars['update_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self._log))
-        self.vars.update(source_channel(self.vars['to_create_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self._log))
-        self.vars.update(source_channel(self.vars['bdg_update_path'], self.vars['Record Name'],
-                                        self.vars['ObjectId'], self.vars['Object'],
-                                        self.vars['CmpAccountID'], log=self._log))
-        self.vars.update(extract_dictionary_values(dict_data=self.vars, log=self._log))
+        _vars.update(_process.source_channel(_vars['update_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'], log=self._log))
 
-        if self.vars['Move To Bulk']:
-            drop_in_bulk_processing(self.vars['to_create_path'], self._log)
-            drop_in_bulk_processing(self.vars['update_path'], self._log)
+        _vars.update(_process.extract_dictionary_values(dict_data=_vars, log=self._log))
+
+        if _vars['Move To Bulk']:
+            _ghelp.drop_in_bulk_processing(_vars['update_path'], self._log)
+            if _ghelp.is_path(_vars['to_create_path']):
+                _vars.update(_process.source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                                     _vars['ObjectId'], _vars['Object'],
+                                                     _vars['ObjectId'], log=self._log))
+                _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
+
         else:
             self._log.info(_steps[2])
+        return _vars
 
-    def finra_search_and_search_two(self):
+    def bizdev_processing(self, _vars):
         """
-        this method handles helps to decide if FINRA scraping or searching SalesForce a 2nd time
-        is necessary.
-        
-        1) if all advisors are not found and are missing CRDNumbers, scrape FINRA
-        2) if FINRA is scraped, search our SalesForce database to increase our likely match-rate.
-        
-        :return: n/a
-        """
-        if self.vars['SFDC_Found'] < self.vars['Total Records'] \
-                and self.vars['FINRA?']:
+        Handles all processing for lists that are sourced from the BizDev Group object.
 
-            self.vars.update(self._finra_api.scrape(path=self.vars['File Path'],
-                                                    scrape_type='crd',
-                                                    parse_list=True))
-            if (self.vars['SFDC_Found'] + self.vars['FINRA_Found']) < self.vars['Total Records']:
-                self.vars.update(
-                    self._search_api.perform_sec_search(self.vars['No CRD'], self.vars['FINRA_SEC Found']))
+        Steps
+        -----
+        1) Predicts headers and pre_process each file.
+        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.
+        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.
+        4) If advisors are scraped, re-search those advisors against SalesForce.
+        5) For all found advisors, scrape their licenses (and other metadata) from FINRA
+        6) Parse list into actionable pieces: a) upload to campaign b) create c) not found.
+        7) Update the 'Last List Upload' field on the bizdev group record.
+        8) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.
+        9) Extract stats from search processing, send notification email, and update SalesForce list record.
+        10) If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Nothing
+        """
+
+        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['CmpAccountName'],
+                                                                 log=self._log, mode=self.mode))
+        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
+
+        try:
+            self.finra_search_and_search_two(_vars)
+        except:
+            self._log.info('An error occurred during FINRA or SearchTwo processing.')
+            pass
+        _vars.update(self._finra_api.scrape(_vars['Found Path'], scrape_type='all', save=True))
+        _vars.update(_process.parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
+                                                       pre_or_post=_vars['Pre_or_Post'], log=self._log,
+                                                       to_create_path=_vars['to_create_path']))
+        _vars.update(_process.sfdc_upload(path=_vars['bdg_update_path'], obj=_vars['Object'],
+                                          obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
+                                          log=self._log))
+
+        try:
+            llu_data = _ghelp.last_list_uploaded_data(_vars['ObjectId'])
+            _vars['SFDC Session'].update_records(obj=_vars['Object'], fields=['Id', 'Last_Upload_Date__c'],
+                                                 upload_data=[llu_data])
+        except:
+            self._log.warn('A non-fatal error occurred during the Last List Upload'
+                           'of the %s object for Id %s. The values were %s.' % (_vars['Object'],
+                                                                                _vars['ObjectId'],
+                                                                                llu_data))
+
+        _vars.update(_process.source_channel(_vars['update_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'],
+                                             _vars['CmpAccountID'], log=self._log))
+        _vars.update(_process.source_channel(_vars['to_create_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'],
+                                             _vars['CmpAccountID'], log=self._log))
+        _vars.update(_process.source_channel(_vars['bdg_update_path'], _vars['Record Name'],
+                                             _vars['ObjectId'], _vars['Object'],
+                                             _vars['CmpAccountID'], log=self._log))
+        _vars.update(_process.extract_dictionary_values(dict_data=_vars, log=self._log))
+
+        if _vars['Move To Bulk']:
+            _ghelp.drop_in_bulk_processing(_vars['to_create_path'], self._log)
+            _ghelp.drop_in_bulk_processing(_vars['update_path'], self._log)
+
+        else:
+            self._log.info(_steps[2])
+        return _vars
+
+    def finra_search_and_search_two(self, _vars):
+        """
+        Handles all Finra and secondary searching (if necessary).
+
+        Steps
+        -----
+        1) If advisors are not found and are missing CRDNumbers, scrape FINRA
+        2) If FINRA is scraped, search our SalesForce database to increase our likely match-rate.
+
+        Parameters
+        ----------
+        _vars
+            Python dictionary containing metadata regarding a list request.
+
+        Returns
+        -------
+            Updated python dictionary containing metadata regarding a list request.
+        """
+        if _vars['SFDC_Found'] < _vars['Total Records'] \
+                and _vars['FINRA?']:
+
+            _vars.update(self._finra_api.scrape(path=_vars['File Path'],
+                                                scrape_type='crd',
+                                                parse_list=True))
+            if (_vars['SFDC_Found'] + _vars['FINRA_Found']) < _vars['Total Records']:
+                _vars.update(
+                    self._search_api.perform_sec_search(_vars['No CRD'], _vars['FINRA_SEC Found']))
 
             else:
                 self._log.info(_steps[0])
 
-            self.vars.update(self._search_api.perform_search_two(self.vars['FINRA_SEC Found'],
-                                                                 self.vars['Found Path'],
-                                                                 self.vars['Object']))
+            _vars.update(self._search_api.perform_search_two(_vars['FINRA_SEC Found'],
+                                                             _vars['Found Path'],
+                                                             _vars['Object']))
         else:
             self._log.info(_steps[1])
+        return _vars
 
     def create_log_record_of_current_list_data(self, msg):
-        self._log.warning('A fatal error has occured. Printing out necessary data to restart the program and'
-                          'complete it manually.')
-        self._log.info(self.vars)
+        """
+        Catches a 'fatal error' incurred by the list program. Halts all processing if called.
+
+        Parameters
+        ----------
+        msg
+            Error message.
+
+        Returns
+        -------
+            Nothing
+        """
+        self._log.warning('A fatal error has occurred. Refer to message traceback for insight into '
+                          'the issue.')
         self._log.error(msg)
         raise RuntimeError(msg)
 
-
-if __name__ == '__main__':
-    lp = ListProcessing()
+#
+# if __name__ == '__main__':
+#     lp = ListProcessing()

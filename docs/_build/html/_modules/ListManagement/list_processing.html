@@ -1,0 +1,476 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ListManagement.list_processing &#8212; List Management 4.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ListManagement.list_processing</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">list_processing.py</span>
+<span class="sd">====================================</span>
+<span class="sd">The core module that orchestrates matching</span>
+<span class="sd">for 3rd party documents (excel, csv, et al) and</span>
+<span class="sd">updates the Salesforce CRM for FS Investments.</span>
+
+<span class="sd">Handles Broker Dealer (Account) and Business Development</span>
+<span class="sd">Group (BizDev Group) updated representative</span>
+<span class="sd">lists (typically received monthly and quarterly, respectively).</span>
+
+<span class="sd">Handles attendee lists for events and conferences (Campaigns)</span>
+<span class="sd">where FS Investments has committed money.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">traceback</span>
+
+<span class="kn">from</span> <span class="nn">PythonUtilities.LoggingUtility</span> <span class="k">import</span> <span class="n">Logging</span>
+<span class="kn">from</span> <span class="nn">PythonUtilities.EmailHandling</span> <span class="k">import</span> <span class="n">EmailHandler</span> <span class="k">as</span> <span class="n">Email</span>
+<span class="kn">from</span> <span class="nn">PythonUtilities.salesforcipy</span> <span class="k">import</span> <span class="n">SFPy</span>
+
+<span class="kn">from</span> <span class="nn">ListManagement.config</span> <span class="k">import</span> <span class="n">Config</span> <span class="k">as</span> <span class="n">con</span>
+<span class="kn">from</span> <span class="nn">ListManagement.search</span> <span class="k">import</span> <span class="n">Search</span><span class="p">,</span> <span class="n">Finra</span>
+<span class="kn">from</span> <span class="nn">ListManagement.search.ml</span> <span class="k">import</span> <span class="n">header_predictions</span> <span class="k">as</span> <span class="n">predicts</span>
+<span class="kn">from</span> <span class="nn">ListManagement.utility</span> <span class="k">import</span> <span class="n">queue</span>
+<span class="kn">from</span> <span class="nn">ListManagement.utility</span> <span class="k">import</span> <span class="n">general</span> <span class="k">as</span> <span class="n">_ghelp</span>
+<span class="kn">from</span> <span class="nn">ListManagement.utility</span> <span class="k">import</span> <span class="n">processes</span> <span class="k">as</span> <span class="n">_process</span>
+
+<span class="n">_steps</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Skipping step 6, because all contacts were found.&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Skipping email, LkupName, FINRA, and SEC searches.&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Contacts will not be created. Not enough information provided.&#39;</span><span class="p">]</span>
+
+
+<span class="c1"># ensure_requirements_met()</span>
+
+
+<div class="viewcode-block" id="ListProcessing"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing">[docs]</a><span class="k">class</span> <span class="nc">ListProcessing</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Orchestrates all matching and updates for pending list requests.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;manual&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Instantiates the ListProcessing class and other objects used</span>
+<span class="sd">        during the matching and update process.</span>
+
+<span class="sd">        Can be run in two modes:</span>
+<span class="sd">            1) &#39;manual&#39; - will require user interaction. (Likely for debugging.)</span>
+<span class="sd">            2) &#39;auto&#39; - allows for entire process to be scheduled/cron&#39;d.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mode</span>
+<span class="sd">            A string to define how the program is being run.</span>
+<span class="sd">            Accepts &#39;manual&#39; (default) and &#39;auto&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">Logging</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">AppName</span><span class="p">,</span> <span class="n">abbr</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">NameAbbr</span><span class="p">,</span> <span class="n">dir_</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">LogDrive</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">logger</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_search_api</span> <span class="o">=</span> <span class="n">Search</span><span class="p">(</span><span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_finra_api</span> <span class="o">=</span> <span class="n">Finra</span><span class="p">(</span><span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+        <span class="n">tmp_sfdc</span> <span class="o">=</span> <span class="n">SFPy</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">SFUser</span><span class="p">,</span> <span class="n">pw</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">SFPass</span><span class="p">,</span> <span class="n">token</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">SFToken</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">SFDomain</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">_dir</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">BaseDir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vars</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">build_queue</span><span class="p">(</span><span class="n">tmp_sfdc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_contact_based_processing</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ListProcessing.main_contact_based_processing"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing.main_contact_based_processing">[docs]</a>    <span class="k">def</span> <span class="nf">main_contact_based_processing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method determines how to route a pending list request, based on the Salesforce object type.</span>
+
+<span class="sd">        An abstracted path looks like the following:</span>
+<span class="sd">            1) Check if there are pending lists.  # TODO: Add check before looping through each list.</span>
+<span class="sd">            2) If lists are pending, begin looping through all available lists.</span>
+<span class="sd">            3) Check that each pending list is of a workable extension.</span>
+<span class="sd">                See Also: ListProcessing().is_bad_extension() method for extensions that</span>
+<span class="sd">                            will stop the processing.</span>
+<span class="sd">            4) If the list has an acceptable extension, enter a</span>
+<span class="sd">                routing statement to determine which rules to process the list request</span>
+<span class="sd">                through.</span>
+<span class="sd">            5) After completing processing, notify the requester, record stats, and</span>
+<span class="sd">                begin processing any additional lists.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            Nothing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">_vars</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_bad_extension</span><span class="p">(</span><span class="n">_vars</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span>
+                        <span class="n">_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">campaign_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">)</span>
+
+                    <span class="k">elif</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Account&#39;</span><span class="p">:</span>
+                        <span class="n">_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">account_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">)</span>
+
+                    <span class="k">elif</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+                        <span class="n">_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bizdev_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">)</span>
+
+                    <span class="n">_ghelp</span><span class="o">.</span><span class="n">record_processing_stats</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Stats Data&#39;</span><span class="p">])</span>
+
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">create_log_record_of_current_list_data</span><span class="p">(</span><span class="n">msg</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()))</span>
+
+                <span class="k">finally</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;List #</span><span class="si">%s</span><span class="s1"> processed.&#39;</span> <span class="o">%</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ListIndex&#39;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="ListProcessing.is_bad_extension"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing.is_bad_extension">[docs]</a>    <span class="k">def</span> <span class="nf">is_bad_extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_vars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks if the a list request has an extension that can be processed. If a list is</span>
+<span class="sd">        unable to be processed, notify the requester of the situation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        _vars</span>
+<span class="sd">            Python dictionary containing metadata regarding a list request.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            Boolean (True or False)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ExtensionType&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;.pdf&#39;</span><span class="p">,</span> <span class="s1">&#39;.gif&#39;</span><span class="p">,</span> <span class="s1">&#39;.png&#39;</span><span class="p">,</span> <span class="s1">&#39;.jpg&#39;</span><span class="p">,</span> <span class="s1">&#39;.doc&#39;</span><span class="p">,</span> <span class="s1">&#39;.docx&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountName&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">obj_name</span> <span class="o">=</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">obj_name</span> <span class="o">=</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountName&#39;</span><span class="p">]</span>
+            <span class="n">sub</span> <span class="o">=</span> <span class="s1">&#39;LMA: Unable to Process List Attached to </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">obj_name</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;The list attached to </span><span class="si">%s</span><span class="s1"> has a file extension, </span><span class="si">%s</span><span class="s1">,  that cannot currently be processed by the &#39;</span> \
+                  <span class="s1">&#39;List Management App.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obj_name</span><span class="p">,</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ExtensionType&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">Email</span><span class="p">(</span><span class="n">con</span><span class="o">.</span><span class="n">SMTPUser</span><span class="p">,</span> <span class="n">con</span><span class="o">.</span><span class="n">SMTPPass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span><span class="o">.</span><span class="n">send_new_email</span><span class="p">(</span>
+                <span class="n">subject</span><span class="o">=</span><span class="n">sub</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="p">[</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Sender Email&#39;</span><span class="p">]],</span> <span class="n">body</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">attachments</span><span class="o">=</span><span class="kc">None</span>
+                <span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">FullName</span>
+            <span class="p">)</span>
+            <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;SFDC Session&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="s1">&#39;List__c&#39;</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Status__c&#39;</span><span class="p">],</span>
+                                                 <span class="n">upload_data</span><span class="o">=</span><span class="p">[[</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ListObjId&#39;</span><span class="p">],</span> <span class="s1">&#39;Unable to Process&#39;</span><span class="p">]])</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="ListProcessing.campaign_processing"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing.campaign_processing">[docs]</a>    <span class="k">def</span> <span class="nf">campaign_processing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_vars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handles all processing for lists that are sourced from the campaign object.</span>
+
+<span class="sd">        Steps</span>
+<span class="sd">        -----</span>
+<span class="sd">        1) Predict headers and pre_process each file.</span>
+<span class="sd">        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.</span>
+<span class="sd">        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.</span>
+<span class="sd">        4) If advisors are scraped, re-search those advisors against SalesForce contact list.</span>
+<span class="sd">        5) Parse list into actionable pieces: a) upload to campaign b) create c) not found.</span>
+<span class="sd">        6) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.</span>
+<span class="sd">        7) Extract stats from search processing, send notification email, and update SalesForce list record.</span>
+<span class="sd">        8) Ff applicable, drop file in the bulk_processing network drive to create or update SaleForce contacts.</span>
+
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        _vars</span>
+<span class="sd">            Python dictionary containing metadata regarding a list request.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            Nothing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">predicts</span><span class="o">.</span><span class="n">predict_headers_and_pre_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span>
+                                                                 <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountName&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_search_api</span><span class="o">.</span><span class="n">perform_search_one</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finra_search_and_search_two</span><span class="p">(</span><span class="n">_vars</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;An error occurred during FINRA or SearchTwo processing. Skipping.&#39;</span><span class="p">)</span>
+            <span class="k">pass</span>
+
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">parse_list_based_on_type</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">],</span> <span class="n">l_type</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                                       <span class="n">pre_or_post</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Pre_or_Post&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">,</span>
+                                                       <span class="n">to_create_path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">]))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">source_channel</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;cmp_upload_path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">source_channel</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountID&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">sfdc_upload</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;cmp_upload_path&#39;</span><span class="p">],</span> <span class="n">obj</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                          <span class="n">obj_id</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">session</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;SFDC Session&#39;</span><span class="p">],</span>
+                                          <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">extract_dictionary_values</span><span class="p">(</span><span class="n">dict_data</span><span class="o">=</span><span class="n">_vars</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Move To Bulk&#39;</span><span class="p">]:</span>
+            <span class="n">_ghelp</span><span class="o">.</span><span class="n">drop_in_bulk_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">_steps</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">_vars</span></div>
+
+<div class="viewcode-block" id="ListProcessing.account_processing"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing.account_processing">[docs]</a>    <span class="k">def</span> <span class="nf">account_processing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_vars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handles all processing for lists that are sourced from the account object.</span>
+
+<span class="sd">        Steps</span>
+<span class="sd">        -----</span>
+<span class="sd">        1) Predicts headers and pre_process each file.</span>
+<span class="sd">        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.</span>
+<span class="sd">        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.</span>
+<span class="sd">        4) If advisors are scraped, re-search those advisors against SalesForce.</span>
+<span class="sd">        5) For all found advisors, scrape their licenses (and other metadata) from FINRA</span>
+<span class="sd">        6) Parse list into actionable pieces: a) upload to campaign b) create c) not found.</span>
+<span class="sd">        7) Update the &#39;Last List Upload&#39; field on the account record.</span>
+<span class="sd">        8) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.</span>
+<span class="sd">        9) Extract stats from search processing, send notification email, and update SalesForce list record.</span>
+<span class="sd">        10) If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        _vars</span>
+<span class="sd">            Python dictionary containing metadata regarding a list request.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            Nothing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="n">predicts</span><span class="o">.</span><span class="n">predict_headers_and_pre_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                                        <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_search_api</span><span class="o">.</span><span class="n">perform_search_one</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finra_search_and_search_two</span><span class="p">(</span><span class="n">_vars</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;An error occurred during FINRA or SearchTwo processing, Skipping.&#39;</span><span class="p">)</span>
+            <span class="k">pass</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_finra_api</span><span class="o">.</span><span class="n">scrape</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">],</span> <span class="n">scrape_type</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">parse_list_based_on_type</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">],</span> <span class="n">l_type</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                                       <span class="n">pre_or_post</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Pre_or_Post&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">,</span>
+                                                       <span class="n">to_create_path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">]))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">llu_data</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">last_list_uploaded_data</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">])</span>
+            <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;SFDC Session&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span> <span class="n">fields</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Last_Rep_List_Upload__c&#39;</span><span class="p">],</span>
+                                                 <span class="n">upload_data</span><span class="o">=</span><span class="p">[</span><span class="n">llu_data</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;A non-fatal error occurred during the Last List Upload&#39;</span>
+                           <span class="s1">&#39;of the </span><span class="si">%s</span><span class="s1"> object for Id </span><span class="si">%s</span><span class="s1">. The values were </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                                                                <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span>
+                                                                                <span class="n">llu_data</span><span class="p">))</span>
+
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">source_channel</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;update_path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">extract_dictionary_values</span><span class="p">(</span><span class="n">dict_data</span><span class="o">=</span><span class="n">_vars</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Move To Bulk&#39;</span><span class="p">]:</span>
+            <span class="n">_ghelp</span><span class="o">.</span><span class="n">drop_in_bulk_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;update_path&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">is_path</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">]):</span>
+                <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">source_channel</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                                     <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                                     <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+                <span class="n">_ghelp</span><span class="o">.</span><span class="n">drop_in_bulk_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">_steps</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">_vars</span></div>
+
+<div class="viewcode-block" id="ListProcessing.bizdev_processing"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing.bizdev_processing">[docs]</a>    <span class="k">def</span> <span class="nf">bizdev_processing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_vars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handles all processing for lists that are sourced from the BizDev Group object.</span>
+
+<span class="sd">        Steps</span>
+<span class="sd">        -----</span>
+<span class="sd">        1) Predicts headers and pre_process each file.</span>
+<span class="sd">        2) Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.</span>
+<span class="sd">        3) If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.</span>
+<span class="sd">        4) If advisors are scraped, re-search those advisors against SalesForce.</span>
+<span class="sd">        5) For all found advisors, scrape their licenses (and other metadata) from FINRA</span>
+<span class="sd">        6) Parse list into actionable pieces: a) upload to campaign b) create c) not found.</span>
+<span class="sd">        7) Update the &#39;Last List Upload&#39; field on the bizdev group record.</span>
+<span class="sd">        8) Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.</span>
+<span class="sd">        9) Extract stats from search processing, send notification email, and update SalesForce list record.</span>
+<span class="sd">        10) If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        _vars</span>
+<span class="sd">            Python dictionary containing metadata regarding a list request.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            Nothing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">predicts</span><span class="o">.</span><span class="n">predict_headers_and_pre_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span>
+                                                                 <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountName&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">,</span>
+                                                                 <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_search_api</span><span class="o">.</span><span class="n">perform_search_one</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finra_search_and_search_two</span><span class="p">(</span><span class="n">_vars</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;An error occurred during FINRA or SearchTwo processing.&#39;</span><span class="p">)</span>
+            <span class="k">pass</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_finra_api</span><span class="o">.</span><span class="n">scrape</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">],</span> <span class="n">scrape_type</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">parse_list_based_on_type</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">],</span> <span class="n">l_type</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                                       <span class="n">pre_or_post</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Pre_or_Post&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">,</span>
+                                                       <span class="n">to_create_path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">]))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">sfdc_upload</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;bdg_update_path&#39;</span><span class="p">],</span> <span class="n">obj</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                          <span class="n">obj_id</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">session</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;SFDC Session&#39;</span><span class="p">],</span>
+                                          <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">llu_data</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">last_list_uploaded_data</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">])</span>
+            <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;SFDC Session&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span> <span class="n">fields</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Last_Upload_Date__c&#39;</span><span class="p">],</span>
+                                                 <span class="n">upload_data</span><span class="o">=</span><span class="p">[</span><span class="n">llu_data</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;A non-fatal error occurred during the Last List Upload&#39;</span>
+                           <span class="s1">&#39;of the </span><span class="si">%s</span><span class="s1"> object for Id </span><span class="si">%s</span><span class="s1">. The values were </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                                                                <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span>
+                                                                                <span class="n">llu_data</span><span class="p">))</span>
+
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">source_channel</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;update_path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountID&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">source_channel</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountID&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">source_channel</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;bdg_update_path&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;CmpAccountID&#39;</span><span class="p">],</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+        <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_process</span><span class="o">.</span><span class="n">extract_dictionary_values</span><span class="p">(</span><span class="n">dict_data</span><span class="o">=</span><span class="n">_vars</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Move To Bulk&#39;</span><span class="p">]:</span>
+            <span class="n">_ghelp</span><span class="o">.</span><span class="n">drop_in_bulk_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;to_create_path&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+            <span class="n">_ghelp</span><span class="o">.</span><span class="n">drop_in_bulk_processing</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;update_path&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">_steps</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">_vars</span></div>
+
+<div class="viewcode-block" id="ListProcessing.finra_search_and_search_two"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing.finra_search_and_search_two">[docs]</a>    <span class="k">def</span> <span class="nf">finra_search_and_search_two</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_vars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handles all Finra and secondary searching (if necessary).</span>
+
+<span class="sd">        Steps</span>
+<span class="sd">        -----</span>
+<span class="sd">        1) If advisors are not found and are missing CRDNumbers, scrape FINRA</span>
+<span class="sd">        2) If FINRA is scraped, search our SalesForce database to increase our likely match-rate.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        _vars</span>
+<span class="sd">            Python dictionary containing metadata regarding a list request.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            Updated python dictionary containing metadata regarding a list request.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;SFDC_Found&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Total Records&#39;</span><span class="p">]</span> \
+                <span class="ow">and</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;FINRA?&#39;</span><span class="p">]:</span>
+
+            <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_finra_api</span><span class="o">.</span><span class="n">scrape</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span>
+                                                <span class="n">scrape_type</span><span class="o">=</span><span class="s1">&#39;crd&#39;</span><span class="p">,</span>
+                                                <span class="n">parse_list</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;SFDC_Found&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;FINRA_Found&#39;</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Total Records&#39;</span><span class="p">]:</span>
+                <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_search_api</span><span class="o">.</span><span class="n">perform_sec_search</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;No CRD&#39;</span><span class="p">],</span> <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;FINRA_SEC Found&#39;</span><span class="p">]))</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">_steps</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+            <span class="n">_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_search_api</span><span class="o">.</span><span class="n">perform_search_two</span><span class="p">(</span><span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;FINRA_SEC Found&#39;</span><span class="p">],</span>
+                                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">],</span>
+                                                             <span class="n">_vars</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">_steps</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">_vars</span></div>
+
+<div class="viewcode-block" id="ListProcessing.create_log_record_of_current_list_data"><a class="viewcode-back" href="../../index.html#ListManagement.list_processing.ListProcessing.create_log_record_of_current_list_data">[docs]</a>    <span class="k">def</span> <span class="nf">create_log_record_of_current_list_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Catches a &#39;fatal error&#39; incurred by the list program. Halts all processing if called.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        msg</span>
+<span class="sd">            Error message.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            Nothing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;A fatal error has occurred. Refer to message traceback for insight into &#39;</span>
+                          <span class="s1">&#39;the issue.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">lp</span> <span class="o">=</span> <span class="n">ListProcessing</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">List Management</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ricky Schools.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
