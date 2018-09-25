@@ -1,4 +1,4 @@
-from ListManagement.stats.record_stats import record_processing_stats
+from ListManagement.utility.record_stats import record_processing_stats
 
 # raw data from dictionary file from logs
 data = """

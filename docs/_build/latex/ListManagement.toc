@@ -1,0 +1,28 @@
+\babel@toc {english}{}
+\contentsline {chapter}{\numberline {1}List Management (L.I.M.A)}{1}{chapter.1}
+\contentsline {section}{\numberline {1.1}How lists are processed}{1}{section.1.1}
+\contentsline {section}{\numberline {1.2}Usage}{1}{section.1.2}
+\contentsline {subsection}{\numberline {1.2.1}Full process}{1}{subsection.1.2.1}
+\contentsline {subsection}{\numberline {1.2.2}Individual components}{2}{subsection.1.2.2}
+\contentsline {subsubsection}{\numberline {1.2.2.1}Finra}{2}{subsubsection.1.2.2.1}
+\contentsline {subsubsection}{\numberline {1.2.2.2}Salesforce}{2}{subsubsection.1.2.2.2}
+\contentsline {subsubsection}{\numberline {1.2.2.3}Search chaining}{2}{subsubsection.1.2.2.3}
+\contentsline {chapter}{\numberline {2}ListManagement package}{5}{chapter.2}
+\contentsline {section}{\numberline {2.1}list\_processing.py}{5}{section.2.1}
+\contentsline {chapter}{\numberline {3}ListManagement.search package}{9}{chapter.3}
+\contentsline {section}{\numberline {3.1}finra.py}{9}{section.3.1}
+\contentsline {section}{\numberline {3.2}salesforce.py}{10}{section.3.2}
+\contentsline {chapter}{\numberline {4}ListManagement.search.ml package}{11}{chapter.4}
+\contentsline {chapter}{\numberline {5}ListManagement.sources package}{13}{chapter.5}
+\contentsline {section}{\numberline {5.1}accounts.py}{13}{section.5.1}
+\contentsline {section}{\numberline {5.2}bdgs.py}{14}{section.5.2}
+\contentsline {section}{\numberline {5.3}campaigns.py}{14}{section.5.3}
+\contentsline {chapter}{\numberline {6}ListManagement.legacy package}{17}{chapter.6}
+\contentsline {chapter}{\numberline {7}ListManagement.utility package}{19}{chapter.7}
+\contentsline {section}{\numberline {7.1}general.py}{20}{section.7.1}
+\contentsline {section}{\numberline {7.2}processes.py}{25}{section.7.2}
+\contentsline {section}{\numberline {7.3}queue.py}{27}{section.7.3}
+\contentsline {section}{\numberline {7.4}sf\_helper.py}{28}{section.7.4}
+\contentsline {chapter}{\numberline {8}ListManagement.cron\_jobs package}{29}{chapter.8}
+\contentsline {chapter}{\numberline {9}Indices and tables}{31}{chapter.9}
+\contentsline {chapter}{Python Module Index}{33}{section*.127}

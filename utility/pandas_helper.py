@@ -2,9 +2,9 @@ from __future__ import absolute_import
 import pandas as pd
 
 try:
-    from ListManagement.utility.gen_helper import determine_ext
+    from .general import determine_ext
 except:
-    from utility.gen_helper import determine_ext
+    from ListManagement.utility.general import determine_ext
 
 
 def read_df(path):
@@ -21,11 +21,8 @@ def save_df(df, path):
     df.to_excel(path, index=False)
 
 
-def concat_dfs(df1, df2, df3=None):
-    if df3 is not None:
-        return pd.concat([df1, df2, df3])
-    else:
-        return pd.concat([df1, df2])
+def concat_dfs(df_list):
+    return pd.concat(df_list, sort=False)
 
 
 def make_df(data=None, columns=None):
@@ -59,3 +56,48 @@ def determine_num_records(path):
         num = int(df['ContactID'].count())
     del df
     return num
+
+
+def regex_search_columns(frame, regex, add=None):
+    cols = frame.filter(regex=regex).columns.tolist()
+    if add is not None:
+        if isinstance(add, str):
+            cols.append(add)
+        elif isinstance(add, list):
+            cols.extend(add)
+    return cols
+
+
+def determine_output(frame, output):
+    if len(frame.index) > 0:
+        frame.columns = output.columns
+        return frame
+    else:
+        return frame
+
+
+def crud(source, target, on):
+    """
+    source_data = {'A': [1, 2, 3], 'B': ['X', 'Y', 'Z']}
+    target_data = {'A': [2, 3, 4], 'B': ['A', 'Z', 'S'], 'C': [9, 7, 3]}
+    Parameters
+    ----------
+    source
+    target
+    on
+
+    Returns
+    -------
+
+    """
+    comparison_df = pd.merge(source, target, on=on, how='outer', indicator=True, suffixes=['_src', '_tgt'])
+
+    insert = comparison_df[comparison_df['_merge'] == 'left_only'].drop(
+        columns=regex_search_columns(comparison_df, 'tgt', '_merge'), axis=1).dropna(axis=1)
+    update = comparison_df[comparison_df['_merge'] == 'both'].drop(
+        columns=regex_search_columns(comparison_df, 'tgt', '_merge'), axis=1).dropna(axis=1)
+    remove = comparison_df[comparison_df['_merge'] == 'right_only'].drop(
+        columns=regex_search_columns(comparison_df, 'src', '_merge'), axis=1).dropna(axis=1)
+    insert, update, remove = determine_output(insert, source), determine_output(update, target), determine_output(
+        remove, target)
+    return insert, update, remove
