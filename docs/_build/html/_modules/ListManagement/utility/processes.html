@@ -1,0 +1,593 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ListManagement.utility.processes &#8212; List Management 4.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ListManagement.utility.processes</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">processes.py</span>
+<span class="sd">====================================</span>
+<span class="sd">Contains core processes that are used</span>
+<span class="sd">throughout the processing of a given list.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+
+<span class="kn">from</span> <span class="nn">PythonUtilities.EmailHandling</span> <span class="k">import</span> <span class="n">EmailHandler</span> <span class="k">as</span> <span class="n">Email</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">ListManagement.config</span> <span class="k">import</span> <span class="n">Config</span> <span class="k">as</span> <span class="n">con</span>
+    <span class="kn">from</span> <span class="nn">ListManagement.sources</span> <span class="k">import</span> <span class="n">campaigns</span><span class="p">,</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">bdgs</span>
+    <span class="kn">from</span> <span class="nn">ListManagement.utility</span> <span class="k">import</span> <span class="n">general</span> <span class="k">as</span> <span class="n">_ghelp</span>
+    <span class="kn">from</span> <span class="nn">ListManagement.utility.email_helper</span> <span class="k">import</span> <span class="n">craft_notification_email</span>
+    <span class="kn">from</span> <span class="nn">ListManagement.utility.pandas_helper</span> <span class="k">import</span> <span class="n">read_df</span><span class="p">,</span> <span class="n">save_df</span><span class="p">,</span> <span class="n">make_df</span><span class="p">,</span> <span class="n">determine_num_records</span>
+    <span class="kn">from</span> <span class="nn">ListManagement.utility.sf_helper</span> <span class="k">import</span> <span class="o">*</span>
+<span class="k">except</span><span class="p">:</span>
+
+    <span class="kn">from</span> <span class="nn">config</span> <span class="k">import</span> <span class="n">Config</span> <span class="k">as</span> <span class="n">con</span>
+    <span class="kn">from</span> <span class="nn">sources</span> <span class="k">import</span> <span class="n">campaigns</span><span class="p">,</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">bdgs</span>
+    <span class="kn">from</span> <span class="nn">utility</span> <span class="k">import</span> <span class="n">general</span> <span class="k">as</span> <span class="n">_ghelp</span>
+    <span class="kn">from</span> <span class="nn">utility.email_helper</span> <span class="k">import</span> <span class="n">craft_notification_email</span>
+    <span class="kn">from</span> <span class="nn">utility.pandas_helper</span> <span class="k">import</span> <span class="n">read_df</span><span class="p">,</span> <span class="n">save_df</span><span class="p">,</span> <span class="n">make_df</span><span class="p">,</span> <span class="n">determine_num_records</span>
+    <span class="kn">from</span> <span class="nn">utility.sf_helper</span> <span class="k">import</span> <span class="o">*</span>
+
+
+<div class="viewcode-block" id="parse_list_based_on_type"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.parse_list_based_on_type">[docs]</a><span class="k">def</span> <span class="nf">parse_list_based_on_type</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">l_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pre_or_post</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">to_create_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Serves as a routing point to parse a list, dependent on the sources object.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path</span>
+<span class="sd">        A string representing a full file path.</span>
+<span class="sd">    l_type</span>
+<span class="sd">        A string containing the source Salesforce object for the list request.</span>
+<span class="sd">    pre_or_post</span>
+<span class="sd">        A string containing &#39;Pre&#39; or &#39;Post&#39;.</span>
+<span class="sd">    log</span>
+<span class="sd">        A logger instance.</span>
+<span class="sd">    to_create_path</span>
+<span class="sd">        The name of file ending with the &#39;_to_create&#39; suffix.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        An updated dictionary mapper object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dict_elements</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;cmp_upload&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;to_create&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;to_update&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;bdg_update&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s1">&#39;no_update&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;n_cmp_upload&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;n_to_create&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;n_to_update&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;n_bdg_update&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s1">&#39;n_no_update&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;cmp_status&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;no_update_path&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;update_path&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s1">&#39;to_create_path&#39;</span><span class="p">:</span> <span class="n">to_create_path</span><span class="p">,</span> <span class="s1">&#39;cmp_upload_path&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;bdg_update_path&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Next Step&#39;</span><span class="p">:</span> <span class="s1">&#39;Data prep.&#39;</span>
+    <span class="p">}</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">read_df</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">l_type</span> <span class="o">==</span> <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span>
+        <span class="n">dict_elements</span><span class="p">,</span> <span class="n">files_created</span> <span class="o">=</span> <span class="n">campaigns</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">frame</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">dict_elements</span><span class="o">=</span><span class="n">dict_elements</span><span class="p">,</span>
+                                                       <span class="n">event_timing</span><span class="o">=</span><span class="n">pre_or_post</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">l_type</span> <span class="o">==</span> <span class="s1">&#39;Account&#39;</span><span class="p">:</span>
+        <span class="n">dict_elements</span><span class="p">,</span> <span class="n">files_created</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">frame</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">dict_elements</span><span class="o">=</span><span class="n">dict_elements</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">l_type</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+        <span class="n">dict_elements</span><span class="p">,</span> <span class="n">files_created</span> <span class="o">=</span> <span class="n">bdgs</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">frame</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">dict_elements</span><span class="o">=</span><span class="n">dict_elements</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Parsed the </span><span class="si">%s</span><span class="s1"> list in to the the below files: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">l_type</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">files_created</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">dict_elements</span></div>
+
+
+<div class="viewcode-block" id="source_channel"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.source_channel">[docs]</a><span class="k">def</span> <span class="nf">source_channel</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">record_name</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">aid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Prepares a list for Salesforce upload and/or contact creation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path</span>
+<span class="sd">        A string representing a full file path.</span>
+<span class="sd">    record_name</span>
+<span class="sd">        A string; name of a Salesforce record.</span>
+<span class="sd">    obj_id</span>
+<span class="sd">        An 18-char string; Id of a Salesforce Object.</span>
+<span class="sd">    obj</span>
+<span class="sd">        A string; Name of a Salesforce Object.</span>
+<span class="sd">    aid</span>
+<span class="sd">        An 18-char string; Optional. Parent Id (or Account Id) related to an Object in Salesforce.</span>
+<span class="sd">    log</span>
+<span class="sd">        A logger instance.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        A python dictionary containing next steps for the list processing tool.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">move_to_bulk</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Will be performed twice.&#39;</span>
+    <span class="k">elif</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Will be performed thrice.&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Preparing data prep for the </span><span class="si">%s</span><span class="s2"> list&#39;s action files, based list type. </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+    <span class="n">list_df</span> <span class="o">=</span> <span class="n">read_df</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;Account&#39;</span> <span class="ow">and</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">is_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">frame</span><span class="p">,</span> <span class="n">move_to_bulk</span><span class="p">,</span> <span class="n">to_create</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">make_sc</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">list_df</span><span class="p">,</span> <span class="n">record_name</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span>
+        <span class="n">frame</span><span class="p">,</span> <span class="n">move_to_bulk</span><span class="p">,</span> <span class="n">to_create</span> <span class="o">=</span> <span class="n">campaigns</span><span class="o">.</span><span class="n">make_sc</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">list_df</span><span class="p">,</span> <span class="n">record_name</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+        <span class="n">frame</span><span class="p">,</span> <span class="n">move_to_bulk</span><span class="p">,</span> <span class="n">to_create</span> <span class="o">=</span> <span class="n">bdgs</span><span class="o">.</span><span class="n">make_sc</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">list_df</span><span class="p">,</span> <span class="n">record_name</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">aid</span><span class="p">)</span>
+
+    <span class="n">n_head</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Phone&#39;</span><span class="p">,</span> <span class="s1">&#39;Fax&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">ph</span> <span class="ow">in</span> <span class="n">n_head</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ph</span> <span class="ow">in</span> <span class="n">list_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">list_df</span><span class="p">[</span><span class="n">ph</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">list_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                    <span class="n">list_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">ph</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">clean_phone_number</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">ph</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Can&#39;t clean up </span><span class="si">%s</span><span class="s2"> numbers due to </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ph</span><span class="p">,</span> <span class="ne">Exception</span><span class="o">.</span><span class="n">message</span><span class="p">))</span>
+
+    <span class="n">save_df</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">list_df</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;Next Step&#39;</span><span class="p">:</span> <span class="s1">&#39;Parse Out Advisors Updates&#39;</span>
+        <span class="p">,</span> <span class="s1">&#39;Create&#39;</span><span class="p">:</span> <span class="n">to_create</span>
+        <span class="p">,</span> <span class="s1">&#39;Move To Bulk&#39;</span><span class="p">:</span> <span class="n">move_to_bulk</span>
+    <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="extract_dictionary_values"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.extract_dictionary_values">[docs]</a><span class="k">def</span> <span class="nf">extract_dictionary_values</span><span class="p">(</span><span class="n">dict_data</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function leverages the dictionary, filled with meta data regarding a list and it&#39;s processing</span>
+<span class="sd">    and extracts specific elements that will be used to:</span>
+<span class="sd">        1) Organize all list processing statistics to record and store. Ex. (Num names on list, match rate, et al).</span>
+<span class="sd">        2) Send a notification of process completion to the originator of a list request.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dict_data</span>
+<span class="sd">        A python dictionary containing meta data regarding a single list in the queue.</span>
+<span class="sd">    log</span>
+<span class="sd">        A logger instance.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        A python dictionary containing next steps for the list program.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Extracting stats from the </span><span class="si">%s</span><span class="s1"> data dictionary.&#39;</span> <span class="o">%</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span>
+
+        <span class="n">to_update</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;n_cmp_upload&#39;</span><span class="p">]</span>
+        <span class="n">to_create</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;n_to_create&#39;</span><span class="p">]</span>
+        <span class="n">obj_to_add</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Num Adding&#39;</span><span class="p">]</span>
+        <span class="n">obj_to_remove</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Num Removing&#39;</span><span class="p">]</span>
+        <span class="n">obj_to_update</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Num Updating/Staying&#39;</span><span class="p">]</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">to_update</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;n_to_update&#39;</span><span class="p">]</span>
+        <span class="n">to_create</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;n_to_create&#39;</span><span class="p">]</span>
+        <span class="n">obj_to_add</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Num Adding&#39;</span><span class="p">]</span>
+        <span class="n">obj_to_remove</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Num Removing&#39;</span><span class="p">]</span>
+        <span class="n">obj_to_update</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Num Updating/Staying&#39;</span><span class="p">]</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39; &gt; Organized </span><span class="si">%s</span><span class="s1"> specific metrics.&#39;</span> <span class="o">%</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Move To Bulk&#39;</span><span class="p">]:</span>
+        <span class="n">create_advisors_note</span> <span class="o">=</span> <span class="s1">&#39;Contacts will not be created. Not enough information provided.&#39;</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;For </span><span class="si">%s</span><span class="s1"> list, </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span> <span class="n">create_advisors_note</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">create_advisors_note</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;FINRA?&#39;</span><span class="p">]:</span>
+            <span class="n">att_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Review Path&#39;</span><span class="p">],</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;BDG Remove&#39;</span><span class="p">],</span>
+                         <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;BDG Add&#39;</span><span class="p">],</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;BDG Stay&#39;</span><span class="p">],</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Current Members&#39;</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">att_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;No CRD&#39;</span><span class="p">],</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;FINRA Ambiguous&#39;</span><span class="p">],</span>
+                         <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;BDG Remove&#39;</span><span class="p">],</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;BDG Add&#39;</span><span class="p">],</span>
+                         <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;BDG Stay&#39;</span><span class="p">],</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Current Members&#39;</span><span class="p">]]</span>
+    <span class="k">elif</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;FINRA?&#39;</span><span class="p">]:</span>
+        <span class="n">att_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;No CRD&#39;</span><span class="p">],</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;FINRA Ambiguous&#39;</span><span class="p">]]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">att_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Review Path&#39;</span><span class="p">]]</span>
+
+    <span class="n">total</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Total Records&#39;</span><span class="p">]</span>
+    <span class="n">file_name</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">split_name</span><span class="p">(</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">])</span>
+    <span class="c1"># num_found_in_sfdc = dictValues[&#39;Found in SFDC Search #2&#39;] + dictValues[&#39;SFDC_Found&#39;] - toCreate</span>
+    <span class="n">num_found_in_sfdc</span> <span class="o">=</span> <span class="n">determine_num_records</span><span class="p">(</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">])</span>
+    <span class="n">need_research</span> <span class="o">=</span> <span class="n">total</span> <span class="o">-</span> <span class="n">num_found_in_sfdc</span> <span class="o">-</span> <span class="n">to_create</span>
+    <span class="n">received</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">clean_date_values</span><span class="p">(</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Received Date&#39;</span><span class="p">])</span>
+    <span class="n">ts_received</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">date_to_string</span><span class="p">(</span><span class="n">received</span><span class="p">)</span>
+    <span class="n">process_start</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;process_start&#39;</span><span class="p">]</span>
+
+    <span class="n">completed</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">time_now</span>
+    <span class="n">processing_completed</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+    <span class="n">processing_time</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">clean_date_values</span><span class="p">(</span><span class="n">process_start</span><span class="p">)</span> <span class="o">-</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">clean_date_values</span><span class="p">(</span><span class="n">completed</span><span class="p">)</span>
+    <span class="n">processing_string</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">timedelta_to_processing_str</span><span class="p">(</span><span class="n">processing_time</span><span class="p">)</span>
+    <span class="n">obj_name</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Record Name&#39;</span><span class="p">]</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">]</span>
+    <span class="n">num_not_updating</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;n_no_update&#39;</span><span class="p">]</span>
+    <span class="n">sender_name</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Sender Name&#39;</span><span class="p">]</span>
+    <span class="n">sender_email</span> <span class="o">=</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;Sender Email&#39;</span><span class="p">]</span>
+    <span class="n">match_rate</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_found_in_sfdc</span> <span class="o">+</span> <span class="n">to_create</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+    <span class="n">items_to_email</span> <span class="o">=</span> <span class="p">[</span><span class="n">sender_name</span><span class="p">,</span> <span class="n">obj_name</span><span class="p">,</span> <span class="s1">&#39;Strategy &amp; Analytics team&#39;</span><span class="p">,</span> <span class="s1">&#39;salesops@fsinvestments.com&#39;</span><span class="p">,</span>
+                      <span class="n">total</span><span class="p">,</span> <span class="n">num_found_in_sfdc</span><span class="p">,</span> <span class="n">to_update</span><span class="p">,</span>
+                      <span class="n">num_not_updating</span><span class="p">,</span> <span class="n">to_create</span><span class="p">,</span> <span class="n">obj_to_add</span><span class="p">,</span> <span class="n">obj_to_update</span><span class="p">,</span>
+                      <span class="n">obj_to_remove</span><span class="p">,</span> <span class="n">need_research</span><span class="p">,</span> <span class="n">received</span><span class="p">,</span> <span class="n">process_start</span><span class="p">,</span>
+                      <span class="n">completed</span><span class="p">,</span> <span class="n">processing_string</span><span class="p">,</span> <span class="n">create_advisors_note</span><span class="p">]</span>
+    <span class="n">body_string</span> <span class="o">=</span> <span class="n">craft_notification_email</span><span class="p">(</span><span class="n">items_to_email</span><span class="p">)</span>
+
+    <span class="n">items_for_stats</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;File Name&#39;</span><span class="p">:</span> <span class="n">file_name</span><span class="p">,</span> <span class="s1">&#39;Received Date&#39;</span><span class="p">:</span> <span class="n">ts_received</span><span class="p">,</span> <span class="s1">&#39;Received From&#39;</span><span class="p">:</span> <span class="n">sender_name</span>
+        <span class="p">,</span> <span class="s1">&#39;Created By&#39;</span><span class="p">:</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">userName</span><span class="p">,</span> <span class="s1">&#39;File Type&#39;</span><span class="p">:</span> <span class="n">obj</span><span class="p">,</span> <span class="s1">&#39;Advisors on List&#39;</span><span class="p">:</span> <span class="n">total</span>
+        <span class="p">,</span> <span class="s1">&#39;Advisors w/CID&#39;</span><span class="p">:</span> <span class="n">num_found_in_sfdc</span><span class="p">,</span> <span class="s1">&#39;Advisors w/CID old Contact Info&#39;</span><span class="p">:</span> <span class="n">num_not_updating</span>
+        <span class="p">,</span> <span class="s1">&#39;CRD Found Not in SFDC&#39;</span><span class="p">:</span> <span class="n">to_create</span><span class="p">,</span> <span class="s1">&#39;Creating&#39;</span><span class="p">:</span> <span class="n">to_create</span>
+        <span class="p">,</span> <span class="s1">&#39;Unable to Find&#39;</span><span class="p">:</span> <span class="n">need_research</span><span class="p">,</span> <span class="s1">&#39;Last Search Date&#39;</span><span class="p">:</span> <span class="n">completed</span>
+        <span class="p">,</span> <span class="s1">&#39;Match Rate&#39;</span><span class="p">:</span> <span class="n">match_rate</span><span class="p">,</span> <span class="s1">&#39;Processing Time&#39;</span><span class="p">:</span> <span class="n">processing_string</span>
+    <span class="p">}</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Extracted stats data:</span><span class="se">\n</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">items_for_stats</span><span class="p">)</span>
+
+    <span class="n">listobj_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Status__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Advisors_on_List__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Contacts_Added_to_Related_Record__c&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Contacts_Created__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Contacts_Found_in_SF__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Contacts_Not_Found__c&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Contacts_to_Research__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Contacts_Updated__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Match_Rate__c&#39;</span><span class="p">,</span> <span class="s1">&#39;List_Process_Completed_At__c&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Processed_By__c&#39;</span><span class="p">]</span>
+
+    <span class="n">listobj_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;ListObjId&#39;</span><span class="p">],</span> <span class="s1">&#39;Process Completed&#39;</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="n">obj_to_add</span><span class="p">,</span> <span class="n">to_create</span><span class="p">,</span> <span class="n">num_found_in_sfdc</span><span class="p">,</span>
+                    <span class="n">need_research</span><span class="p">,</span> <span class="n">need_research</span><span class="p">,</span> <span class="n">to_update</span><span class="p">,</span> <span class="n">match_rate</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="n">processing_completed</span><span class="p">,</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">sf_uid</span><span class="p">]</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Updating the List record for Id: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;ListObjId&#39;</span><span class="p">])</span>
+    <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;SFDC Session&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="s1">&#39;List__c&#39;</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="n">listobj_cols</span><span class="p">,</span> <span class="n">upload_data</span><span class="o">=</span><span class="p">[</span><span class="n">listobj_data</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">att_paths</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Attempting to attach </span><span class="si">%s</span><span class="s1"> files to the List record.&#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">att_paths</span><span class="p">))</span>
+        <span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;SFDC Session&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upload_attachments</span><span class="p">(</span><span class="n">obj_id</span><span class="o">=</span><span class="n">dict_data</span><span class="p">[</span><span class="s1">&#39;ListObjId&#39;</span><span class="p">],</span> <span class="n">attachments</span><span class="o">=</span><span class="n">att_paths</span><span class="p">)</span>
+
+    <span class="n">subject</span> <span class="o">=</span> <span class="s2">&quot;ALM Notification: </span><span class="si">%s</span><span class="s2"> list processed.&quot;</span> <span class="o">%</span> <span class="n">obj_name</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Sending notification email to requestor to notify of completion.&#39;</span><span class="p">)</span>
+    <span class="n">Email</span><span class="p">(</span><span class="n">con</span><span class="o">.</span><span class="n">SMTPUser</span><span class="p">,</span> <span class="n">con</span><span class="o">.</span><span class="n">SMTPPass</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span><span class="o">.</span><span class="n">send_new_email</span><span class="p">(</span>
+        <span class="n">subject</span><span class="o">=</span><span class="n">subject</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="p">[</span><span class="n">sender_email</span><span class="p">,</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">userEmail</span><span class="p">],</span> <span class="n">body</span><span class="o">=</span><span class="n">body_string</span><span class="p">,</span>
+        <span class="n">attachments</span><span class="o">=</span><span class="n">att_paths</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">FullName</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;Next Step&#39;</span><span class="p">:</span> <span class="s1">&#39;Record Stats&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Stats Data&#39;</span><span class="p">:</span> <span class="n">items_for_stats</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="sfdc_upload"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.sfdc_upload">[docs]</a><span class="k">def</span> <span class="nf">sfdc_upload</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># Todo: consider refactoring.</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A routing method which performs final preparation and orchestrates a Salesforce upload</span>
+<span class="sd">    for a given file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path</span>
+<span class="sd">        A string representing a full file path.</span>
+<span class="sd">    obj</span>
+<span class="sd">        A string representing the name of a Salesforce object.</span>
+<span class="sd">    obj_id</span>
+<span class="sd">        An 18-char string; The id of a Salesforce object.</span>
+<span class="sd">    session</span>
+<span class="sd">        An authenticated Salesforce REST API session.</span>
+<span class="sd">    log</span>
+<span class="sd">        A logger instance.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        A python dictionary containing metadata and next steps for the list program.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+    <span class="n">col_nums</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">read_df</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span> <span class="s1">&#39;BizDev_Group__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Licenses&#39;</span><span class="p">:</span> <span class="s1">&#39;Licenses__c&#39;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;ContactID&#39;</span><span class="p">,</span> <span class="s1">&#39;BizDev_Group__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Licenses__c&#39;</span><span class="p">]]</span>
+        <span class="n">col_nums</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="s1">&#39;BizDev_Group__c&#39;</span><span class="p">))</span>
+        <span class="n">col_nums</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="s1">&#39;ContactID&#39;</span><span class="p">))</span>
+        <span class="n">col_nums</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="s1">&#39;Licenses__c&#39;</span><span class="p">))</span>
+    <span class="n">df_values</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">df_headers</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Attempting to upload data to SalesForce for the </span><span class="si">%s</span><span class="s1"> object.&#39;</span> <span class="o">%</span> <span class="n">obj</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span>
+            <span class="n">paths</span><span class="p">,</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">upload</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">df_headers</span><span class="p">,</span> <span class="n">df_values</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+            <span class="n">paths</span><span class="p">,</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">upload</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">df_headers</span><span class="p">,</span> <span class="n">df_values</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">col_nums</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">sub</span> <span class="o">=</span> <span class="s1">&#39;LMA: </span><span class="si">%s</span><span class="s1"> upload fail for </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+            <span class="n">body</span> <span class="o">=</span> <span class="s1">&#39;Experienced an error upload the </span><span class="si">%s</span><span class="s1"> file to the </span><span class="si">%s</span><span class="s1"> object in SFDC. Please&#39;</span> \
+                   <span class="s1">&#39;manually upload this file at your earliest convenience.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">body</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()))</span>
+            <span class="n">Email</span><span class="p">(</span><span class="n">con</span><span class="o">.</span><span class="n">SMTPUser</span><span class="p">,</span> <span class="n">con</span><span class="o">.</span><span class="n">SMTPPass</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span><span class="o">.</span><span class="n">send_new_email</span><span class="p">(</span>
+                <span class="n">subject</span><span class="o">=</span><span class="n">sub</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">ListTeam</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span>
+                <span class="n">attachments</span><span class="o">=</span><span class="p">[</span><span class="n">path</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="n">con</span><span class="o">.</span><span class="n">FullName</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;There is no data to upload to the </span><span class="si">%s</span><span class="s1"> object.&#39;</span> <span class="o">%</span> <span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;Next Step&#39;</span><span class="p">:</span> <span class="s1">&#39;Send Email&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;BDG Remove&#39;</span><span class="p">:</span> <span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s1">&#39;BDG Add&#39;</span><span class="p">:</span> <span class="n">paths</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s1">&#39;BDG Stay&#39;</span><span class="p">:</span> <span class="n">paths</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="s1">&#39;Current Members&#39;</span><span class="p">:</span> <span class="n">paths</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+            <span class="s1">&#39;Num Removing&#39;</span><span class="p">:</span> <span class="n">stats</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s1">&#39;Num Adding&#39;</span><span class="p">:</span> <span class="n">stats</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s1">&#39;Num Updating/Staying&#39;</span><span class="p">:</span> <span class="n">stats</span><span class="p">[</span><span class="mi">2</span><span class="p">]}</span></div>
+
+
+<div class="viewcode-block" id="upload"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.upload">[docs]</a><span class="k">def</span> <span class="nf">upload</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">col_num</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">df_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># Todo: consider refactoring.</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helps to perform an actual salesforce upload.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    session</span>
+<span class="sd">        An authenticated Salesforce REST API session.</span>
+<span class="sd">    headers</span>
+<span class="sd">        A list of strings representing column names in a Salesforce table.</span>
+<span class="sd">        Should consider removing, as it doesn&#39;t seem used.</span>
+<span class="sd">    data</span>
+<span class="sd">        A list containing the data which will be uploaded to Salesforce.</span>
+<span class="sd">    obj_id</span>
+<span class="sd">        An 18-char string; Represents an Id of a Salesforce object.</span>
+<span class="sd">    obj</span>
+<span class="sd">        A string; Represents the name of a Salesforce object.</span>
+<span class="sd">    col_num</span>
+<span class="sd">        TBD</span>
+<span class="sd">    df_path</span>
+<span class="sd">        A string representing the a full file path.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        TBD</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span>
+            <span class="n">paths</span><span class="p">,</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">cmp_upload</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Needs Follow-Up&#39;</span><span class="p">:</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="s1">&#39;Campaign&#39;</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Post_Event_Leads_Uploaded__c&#39;</span><span class="p">],</span>
+                                       <span class="n">upload_data</span><span class="o">=</span><span class="p">[[</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;true&#39;</span><span class="p">]])</span>
+        <span class="k">elif</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="n">headers_clean_up</span><span class="p">(</span><span class="n">headers</span><span class="p">)</span>
+            <span class="n">paths</span><span class="p">,</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">bdg_upload</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">col_num</span><span class="p">,</span> <span class="n">df_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">paths</span><span class="p">,</span> <span class="n">stats</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="cmp_upload"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.cmp_upload">[docs]</a><span class="k">def</span> <span class="nf">cmp_upload</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">n_re</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_added</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_uptd</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="c1"># Todo: consider refactoring.</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adds/updates campaign members (and their statuses) in a Salesforce campaign.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    session</span>
+<span class="sd">        An authenticated Salesforce REST API session.</span>
+<span class="sd">    data</span>
+<span class="sd">        A list containing the data which will be uploaded to Salesforce.</span>
+<span class="sd">    obj_id</span>
+<span class="sd">        An 18-char string; Represents an Id of a Salesforce object.</span>
+<span class="sd">    obj</span>
+<span class="sd">        A string; Represents the name of a Salesforce object.</span>
+<span class="sd">    n_re</span>
+<span class="sd">        An integer; Represents the number of advisors removing from a campaign.</span>
+<span class="sd">    n_added</span>
+<span class="sd">        An integer; Represents the number of advisors adding to a campaign.</span>
+<span class="sd">    n_uptd</span>
+<span class="sd">        An integer; Represents the number of advisors updating in a campaign.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        A tuple lists containing [paths], and [num records]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Step 10. Salesforce Campaign Upload.&#39;</span><span class="p">)</span>
+    <span class="n">where</span> <span class="o">=</span> <span class="s2">&quot;Id=&#39;</span><span class="si">%s</span><span class="s2">&#39; AND Contact.Territory_Manager__c!=&#39;Max Prown&#39;&quot;</span> <span class="o">%</span> <span class="n">obj_id</span>
+    <span class="n">sf_c_cmp_members</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;CampaignMember&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;ContactId&#39;</span><span class="p">,</span> <span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="s1">&#39;Id&#39;</span><span class="p">],</span> <span class="n">where</span><span class="p">)</span>
+    <span class="n">to_insert</span><span class="p">,</span> <span class="n">to_update</span><span class="p">,</span> <span class="n">to_remove</span> <span class="o">=</span> <span class="n">split_list</span><span class="p">(</span><span class="n">sf_c_cmp_members</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">data</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+    <span class="n">n_add</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_insert</span><span class="p">)</span>
+    <span class="n">n_up</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_update</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_added</span> <span class="o">&lt;</span> <span class="n">n_add</span><span class="p">:</span>
+        <span class="n">n_added</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">create_records</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="s1">&#39;CampaignMember&#39;</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ContactId&#39;</span><span class="p">,</span> <span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="s1">&#39;CampaignId&#39;</span><span class="p">],</span>
+                                         <span class="n">upload_data</span><span class="o">=</span><span class="n">to_insert</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n_uptd</span> <span class="o">&lt;</span> <span class="n">n_up</span><span class="p">:</span>
+        <span class="n">n_uptd</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="s1">&#39;CampaignMember&#39;</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="s1">&#39;CampaignId&#39;</span><span class="p">],</span>
+                                        <span class="n">upload_data</span><span class="o">=</span><span class="n">to_update</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span> <span class="p">[</span><span class="n">n_re</span><span class="p">,</span> <span class="n">n_add</span><span class="p">,</span> <span class="n">n_up</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="bdg_upload"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.bdg_upload">[docs]</a><span class="k">def</span> <span class="nf">bdg_upload</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">col_num</span><span class="p">,</span> <span class="n">df_path</span><span class="p">,</span> <span class="n">remove_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">add_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">update_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">curr_memb</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_add</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_up</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_re</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adds/updates advisors in a Salesforce BizDev Group.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    session</span>
+<span class="sd">        An authenticated Salesforce REST API session.</span>
+<span class="sd">    data</span>
+<span class="sd">        A list containing the data which will be uploaded to Salesforce.</span>
+<span class="sd">    obj_id</span>
+<span class="sd">        An 18-char string; Represents an Id of a Salesforce object.</span>
+<span class="sd">    obj</span>
+<span class="sd">        A string; Represents the name of a Salesforce object.</span>
+<span class="sd">    col_num</span>
+<span class="sd">        An integer; The column to use for when parsing a list.</span>
+<span class="sd">    df_path</span>
+<span class="sd">        A string; Represents the a full file path.</span>
+<span class="sd">    remove_path</span>
+<span class="sd">        A string; Represents the name of the &#39;to_remove&#39; file name.</span>
+<span class="sd">    add_path</span>
+<span class="sd">        A string; Represents the name of the &#39;to_add&#39; file name.</span>
+<span class="sd">    update_path</span>
+<span class="sd">        A string; Represents the name of the &#39;to_update&#39; file name.</span>
+<span class="sd">    curr_memb</span>
+<span class="sd">        REMOVE; NOT USED.</span>
+<span class="sd">    n_add</span>
+<span class="sd">        An integer; Represents the number of advisors adding to a campaign.</span>
+<span class="sd">    n_up</span>
+<span class="sd">        An integer; Represents the number of advisors updating in a campaign.</span>
+<span class="sd">    n_re</span>
+<span class="sd">        An integer; Represents the number of advisors removing from a campaign.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        A tuple lists containing [paths], and [num records]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Todo: consider refactoring.</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Step 10. Salesforce BizDev Group Upload.&#39;</span><span class="p">)</span>
+    <span class="n">where</span> <span class="o">=</span> <span class="s2">&quot;BizDev_Group__c=&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">obj_id</span>
+    <span class="n">sf_bdg_members</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;Contact&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;BizDev_Group__c &#39;</span><span class="p">],</span> <span class="n">where</span><span class="p">)</span>
+    <span class="n">to_insert</span><span class="p">,</span> <span class="n">to_update</span><span class="p">,</span> <span class="n">to_remove</span> <span class="o">=</span> <span class="n">split_list</span><span class="p">(</span><span class="n">sf_bdg_members</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">data</span><span class="p">,</span> <span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">col_num</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">curr_memb</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">create_path_name</span><span class="p">(</span><span class="n">df_path</span><span class="p">,</span> <span class="s1">&#39;current_bdg_members&#39;</span><span class="p">)</span>
+    <span class="n">sf_bdg_members</span> <span class="o">=</span> <span class="p">[</span><span class="n">sf_bdg_members</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sf_bdg_members</span><span class="p">),</span> <span class="mi">2</span><span class="p">)]</span>
+    <span class="n">save_df</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">make_df</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sf_bdg_members</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;BizDev_Group__c&#39;</span><span class="p">]),</span> <span class="n">path</span><span class="o">=</span><span class="n">curr_memb</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Attempting to associate </span><span class="si">%s</span><span class="s1"> to the BizDev Group.&#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_insert</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_insert</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">df_add</span> <span class="o">=</span> <span class="n">make_df</span><span class="p">(</span><span class="n">to_insert</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ContactID&#39;</span><span class="p">,</span> <span class="s1">&#39;BizDevGroupID&#39;</span><span class="p">,</span> <span class="s1">&#39;Licenses&#39;</span><span class="p">])</span>
+        <span class="n">add_path</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">create_path_name</span><span class="p">(</span><span class="n">df_path</span><span class="p">,</span> <span class="s1">&#39;toAdd&#39;</span><span class="p">)</span>
+        <span class="n">save_df</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_add</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">add_path</span><span class="p">)</span>
+        <span class="n">n_add</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="s1">&#39;Contact&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;BizDev_Group__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Licenses__c&#39;</span><span class="p">],</span> <span class="n">to_insert</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_update</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Attempting to update Licenses for </span><span class="si">%s</span><span class="s1"> advisors staying in the BizDevGroup.&#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_update</span><span class="p">))</span>
+        <span class="n">df_update</span> <span class="o">=</span> <span class="n">make_df</span><span class="p">(</span><span class="n">to_update</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ContactID&#39;</span><span class="p">,</span> <span class="s1">&#39;BizDevGroupID&#39;</span><span class="p">,</span> <span class="s1">&#39;Licenses&#39;</span><span class="p">])</span>
+        <span class="n">update_path</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">create_path_name</span><span class="p">(</span><span class="n">df_path</span><span class="p">,</span> <span class="s1">&#39;bdg_toStay&#39;</span><span class="p">)</span>
+        <span class="n">save_df</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_update</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">update_path</span><span class="p">)</span>
+        <span class="n">n_up</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">update_records</span><span class="p">(</span><span class="s1">&#39;Contact&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;BizDev_Group__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Licenses__c&#39;</span><span class="p">],</span> <span class="n">to_update</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">to_remove</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;We are not removing contacts by request of Krista Bono.&#39;</span><span class="p">)</span>
+        <span class="n">df_remove</span> <span class="o">=</span> <span class="n">make_df</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">to_remove</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ContactID&#39;</span><span class="p">,</span> <span class="s1">&#39;Previous BizDevGroupID&#39;</span><span class="p">])</span>
+        <span class="n">remove_path</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">create_path_name</span><span class="p">(</span><span class="n">df_path</span><span class="p">,</span> <span class="s1">&#39;to_remove&#39;</span><span class="p">)</span>
+        <span class="n">save_df</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_remove</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">remove_path</span><span class="p">)</span>
+        <span class="n">n_re</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_remove</span><span class="p">)</span>
+
+    <span class="n">session</span><span class="o">.</span><span class="n">last_list_uploaded</span><span class="p">(</span><span class="n">obj_id</span><span class="o">=</span><span class="n">obj_id</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">remove_path</span><span class="p">,</span> <span class="n">add_path</span><span class="p">,</span> <span class="n">update_path</span><span class="p">,</span> <span class="n">curr_memb</span><span class="p">],</span> <span class="p">[</span><span class="n">n_re</span><span class="p">,</span> <span class="n">n_add</span><span class="p">,</span> <span class="n">n_up</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="id_preprocessing_needs"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.processes.id_preprocessing_needs">[docs]</a><span class="k">def</span> <span class="nf">id_preprocessing_needs</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="c1"># should be comprised of three steps.</span>
+    <span class="c1"># 1. Evaluate path extension type.</span>
+    <span class="c1"># 2. If file is of appropriate type - check if:</span>
+    <span class="c1"># a. top row is blank</span>
+    <span class="c1"># b. remove any random blank rows</span>
+    <span class="c1"># c. identify if there is a bad header row</span>
+    <span class="c1"># 3. Notify user of needs / actions performed</span>
+
+    <span class="n">_accepted_file_ext</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.xlsx&#39;</span><span class="p">,</span> <span class="s1">&#39;.xls&#39;</span><span class="p">,</span> <span class="s1">&#39;.csv&#39;</span><span class="p">]</span>
+    <span class="n">has_bad_file_ext</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">needs_manual_intervention</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">has_malformed_header_row</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">has_blank_rows</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="n">extension</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">extension</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_accepted_file_ext</span><span class="p">:</span>
+        <span class="n">has_bad_file_ext</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_bad_file_ext</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">read_df</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">has_blank_rows</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="n">has_bad_file_ext</span> <span class="ow">or</span> <span class="n">has_malformed_header_row</span> <span class="ow">or</span> <span class="n">has_blank_rows</span><span class="p">:</span>
+        <span class="n">needs_manual_intervention</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="nb">print</span><span class="p">({</span><span class="s1">&#39;needs_intervention&#39;</span><span class="p">:</span> <span class="n">needs_manual_intervention</span><span class="p">,</span>
+           <span class="s1">&#39;bad_ext&#39;</span><span class="p">:</span> <span class="n">has_bad_file_ext</span><span class="p">,</span>
+           <span class="s1">&#39;blank_rows&#39;</span><span class="p">:</span> <span class="n">has_blank_rows</span><span class="p">,</span>
+           <span class="s1">&#39;malformed_header&#39;</span><span class="p">:</span> <span class="n">has_malformed_header_row</span><span class="p">})</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">List Management</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ricky Schools.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

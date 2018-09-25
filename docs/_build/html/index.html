@@ -1,0 +1,1966 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Welcome to List Management’s documentation! &#8212; List Management 4.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-list-management-s-documentation">
+<h1>Welcome to List Management’s documentation!<a class="headerlink" href="#welcome-to-list-management-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="list-management-l-i-m-a">
+<h1>List Management (L.I.M.A)<a class="headerlink" href="#list-management-l-i-m-a" title="Permalink to this headline">¶</a></h1>
+<p>A python based software that ingests 3rd-party tabular (excel, csv, etc.) files for conference and rep lists and aims to ensure that a Salesforce CRM is up-to-date.</p>
+<p>At it’s core, LIMA is a matching system that can push necessary updates, given a data input. Enabling LIMA are a number of great libraries:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://pypi.org/project/pandas/">pandas</a></li>
+<li><a class="reference external" href="https://pypi.org/project/salesforce-bulk/">salesforce-bulk</a></li>
+<li><a class="reference external" href="https://pypi.org/project/selenium/">selenium</a></li>
+<li><a class="reference external" href="https://pypi.org/project/scikit-learn/">scikit-learn</a></li>
+<li><a class="reference external" href="https://pypi.org/project/simple-salesforce/">simple-salesforce</a></li>
+<li><a class="reference external" href="https://pypi.org/project/us/">us</a></li>
+<li><a class="reference external" href="https://pypi.org/project/uszipcode/">uszipcode</a></li>
+</ul>
+<div class="section" id="how-lists-are-processed">
+<h2>How lists are processed<a class="headerlink" href="#how-lists-are-processed" title="Permalink to this headline">¶</a></h2>
+<a class="reference external image-reference" href="static/list_process.png"><img alt="Representation of list processing" src="static/list_process.png" /></a>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="full-process">
+<h3>Full process<a class="headerlink" href="#full-process" title="Permalink to this headline">¶</a></h3>
+<p>To leverage the entire functionality of the list program (LIMA), you need only perform the below.
+New in version 4.0 is the ability to specify if you’re manually running (ad-hoc) or if it’s being controlled by a bot (cron’d/scheduled).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ListManagement.list_processing</span> <span class="kn">import</span> <span class="n">ListProcessing</span>
+
+<span class="c1"># to run in manual/ad-hoc mode</span>
+<span class="n">lp</span> <span class="o">=</span> <span class="n">ListProcessing</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;manual&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">main_contact_based_processing</span><span class="p">()</span>
+
+<span class="c1"># to run in cron&#39;d/auto mode</span>
+<span class="n">lp</span> <span class="o">=</span> <span class="n">ListProcessing</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">main_contact_based_processing</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="individual-components">
+<h3>Individual components<a class="headerlink" href="#individual-components" title="Permalink to this headline">¶</a></h3>
+<p>The modules within the search node of LIMA lend themselves well to ad-hoc/one-off searches. Using the tools like the below will parse your input file into one (or more) output files.</p>
+<div class="section" id="finra">
+<h4>Finra<a class="headerlink" href="#finra" title="Permalink to this headline">¶</a></h4>
+<p>If you have a list of advisors where your data contains either a CRD number, or has the advisor’s First, Last, and Company name, you can leverage the power of the Finra API. See the documentation for more details.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ListManagement.search.finra</span> <span class="kn">import</span> <span class="n">Finra</span>
+<span class="kn">from</span> <span class="nn">PythonUtilities.LoggingUtility</span> <span class="kn">import</span> <span class="n">Logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">Logging</span><span class="p">(</span><span class="s1">&#39;Lima-Finra-AdHoc&#39;</span><span class="p">,</span> <span class="s1">&#39;LM_FAH&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">logger</span>
+<span class="n">fin</span> <span class="o">=</span> <span class="n">Finra</span><span class="p">(</span><span class="n">log</span><span class="o">=</span><span class="n">log</span><span class="p">)</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;~/your/path/to/a/file.xlsx&#39;</span>
+
+<span class="n">fin</span><span class="o">.</span><span class="n">scrape</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">parse_list</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="salesforce">
+<h4>Salesforce<a class="headerlink" href="#salesforce" title="Permalink to this headline">¶</a></h4>
+<p>Similar to the Finra scenario, if you have a file with CRD, Email, or or has the advisor’s First, Last, and Company name, you can leverage the power of the Salesforce Search API. See the documentation for more details.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ListManagement.search.salesforce</span> <span class="kn">import</span> <span class="n">Search</span>
+<span class="kn">from</span> <span class="nn">PythonUtilities.LoggingUtility</span> <span class="kn">import</span> <span class="n">Logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">Logging</span><span class="p">(</span><span class="s1">&#39;Lima-Searc-AdHoc&#39;</span><span class="p">,</span> <span class="s1">&#39;LM_SAH&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">logger</span>
+<span class="n">search</span> <span class="o">=</span> <span class="n">Search</span><span class="p">(</span><span class="n">log</span><span class="o">=</span><span class="n">log</span><span class="p">)</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;~/your/path/to/a/file.xlsx&#39;</span>
+
+<span class="n">search</span><span class="o">.</span><span class="n">perform_search_one</span><span class="p">(</span><span class="n">searching_list_path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">list_type</span><span class="o">=</span><span class="s1">&#39;Campaign&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="search-chaining">
+<h4>Search chaining<a class="headerlink" href="#search-chaining" title="Permalink to this headline">¶</a></h4>
+<p>Similar to how the LIMA uses these modules, you can manufacture (if necessary) a similar process to take a given file, search it against 1) Salesforce, 2) attempt to identify any not found via a BrokerCheck search (Finra) and 3) research against Salesforce.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ListManagement.search</span> <span class="kn">import</span> <span class="n">salesforce</span><span class="p">,</span> <span class="n">finra</span>
+<span class="kn">from</span> <span class="nn">PythonUtilities.LoggingUtility</span> <span class="kn">import</span> <span class="n">Logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">Logging</span><span class="p">(</span><span class="s1">&#39;Lima-Finra-AdHoc&#39;</span><span class="p">,</span> <span class="s1">&#39;LM_CAH&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">logger</span>
+<span class="n">sf_search</span> <span class="o">=</span> <span class="n">salesforce</span><span class="o">.</span><span class="n">Search</span><span class="p">(</span><span class="n">log</span><span class="p">)</span>
+<span class="n">fin_search</span> <span class="o">=</span> <span class="n">finra</span><span class="o">.</span><span class="n">Finra</span><span class="p">(</span><span class="n">log</span><span class="p">)</span>
+
+<span class="n">extracted</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;File Path&#39;</span><span class="p">:</span> <span class="s1">&#39;~/your/path/to/a/file.xlsx&#39;</span><span class="p">}</span>
+
+<span class="n">extracted</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">sf_search</span><span class="o">.</span><span class="n">perform_search_one</span><span class="p">(</span><span class="n">searching_list_path</span><span class="o">=</span><span class="n">extracted</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span> <span class="n">list_type</span><span class="o">=</span><span class="s1">&#39;Campaign&#39;</span><span class="p">))</span>
+<span class="n">extracted</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">fin_search</span><span class="o">.</span><span class="n">scrape</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">extracted</span><span class="p">[</span><span class="s1">&#39;File Path&#39;</span><span class="p">],</span> <span class="n">scrape_type</span><span class="o">=</span><span class="s1">&#39;crd&#39;</span><span class="p">,</span> <span class="n">parse_list</span><span class="o">=</span><span class="bp">True</span><span class="p">))</span>
+<span class="n">extracted</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">sf_search</span><span class="o">.</span><span class="n">perform_search_two</span><span class="p">(</span><span class="n">extracted</span><span class="p">[</span><span class="s1">&#39;FINRA_SEC Found&#39;</span><span class="p">],</span> <span class="n">extracted</span><span class="p">[</span><span class="s1">&#39;Found Path&#39;</span><span class="p">],</span> <span class="n">list_type</span><span class="o">=</span><span class="s1">&#39;Campaign&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Written by Ricky Schools, with help from Max Charles, for FS Investments.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="module-ListManagement">
+<span id="listmanagement-package"></span><h1>ListManagement package<a class="headerlink" href="#module-ListManagement" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<span class="target" id="module-ListManagement.list_processing"></span><div class="section" id="list-processing-py">
+<h2>list_processing.py<a class="headerlink" href="#list-processing-py" title="Permalink to this headline">¶</a></h2>
+<p>The core module that orchestrates matching
+for 3rd party documents (excel, csv, et al) and
+updates the Salesforce CRM for FS Investments.</p>
+<p>Handles Broker Dealer (Account) and Business Development
+Group (BizDev Group) updated representative
+lists (typically received monthly and quarterly, respectively).</p>
+<p>Handles attendee lists for events and conferences (Campaigns)
+where FS Investments has committed money.</p>
+<dl class="class">
+<dt id="ListManagement.list_processing.ListProcessing">
+<em class="property">class </em><code class="descclassname">ListManagement.list_processing.</code><code class="descname">ListProcessing</code><span class="sig-paren">(</span><em>mode='manual'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Orchestrates all matching and updates for pending list requests.</p>
+<dl class="method">
+<dt id="ListManagement.list_processing.ListProcessing.account_processing">
+<code class="descname">account_processing</code><span class="sig-paren">(</span><em>_vars</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing.account_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing.account_processing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles all processing for lists that are sourced from the account object.</p>
+<ol class="arabic simple">
+<li>Predicts headers and pre_process each file.</li>
+<li>Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.</li>
+<li>If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.</li>
+<li>If advisors are scraped, re-search those advisors against SalesForce.</li>
+<li>For all found advisors, scrape their licenses (and other metadata) from FINRA</li>
+<li>Parse list into actionable pieces: a) upload to campaign b) create c) not found.</li>
+<li>Update the ‘Last List Upload’ field on the account record.</li>
+<li>Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.</li>
+<li>Extract stats from search processing, send notification email, and update SalesForce list record.</li>
+<li>If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.</li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>_vars</strong> – Python dictionary containing metadata regarding a list request.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Nothing</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.list_processing.ListProcessing.bizdev_processing">
+<code class="descname">bizdev_processing</code><span class="sig-paren">(</span><em>_vars</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing.bizdev_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing.bizdev_processing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles all processing for lists that are sourced from the BizDev Group object.</p>
+<ol class="arabic simple">
+<li>Predicts headers and pre_process each file.</li>
+<li>Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.</li>
+<li>If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.</li>
+<li>If advisors are scraped, re-search those advisors against SalesForce.</li>
+<li>For all found advisors, scrape their licenses (and other metadata) from FINRA</li>
+<li>Parse list into actionable pieces: a) upload to campaign b) create c) not found.</li>
+<li>Update the ‘Last List Upload’ field on the bizdev group record.</li>
+<li>Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.</li>
+<li>Extract stats from search processing, send notification email, and update SalesForce list record.</li>
+<li>If applicable, drop files in the bulk_processing network drive to create or update SaleForce contacts.</li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>_vars</strong> – Python dictionary containing metadata regarding a list request.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Nothing</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.list_processing.ListProcessing.campaign_processing">
+<code class="descname">campaign_processing</code><span class="sig-paren">(</span><em>_vars</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing.campaign_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing.campaign_processing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles all processing for lists that are sourced from the campaign object.</p>
+<ol class="arabic simple">
+<li>Predict headers and pre_process each file.</li>
+<li>Searches against SalesForce for matches on: a) CRDNumber b) AMPFId c) Email d) LookupName.</li>
+<li>If advisors are not found, scrape data from FINRA based on First, Last, and Account Name.</li>
+<li>If advisors are scraped, re-search those advisors against SalesForce contact list.</li>
+<li>Parse list into actionable pieces: a) upload to campaign b) create c) not found.</li>
+<li>Prepare data for upload into SalesForce (via source_channel function), do so for each file created above.</li>
+<li>Extract stats from search processing, send notification email, and update SalesForce list record.</li>
+<li>Ff applicable, drop file in the bulk_processing network drive to create or update SaleForce contacts.</li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>_vars</strong> – Python dictionary containing metadata regarding a list request.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Nothing</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.list_processing.ListProcessing.create_log_record_of_current_list_data">
+<code class="descname">create_log_record_of_current_list_data</code><span class="sig-paren">(</span><em>msg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing.create_log_record_of_current_list_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing.create_log_record_of_current_list_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Catches a ‘fatal error’ incurred by the list program. Halts all processing if called.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>msg</strong> – Error message.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Nothing</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.list_processing.ListProcessing.finra_search_and_search_two">
+<code class="descname">finra_search_and_search_two</code><span class="sig-paren">(</span><em>_vars</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing.finra_search_and_search_two"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing.finra_search_and_search_two" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles all Finra and secondary searching (if necessary).</p>
+<ol class="arabic simple">
+<li>If advisors are not found and are missing CRDNumbers, scrape FINRA</li>
+<li>If FINRA is scraped, search our SalesForce database to increase our likely match-rate.</li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>_vars</strong> – Python dictionary containing metadata regarding a list request.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Updated python dictionary containing metadata regarding a list request.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.list_processing.ListProcessing.is_bad_extension">
+<code class="descname">is_bad_extension</code><span class="sig-paren">(</span><em>_vars</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing.is_bad_extension"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing.is_bad_extension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if the a list request has an extension that can be processed. If a list is
+unable to be processed, notify the requester of the situation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>_vars</strong> – Python dictionary containing metadata regarding a list request.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Boolean (True or False)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.list_processing.ListProcessing.main_contact_based_processing">
+<code class="descname">main_contact_based_processing</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/list_processing.html#ListProcessing.main_contact_based_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.list_processing.ListProcessing.main_contact_based_processing" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method determines how to route a pending list request, based on the Salesforce object type.</p>
+<dl class="docutils">
+<dt>An abstracted path looks like the following:</dt>
+<dd><ol class="first last arabic simple">
+<li>Check if there are pending lists.  # TODO: Add check before looping through each list.</li>
+<li>If lists are pending, begin looping through all available lists.</li>
+<li><dl class="first docutils">
+<dt>Check that each pending list is of a workable extension.</dt>
+<dd><dl class="first last docutils">
+<dt>See Also: ListProcessing().is_bad_extension() method for extensions that</dt>
+<dd>will stop the processing.</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>If the list has an acceptable extension, enter a</dt>
+<dd>routing statement to determine which rules to process the list request
+through.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>After completing processing, notify the requester, record stats, and</dt>
+<dd>begin processing any additional lists.</dd>
+</dl>
+</li>
+</ol>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">Nothing</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-ListManagement.search">
+<span id="listmanagement-search-package"></span><h1>ListManagement.search package<a class="headerlink" href="#module-ListManagement.search" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<span class="target" id="module-ListManagement.search.finra"></span><div class="section" id="finra-py">
+<h2>finra.py<a class="headerlink" href="#finra-py" title="Permalink to this headline">¶</a></h2>
+<p>Provides an ‘API’ via Selenium for extracting metadata
+on registered financial advisors from Finra BrokerCheck.</p>
+<dl class="class">
+<dt id="ListManagement.search.finra.Finra">
+<em class="property">class </em><code class="descclassname">ListManagement.search.finra.</code><code class="descname">Finra</code><span class="sig-paren">(</span><em>log=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/finra.html#Finra"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.finra.Finra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="docutils">
+<dt>A web scraper that leverages FINRA to:</dt>
+<dd><ol class="first last arabic simple">
+<li>Find the CRD of a financial advisor given a ‘Lookup Name’. (First, Last, Firm Name)</li>
+<li>Find metadata (see self._x_paths keys below) on a financial advisor, given their CRD Number.</li>
+</ol>
+</dd>
+</dl>
+<dl class="method">
+<dt id="ListManagement.search.finra.Finra.return_scraped_data">
+<code class="descname">return_scraped_data</code><span class="sig-paren">(</span><em>df</em>, <em>on</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/finra.html#Finra.return_scraped_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.finra.Finra.return_scraped_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms a dictionary (containing scraped advisor metadata) into a pandas data frame.
+:param df: A pandas data frame containing the original information/advisors to scrape.
+:param on: A string; Represents what we should</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">The original pandas data frame joined with the scraped data frame.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.search.finra.Finra.scrape">
+<code class="descname">scrape</code><span class="sig-paren">(</span><em>path</em>, <em>alter_name=None</em>, <em>scrape_type=None</em>, <em>parse_list=False</em>, <em>save=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/finra.html#Finra.scrape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.finra.Finra.scrape" title="Permalink to this definition">¶</a></dt>
+<dd><p>User level method allowing them access to the Finra ‘API’. Given a tabular file (Excel, CSV),
+a user can specify:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>The scrape type (‘all’, see self._x_paths above, or ‘crdnumber’) they desire to perform.</li>
+<li>If they want to save the results of the file.</li>
+<li><dl class="first docutils">
+<dt>An option to parse the results of the scrape into 3 parts: (typically for scrape_type=’crdnumber’</dt>
+<dd><ol class="first last loweralpha">
+<li>Found</li>
+<li>Not found</li>
+<li>Ambiguous (due to multiple advisors having the same name)</li>
+</ol>
+</dd>
+</dl>
+</li>
+</ol>
+</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – A string; Represents a full file path.</li>
+<li><strong>alter_name</strong> – A string; Represents a suffix to append to a full file path.</li>
+<li><strong>scrape_type</strong> – A string; The scrape type (‘all’, see self._x_paths above, or ‘crdnumber’) they desire to perform.</li>
+<li><strong>parse_list</strong> – Boolean; Used to enable the list parsing (see 3) above).</li>
+<li><strong>save</strong> – Boolean; Determines whether scraped results are saved to a file path or returned to the user in a console.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><em>Dependent on save parameter above.</em></li>
+<li><em>Scraped results are saved to a file path or returned to the user in a console.</em></li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-ListManagement.search.salesforce"></span><div class="section" id="salesforce-py">
+<h2>salesforce.py<a class="headerlink" href="#salesforce-py" title="Permalink to this headline">¶</a></h2>
+<p>Provides a set of actions to compare the Contact object
+of a Salesforce CRM to a 3rd party list (excel, csv).</p>
+<dl class="class">
+<dt id="ListManagement.search.salesforce.Search">
+<em class="property">class </em><code class="descclassname">ListManagement.search.salesforce.</code><code class="descname">Search</code><span class="sig-paren">(</span><em>log=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/salesforce.html#Search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.salesforce.Search" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Search object that orchestrates comparisons and parsing between
+source (3rd party, Finra, et al) data sets and target
+(Salesforce contact object) data sets.</p>
+<dl class="method">
+<dt id="ListManagement.search.salesforce.Search.perform_search_one">
+<code class="descname">perform_search_one</code><span class="sig-paren">(</span><em>searching_list_path</em>, <em>list_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/salesforce.html#Search.perform_search_one"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.salesforce.Search.perform_search_one" title="Permalink to this definition">¶</a></dt>
+<dd><p>User method to implement the first comparison between a 3rd party list and Salesforce.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>searching_list_path</strong> – String; Represents a full file path.</li>
+<li><strong>list_type</strong> – String; Represents the name of a Salesforce object.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A python dictionary containing next steps for list processing.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.search.salesforce.Search.perform_search_two">
+<code class="descname">perform_search_two</code><span class="sig-paren">(</span><em>searching_list_path</em>, <em>found_path</em>, <em>list_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/salesforce.html#Search.perform_search_two"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.salesforce.Search.perform_search_two" title="Permalink to this definition">¶</a></dt>
+<dd><p>User method to implement the second comparison between a 3rd party list and Salesforce.</p>
+<p>All advisors found during the call of this method are moved from the searching_list_path
+to the found_path.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>searching_list_path</strong> – String; Represents a full file path of the un-matched advisors.</li>
+<li><strong>found_path</strong> – String; Represents a full file path of the matched advisors.</li>
+<li><strong>list_type</strong> – String; Represents the name of a Salesforce object.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A python dictionary containing next steps for list processing.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.search.salesforce.Search.perform_sec_search">
+<code class="descname">perform_sec_search</code><span class="sig-paren">(</span><em>searching_list_path</em>, <em>found_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/salesforce.html#Search.perform_sec_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.salesforce.Search.perform_sec_search" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-ListManagement.search.ml">
+<span id="listmanagement-search-ml-package"></span><h1>ListManagement.search.ml package<a class="headerlink" href="#module-ListManagement.search.ml" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-ListManagement.search.ml.header_predictions"></span><dl class="function">
+<dt id="ListManagement.search.ml.header_predictions.pre_processing">
+<code class="descclassname">ListManagement.search.ml.header_predictions.</code><code class="descname">pre_processing</code><span class="sig-paren">(</span><em>df</em>, <em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/ml/header_predictions.html#pre_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.ml.header_predictions.pre_processing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.search.ml.header_predictions.predict_headers_and_pre_processing">
+<code class="descclassname">ListManagement.search.ml.header_predictions.</code><code class="descname">predict_headers_and_pre_processing</code><span class="sig-paren">(</span><em>path</em>, <em>obj</em>, <em>log</em>, <em>mode</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/ml/header_predictions.html#predict_headers_and_pre_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.ml.header_predictions.predict_headers_and_pre_processing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<span class="target" id="module-ListManagement.search.ml.model"></span><dl class="class">
+<dt id="ListManagement.search.ml.model.HeaderPredictions">
+<em class="property">class </em><code class="descclassname">ListManagement.search.ml.model.</code><code class="descname">HeaderPredictions</code><span class="sig-paren">(</span><em>log=None</em>, <em>use_saved=False</em>, <em>run_diagnostics=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/ml/model.html#HeaderPredictions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.ml.model.HeaderPredictions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="ListManagement.search.ml.model.HeaderPredictions.create_training_features">
+<code class="descname">create_training_features</code><span class="sig-paren">(</span><em>headers</em>, <em>t_type='train'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/ml/model.html#HeaderPredictions.create_training_features"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.ml.model.HeaderPredictions.create_training_features" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.search.ml.model.HeaderPredictions.data_preprocessing">
+<code class="descname">data_preprocessing</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/ml/model.html#HeaderPredictions.data_preprocessing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.ml.model.HeaderPredictions.data_preprocessing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.search.ml.model.HeaderPredictions.diagnostics">
+<code class="descname">diagnostics</code><span class="sig-paren">(</span><em>save=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/ml/model.html#HeaderPredictions.diagnostics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.ml.model.HeaderPredictions.diagnostics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.search.ml.model.HeaderPredictions.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>predict_path</em>, <em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/search/ml/model.html#HeaderPredictions.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.search.ml.model.HeaderPredictions.predict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ListManagement.sources">
+<span id="listmanagement-sources-package"></span><h1>ListManagement.sources package<a class="headerlink" href="#module-ListManagement.sources" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-ListManagement.sources.accounts"></span><div class="section" id="accounts-py">
+<h2>accounts.py<a class="headerlink" href="#accounts-py" title="Permalink to this headline">¶</a></h2>
+<p>Contains functions relative to processing
+lists requests sourced from the Account
+object in Salesforce.</p>
+<dl class="function">
+<dt id="ListManagement.sources.accounts.make_sc">
+<code class="descclassname">ListManagement.sources.accounts.</code><code class="descname">make_sc</code><span class="sig-paren">(</span><em>path</em>, <em>frame</em>, <em>record_name</em>, <em>obj_id</em>, <em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/sources/accounts.html#make_sc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.sources.accounts.make_sc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to manufacture a ‘source_channel’ for contacts
+that need to be created.</p>
+<p>A source channel gives FS Investments the ability to see
+from where and when a contact record was sourced from.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – String; Represents a full file path.</li>
+<li><strong>frame</strong> – Pandas data frame; Object containing relational data.</li>
+<li><strong>record_name</strong> – String; Represents the name of a salesforce record.</li>
+<li><strong>obj_id</strong> – String; Represents the id of a Salesforce record</li>
+<li><strong>obj</strong> – String; Represents the name of a Salesforce object.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple; updated pandas dataframe, move to bulk (boolean), and to_create_path (string)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.sources.accounts.parse">
+<code class="descclassname">ListManagement.sources.accounts.</code><code class="descname">parse</code><span class="sig-paren">(</span><em>path</em>, <em>frame</em>, <em>dict_elements</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/sources/accounts.html#parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.sources.accounts.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to help parse Account list requests into
+actionable Salesforce jobs (update, create).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – String; Represents a full file path to the source list.</li>
+<li><strong>frame</strong> – Pandas data frame</li>
+<li><strong>dict_elements</strong> – Dictionary; Contains metadata generated during list processing.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple; updated dictionary and list of files created.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<span class="target" id="module-ListManagement.sources.bdgs"></span><div class="section" id="bdgs-py">
+<h2>bdgs.py<a class="headerlink" href="#bdgs-py" title="Permalink to this headline">¶</a></h2>
+<p>Contains functions relative to processing
+lists requests sourced from the BizDev Group
+object in Salesforce.</p>
+<dl class="function">
+<dt id="ListManagement.sources.bdgs.make_sc">
+<code class="descclassname">ListManagement.sources.bdgs.</code><code class="descname">make_sc</code><span class="sig-paren">(</span><em>path</em>, <em>frame</em>, <em>record_name</em>, <em>obj_id</em>, <em>obj</em>, <em>aid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/sources/bdgs.html#make_sc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.sources.bdgs.make_sc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to manufacture a ‘source_channel’ for contacts
+that need to be created.</p>
+<p>A source channel gives FS Investments the ability to see
+from where and when a contact record was sourced from.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – String; Represents a full file path.</li>
+<li><strong>frame</strong> – Pandas data frame; Object containing relational data.</li>
+<li><strong>record_name</strong> – String; Represents the name of a salesforce record.</li>
+<li><strong>obj_id</strong> – String; Represents the id of a Salesforce record</li>
+<li><strong>obj</strong> – String; Represents the name of a Salesforce object.</li>
+<li><strong>aid</strong> – String; Represents the Id of an Account object in Salesforce.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple; updated pandas dataframe, move to bulk (boolean), and to_create_path (string)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.sources.bdgs.parse">
+<code class="descclassname">ListManagement.sources.bdgs.</code><code class="descname">parse</code><span class="sig-paren">(</span><em>path</em>, <em>frame</em>, <em>dict_elements</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/sources/bdgs.html#parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.sources.bdgs.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to help parse BizDev Group list requests into
+actionable Salesforce jobs (update, create).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – String; Represents a full file path to the source list.</li>
+<li><strong>frame</strong> – Pandas data frame</li>
+<li><strong>dict_elements</strong> – Dictionary; Contains metadata generated during list processing.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple; updated dictionary and list of files created.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<span class="target" id="module-ListManagement.sources.campaigns"></span><div class="section" id="campaigns-py">
+<h2>campaigns.py<a class="headerlink" href="#campaigns-py" title="Permalink to this headline">¶</a></h2>
+<p>Contains functions relative to processing
+lists requests sourced from the Campaign
+object in Salesforce.</p>
+<dl class="function">
+<dt id="ListManagement.sources.campaigns.make_sc">
+<code class="descclassname">ListManagement.sources.campaigns.</code><code class="descname">make_sc</code><span class="sig-paren">(</span><em>path</em>, <em>frame</em>, <em>record_name</em>, <em>obj_id</em>, <em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/sources/campaigns.html#make_sc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.sources.campaigns.make_sc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to manufacture a ‘source_channel’ for contacts
+that need to be created.</p>
+<p>A source channel gives FS Investments the ability to see
+from where and when a contact record was sourced from.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – String; Represents a full file path.</li>
+<li><strong>frame</strong> – Pandas data frame; Object containing relational data.</li>
+<li><strong>record_name</strong> – String; Represents the name of a salesforce record.</li>
+<li><strong>obj_id</strong> – String; Represents the id of a Salesforce record</li>
+<li><strong>obj</strong> – String; Represents the name of a Salesforce object.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple; updated pandas dataframe, move to bulk (boolean), and to_create_path (string)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.sources.campaigns.parse">
+<code class="descclassname">ListManagement.sources.campaigns.</code><code class="descname">parse</code><span class="sig-paren">(</span><em>path</em>, <em>frame</em>, <em>dict_elements</em>, <em>event_timing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/sources/campaigns.html#parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.sources.campaigns.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to help parse Campaign list requests into
+actionable Salesforce jobs (update, create).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – String; Represents a full file path to the source list.</li>
+<li><strong>frame</strong> – Pandas data frame</li>
+<li><strong>dict_elements</strong> – Dictionary; Contains metadata generated during list processing.</li>
+<li><strong>event_timing</strong> – String; Denotes whether a campaign has happened or not.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple; updated dictionary and list of files created.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-ListManagement.legacy">
+<span id="listmanagement-legacy-package"></span><h1>ListManagement.legacy package<a class="headerlink" href="#module-ListManagement.legacy" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-ListManagement.legacy.get_sf_adv_list"></span><dl class="function">
+<dt id="ListManagement.legacy.get_sf_adv_list.run">
+<code class="descclassname">ListManagement.legacy.get_sf_adv_list.</code><code class="descname">run</code><span class="sig-paren">(</span><em>path_name</em>, <em>logger</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/legacy/get_sf_adv_list.html#run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.legacy.get_sf_adv_list.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<span class="target" id="module-ListManagement.legacy.sf_adv_formatting"></span><dl class="function">
+<dt id="ListManagement.legacy.sf_adv_formatting.clean_dates">
+<code class="descclassname">ListManagement.legacy.sf_adv_formatting.</code><code class="descname">clean_dates</code><span class="sig-paren">(</span><em>frame</em>, <em>headers</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/legacy/sf_adv_formatting.html#clean_dates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.legacy.sf_adv_formatting.clean_dates" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.legacy.sf_adv_formatting.date_for_move">
+<code class="descclassname">ListManagement.legacy.sf_adv_formatting.</code><code class="descname">date_for_move</code><span class="sig-paren">(</span><em>loc_orig</em>, <em>loc_to</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/legacy/sf_adv_formatting.html#date_for_move"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.legacy.sf_adv_formatting.date_for_move" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.legacy.sf_adv_formatting.make_lookup_name">
+<code class="descclassname">ListManagement.legacy.sf_adv_formatting.</code><code class="descname">make_lookup_name</code><span class="sig-paren">(</span><em>df</em>, <em>jstr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/legacy/sf_adv_formatting.html#make_lookup_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.legacy.sf_adv_formatting.make_lookup_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.legacy.sf_adv_formatting.needs_update_flag">
+<code class="descclassname">ListManagement.legacy.sf_adv_formatting.</code><code class="descname">needs_update_flag</code><span class="sig-paren">(</span><em>frame</em>, <em>headers</em>, <em>activity_range</em>, <em>sales_range</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/legacy/sf_adv_formatting.html#needs_update_flag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.legacy.sf_adv_formatting.needs_update_flag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.legacy.sf_adv_formatting.shorten_data">
+<code class="descclassname">ListManagement.legacy.sf_adv_formatting.</code><code class="descname">shorten_data</code><span class="sig-paren">(</span><em>df</em>, <em>col_name</em>, <em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/legacy/sf_adv_formatting.html#shorten_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.legacy.sf_adv_formatting.shorten_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<span class="target" id="module-ListManagement.legacy.sf_adv_query"></span></div>
+<div class="section" id="module-ListManagement.utility">
+<span id="listmanagement-utility-package"></span><h1>ListManagement.utility package<a class="headerlink" href="#module-ListManagement.utility" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-ListManagement.utility.email_helper"></span><dl class="function">
+<dt id="ListManagement.utility.email_helper.attachment_reader">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">attachment_reader</code><span class="sig-paren">(</span><em>remove=False</em>, <em>raw=None</em>, <em>att=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#attachment_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.attachment_reader" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.body_parse">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">body_parse</code><span class="sig-paren">(</span><em>message</em>, <em>s_string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#body_parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.body_parse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.close_mailbox_connection">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">close_mailbox_connection</code><span class="sig-paren">(</span><em>m</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#close_mailbox_connection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.close_mailbox_connection" title="Permalink to this definition">¶</a></dt>
+<dd><p>closes the mailbox connection</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>m</strong> – mailbox object</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">dictionary of mailbox information.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.craft_notification_email">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">craft_notification_email</code><span class="sig-paren">(</span><em>items</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#craft_notification_email"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.craft_notification_email" title="Permalink to this definition">¶</a></dt>
+<dd><p>creates the actual text values of the email.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>items</strong> – dictionary items for stats processing</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">body of email.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.determine_id_and_object_from_link">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">determine_id_and_object_from_link</code><span class="sig-paren">(</span><em>tmp</em>, <em>email_text</em>, <em>log</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#determine_id_and_object_from_link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.determine_id_and_object_from_link" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.email_parser">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">email_parser</code><span class="sig-paren">(</span><em>sender_name</em>, <em>look1</em>, <em>look2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#email_parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.email_parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>parses the body text of an email_handler message</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sender_name</strong> – text of an email_handler message (required)</li>
+<li><strong>look1</strong> – start / end location of the text to parse (required)</li>
+<li><strong>look2</strong> – optional - takes a secondary substring if finding text</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">parsed substring</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.get_decoded_email_body">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">get_decoded_email_body</code><span class="sig-paren">(</span><em>message_body</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#get_decoded_email_body"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.get_decoded_email_body" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.get_msg_part">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">get_msg_part</code><span class="sig-paren">(</span><em>msg_part</em>, <em>array</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#get_msg_part"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.get_msg_part" title="Permalink to this definition">¶</a></dt>
+<dd><p>decodes the email_handler body from the email_handler data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>msg_part</strong> – coded message string (required)</li>
+<li><strong>array</strong> – items to parse</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">decoded text of email_handler message</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.handle_list_queue_requests">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">handle_list_queue_requests</code><span class="sig-paren">(</span><em>num</em>, <em>f_data</em>, <em>list_queue</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#handle_list_queue_requests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.handle_list_queue_requests" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.info_parser">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">info_parser</code><span class="sig-paren">(</span><em>body</em>, <em>look</em>, <em>look2=None</em>, <em>n=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#info_parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.info_parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>parses the body text of an email_handler message</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>body</strong> – text of an email_handler message (required)</li>
+<li><strong>look</strong> – start / end location of the text to parse (required)</li>
+<li><strong>look2</strong> – optional - takes a secondary substring if finding text</li>
+<li><strong>n</strong> – length of where attachment link is</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">parsed substring</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.email_helper.lists_in_queue">
+<code class="descclassname">ListManagement.utility.email_helper.</code><code class="descname">lists_in_queue</code><span class="sig-paren">(</span><em>var_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_helper.html#lists_in_queue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_helper.lists_in_queue" title="Permalink to this definition">¶</a></dt>
+<dd><p>determines if there are any lists in the queue.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>var_list</strong> – dictionary of list variables.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">boolean TRUE / FALSE</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<span class="target" id="module-ListManagement.utility.email_reader"></span><dl class="class">
+<dt id="ListManagement.utility.email_reader.MailBoxReader">
+<em class="property">class </em><code class="descclassname">ListManagement.utility.email_reader.</code><code class="descname">MailBoxReader</code><span class="sig-paren">(</span><em>log</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#MailBoxReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.MailBoxReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="ListManagement.utility.email_reader.MailBoxReader.associate_email_request_with_sf_object">
+<code class="descname">associate_email_request_with_sf_object</code><span class="sig-paren">(</span><em>dict_data</em>, <em>att</em>, <em>sender_addr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#MailBoxReader.associate_email_request_with_sf_object"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.MailBoxReader.associate_email_request_with_sf_object" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.utility.email_reader.MailBoxReader.close_mailbox">
+<code class="descname">close_mailbox</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#MailBoxReader.close_mailbox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.MailBoxReader.close_mailbox" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.utility.email_reader.MailBoxReader.determine_path_and_complete_processing">
+<code class="descname">determine_path_and_complete_processing</code><span class="sig-paren">(</span><em>num</em>, <em>dict_data</em>, <em>att</em>, <em>msg_body</em>, <em>sender_addr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#MailBoxReader.determine_path_and_complete_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.MailBoxReader.determine_path_and_complete_processing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.utility.email_reader.MailBoxReader.extract_pending_lists">
+<code class="descname">extract_pending_lists</code><span class="sig-paren">(</span><em>mailbox</em>, <em>folder</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#MailBoxReader.extract_pending_lists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.MailBoxReader.extract_pending_lists" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.utility.email_reader.MailBoxReader.handle_new_email_requests">
+<code class="descname">handle_new_email_requests</code><span class="sig-paren">(</span><em>num</em>, <em>raw_email</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#MailBoxReader.handle_new_email_requests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.MailBoxReader.handle_new_email_requests" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ListManagement.utility.email_reader.MailBoxReader.iterative_processing">
+<code class="descname">iterative_processing</code><span class="sig-paren">(</span><em>msg_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#MailBoxReader.iterative_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.MailBoxReader.iterative_processing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ListManagement.utility.email_reader.ReturnDict">
+<em class="property">class </em><code class="descclassname">ListManagement.utility.email_reader.</code><code class="descname">ReturnDict</code><span class="sig-paren">(</span><em>item</em>, <em>email_var</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/email_reader.html#ReturnDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.email_reader.ReturnDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+</dd></dl>
+
+<span class="target" id="module-ListManagement.utility.general"></span><div class="section" id="general-py">
+<h2>general.py<a class="headerlink" href="#general-py" title="Permalink to this headline">¶</a></h2>
+<p>Houses functions that are used
+throughout the list processing process.</p>
+<dl class="function">
+<dt id="ListManagement.utility.general.auto_maintain">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">auto_maintain</code><span class="sig-paren">(</span><em>directory</em>, <em>destination=None</em>, <em>ndays=30</em>, <em>log=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#auto_maintain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.auto_maintain" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function helps to maintain a given directory by deleting files older than ndays old.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>directory</strong> – A string representing the directory (folder) to maintain.</li>
+<li><strong>destination</strong> – Optional. A string representing the directory to move a file to.</li>
+<li><strong>ndays</strong> – An integer representing a ceiling for the age of files to keep.</li>
+<li><strong>log</strong> – A logger instance.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Nothing</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.clean_date_values">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">clean_date_values</code><span class="sig-paren">(</span><em>d_value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#clean_date_values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.clean_date_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms a string into a datetime object.
+:param d_value: A string representing a date.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">A datetime object.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.clean_phone_number">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">clean_phone_number</code><span class="sig-paren">(</span><em>number</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#clean_phone_number"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.clean_phone_number" title="Permalink to this definition">¶</a></dt>
+<dd><p>Aims to normalize the formatting of a phone number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>number</strong> – A string representation of a phone number.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A normalized &amp; updated string representation of a phone number.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.cmdorgui">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">cmdorgui</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#cmdorgui"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.cmdorgui" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper method to itentify if the running version of python is command line or GUI.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">Nothing</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.convert_unicode_to_date">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">convert_unicode_to_date</code><span class="sig-paren">(</span><em>date_string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#convert_unicode_to_date"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.convert_unicode_to_date" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms a string containing a date into a datetime object. Decides if
+the date is in the future or in the past.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>date_string</strong> – A string representing a date.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A tuple containing the 1) datetime object and 2) if the date is in the future or past.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.create_dir_move_file">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">create_dir_move_file</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#create_dir_move_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.create_dir_move_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and moves a given file from it’s current directory to a child directory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> – A string representing a full file path.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A string representing the new full file path location.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.create_path_name">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">create_path_name</code><span class="sig-paren">(</span><em>path</em>, <em>new_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#create_path_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.create_path_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new file name given a path and a new name.
+:param path: A string representing the original name of a file.
+:param new_name: A string representing a new suffix to append to the existing file name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">An updated string representing the new file name.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.date_parsing">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">date_parsing</code><span class="sig-paren">(</span><em>str_date_value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#date_parsing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.date_parsing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a string to a datetime object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>str_date_value</strong> – String representation of a date.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Datetime object of given date.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.date_to_string">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">date_to_string</code><span class="sig-paren">(</span><em>d_value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#date_to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.date_to_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turns a datetime object into a string.
+:param d_value: A datetime object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">The string representation of a date.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.determine_ext">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">determine_ext</code><span class="sig-paren">(</span><em>f_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#determine_ext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.determine_ext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determines the extension of a file given a file name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>f_name</strong> – Name of a file.
+Examples: ABC_1234.xlsx, my_file.csv</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><em>The extension of a file and it’s length.</em></li>
+<li><strong>Examples</strong> (<em>(5, .xlsx), (4, .csv)</em>)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.determine_move_to_bulk_processing">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">determine_move_to_bulk_processing</code><span class="sig-paren">(</span><em>df</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#determine_move_to_bulk_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.determine_move_to_bulk_processing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determines of a list request contains the necessary columns (meta-data)
+to be passed to Business Solutions’ Salesforce bulk processing tool.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>df</strong> – A pandas data frame containing a list.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Boolean (True or False)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.drop_in_bulk_processing">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">drop_in_bulk_processing</code><span class="sig-paren">(</span><em>path</em>, <em>log</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#drop_in_bulk_processing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.drop_in_bulk_processing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drops a file and passes it to the bulk tool Business Solution built.
+:param path: A string representing a full file name.
+:param log: A log instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">Nothing</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.drop_unneeded_columns">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">drop_unneeded_columns</code><span class="sig-paren">(</span><em>df, obj, ac=['CRDNumber', 'FirstName', 'LastName', 'AccountId', 'MailingStreet', 'MailingCity', 'MailingState', 'MailingPostalCode', 'SourceChannel', 'Email', 'Website', 'AUM', 'GDC', 'Fax', 'HomePhone', 'MobilePhone', 'Phone'], create=True, bdg=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#drop_unneeded_columns"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.drop_unneeded_columns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes all columns that are not needed by Business Solutions’ Salesforce
+bulk uploading tool.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>df</strong> – A pandas data frame containing a list.</li>
+<li><strong>obj</strong> – A string representing a Salesforce object.</li>
+<li><strong>ac</strong> – A list containing the columns accepted by the bulk tool.</li>
+<li><strong>create</strong> – Boolean. Denotes if this call is coming from a ‘to_create’ contacts
+request or not.</li>
+<li><strong>bdg</strong> – Boolean. Denotes if this call is coming from a BizDev Group request
+or not.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><em>An updated pandas data frame object containing only the</em></li>
+<li><em>bulk tool’s accepted columns.</em></li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.duration">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">duration</code><span class="sig-paren">(</span><em>start</em>, <em>end</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#duration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.duration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a string representation of the time elapsed between start and end.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>start</strong> – Timestamp/datetime object of when a process began.</li>
+<li><strong>end</strong> – Timestamp/datetime object of when a process ended.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A formatted time representing the elapsed time in hours, minutes, and seconds.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.find_chrome_driver_location">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">find_chrome_driver_location</code><span class="sig-paren">(</span><em>filename='chromedriver'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#find_chrome_driver_location"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.find_chrome_driver_location" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper method to find the location of ‘chromedriver’.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filename</strong> – The name of a file to find.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Location where given file is found.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.is_path">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">is_path</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#is_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.is_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if a given path is a file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> – A string. Should be a path to a directory or file.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Boolean (True or False)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.last_list_uploaded_data">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">last_list_uploaded_data</code><span class="sig-paren">(</span><em>object_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#last_list_uploaded_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.last_list_uploaded_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds a list containing the ‘object_id’ and the current time (in ISO-format).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>object_id</strong> – A string representation of a Salesforce object id.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><em>A list.</em></li>
+<li><strong>Examples</strong> (<em>[object_id, current time in ISO-format.]</em>)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.lower_head_values">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">lower_head_values</code><span class="sig-paren">(</span><em>lname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#lower_head_values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.lower_head_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a string to lower-case.
+:param lname: A string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">A lower-case string.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.myprogressbar">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">myprogressbar</code><span class="sig-paren">(</span><em>batchsize</em>, <em>totalsize</em>, <em>barlength=25</em>, <em>message=''</em>, <em>char='#'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#myprogressbar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.myprogressbar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper method to display a progress bar.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>batchsize</strong> – An integer representing the number of records processed.</li>
+<li><strong>totalsize</strong> – An integer representing the size of a list.</li>
+<li><strong>barlength</strong> – A customizable integer representing the length of a bar.</li>
+<li><strong>message</strong> – A string customizing representing the name of the bar.</li>
+<li><strong>char</strong> – A string. The character to populate the progress bar.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Nothing</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.path_leaf">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">path_leaf</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#path_leaf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.path_leaf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dynamic function to return a file or folder name.
+:param path: A string representing a file name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">A file name or a directory.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.record_processing_stats">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">record_processing_stats</code><span class="sig-paren">(</span><em>values</em>, <em>save=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#record_processing_stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.record_processing_stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Records a backup of the metadata associated from processing a list in SQL and Excel.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>values</strong> – A collection of values to record related to a lists processing.</li>
+<li><strong>save</strong> – Boolean (True or False). Dictates whether to save or return a data frame.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><em>A dictionary (if save=True) or pandas data frame representing</em></li>
+<li><em>the stats recorded during list processing (if save=False).</em></li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.remove_underscores">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">remove_underscores</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#remove_underscores"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.remove_underscores" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replaces underscores with spaces.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>line</strong> – A string representing a single cell of a pandas data frame.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A updated string, without underscores.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.save_conf_creation_meta">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">save_conf_creation_meta</code><span class="sig-paren">(</span><em>sc</em>, <em>objid</em>, <em>status</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#save_conf_creation_meta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.save_conf_creation_meta" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.shorten_fname_to_95chars">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">shorten_fname_to_95chars</code><span class="sig-paren">(</span><em>f_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#shorten_fname_to_95chars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.shorten_fname_to_95chars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shortens a filename to less than 95 characters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>f_name</strong> – A string representing a file name.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A string representing a file name (updated, if necessary)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.split_by_uppers">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">split_by_uppers</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#split_by_uppers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.split_by_uppers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a string and if no spaces are present, splits them by the present
+upper case values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>line</strong> – A string value.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">An updated string value.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.split_dir_name">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">split_dir_name</code><span class="sig-paren">(</span><em>full_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#split_dir_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.split_dir_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provides a file name given a full path.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>full_path</strong> – A string representation of a full file path.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A file name.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.split_name">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">split_name</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#split_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.split_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Splits a path into 1) the containing folder and 2) the file name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> – A string representing a full file path.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A string representing a file name.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.strip_unicode_chars">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">strip_unicode_chars</code><span class="sig-paren">(</span><em>row</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#strip_unicode_chars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.strip_unicode_chars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to coerce all data to UTF-8.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>row</strong> – A string value, representing a single cell (value)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">A coerced string value.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.general.timedelta_to_processing_str">
+<code class="descclassname">ListManagement.utility.general.</code><code class="descname">timedelta_to_processing_str</code><span class="sig-paren">(</span><em>duration</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/general.html#timedelta_to_processing_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.general.timedelta_to_processing_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms a timestamp into a string representing the time in days, hours, minutes, &amp; seconds.
+:param duration: A timestamp object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">String representation of duration.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<span class="target" id="module-ListManagement.utility.pandas_helper"></span><dl class="function">
+<dt id="ListManagement.utility.pandas_helper.concat_dfs">
+<code class="descclassname">ListManagement.utility.pandas_helper.</code><code class="descname">concat_dfs</code><span class="sig-paren">(</span><em>df_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/pandas_helper.html#concat_dfs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.pandas_helper.concat_dfs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.pandas_helper.determine_num_records">
+<code class="descclassname">ListManagement.utility.pandas_helper.</code><code class="descname">determine_num_records</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/pandas_helper.html#determine_num_records"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.pandas_helper.determine_num_records" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.pandas_helper.is_null">
+<code class="descclassname">ListManagement.utility.pandas_helper.</code><code class="descname">is_null</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/pandas_helper.html#is_null"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.pandas_helper.is_null" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.pandas_helper.make_df">
+<code class="descclassname">ListManagement.utility.pandas_helper.</code><code class="descname">make_df</code><span class="sig-paren">(</span><em>data=None</em>, <em>columns=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/pandas_helper.html#make_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.pandas_helper.make_df" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.pandas_helper.new_stat_line">
+<code class="descclassname">ListManagement.utility.pandas_helper.</code><code class="descname">new_stat_line</code><span class="sig-paren">(</span><em>value_dict</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/pandas_helper.html#new_stat_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.pandas_helper.new_stat_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>writes the new line of data to the stats dataframe</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>value_dict</strong> – values to add to stats</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">dataframe of stats to record.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.pandas_helper.read_df">
+<code class="descclassname">ListManagement.utility.pandas_helper.</code><code class="descname">read_df</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/pandas_helper.html#read_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.pandas_helper.read_df" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.pandas_helper.save_df">
+<code class="descclassname">ListManagement.utility.pandas_helper.</code><code class="descname">save_df</code><span class="sig-paren">(</span><em>df</em>, <em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/pandas_helper.html#save_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.pandas_helper.save_df" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<span class="target" id="module-ListManagement.utility.processes"></span><div class="section" id="processes-py">
+<h2>processes.py<a class="headerlink" href="#processes-py" title="Permalink to this headline">¶</a></h2>
+<p>Contains core processes that are used
+throughout the processing of a given list.</p>
+<dl class="function">
+<dt id="ListManagement.utility.processes.bdg_upload">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">bdg_upload</code><span class="sig-paren">(</span><em>session</em>, <em>data</em>, <em>obj_id</em>, <em>obj</em>, <em>col_num</em>, <em>df_path</em>, <em>remove_path=None</em>, <em>add_path=None</em>, <em>update_path=None</em>, <em>curr_memb=None</em>, <em>n_add=0</em>, <em>n_up=0</em>, <em>n_re=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#bdg_upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.bdg_upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds/updates advisors in a Salesforce BizDev Group.
+:param session: An authenticated Salesforce REST API session.
+:param data: A list containing the data which will be uploaded to Salesforce.
+:param obj_id: An 18-char string; Represents an Id of a Salesforce object.
+:param obj: A string; Represents the name of a Salesforce object.
+:param col_num: An integer; The column to use for when parsing a list.
+:param df_path: A string; Represents the a full file path.
+:param remove_path: A string; Represents the name of the ‘to_remove’ file name.
+:param add_path: A string; Represents the name of the ‘to_add’ file name.
+:param update_path: A string; Represents the name of the ‘to_update’ file name.
+:param curr_memb: REMOVE; NOT USED.
+:param n_add: An integer; Represents the number of advisors adding to a campaign.
+:param n_up: An integer; Represents the number of advisors updating in a campaign.
+:param n_re: An integer; Represents the number of advisors removing from a campaign.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">A tuple lists containing [paths], and [num records]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.processes.cmp_upload">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">cmp_upload</code><span class="sig-paren">(</span><em>session</em>, <em>data</em>, <em>obj_id</em>, <em>obj</em>, <em>n_re=0</em>, <em>n_added=0</em>, <em>n_uptd=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#cmp_upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.cmp_upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds/updates campaign members (and their statuses) in a Salesforce campaign.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>session</strong> – An authenticated Salesforce REST API session.</li>
+<li><strong>data</strong> – A list containing the data which will be uploaded to Salesforce.</li>
+<li><strong>obj_id</strong> – An 18-char string; Represents an Id of a Salesforce object.</li>
+<li><strong>obj</strong> – A string; Represents the name of a Salesforce object.</li>
+<li><strong>n_re</strong> – An integer; Represents the number of advisors removing from a campaign.</li>
+<li><strong>n_added</strong> – An integer; Represents the number of advisors adding to a campaign.</li>
+<li><strong>n_uptd</strong> – An integer; Represents the number of advisors updating in a campaign.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A tuple lists containing [paths], and [num records]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.processes.extract_dictionary_values">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">extract_dictionary_values</code><span class="sig-paren">(</span><em>dict_data</em>, <em>log=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#extract_dictionary_values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.extract_dictionary_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function leverages the dictionary, filled with meta data regarding a list and it’s processing
+and extracts specific elements that will be used to:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Organize all list processing statistics to record and store. Ex. (Num names on list, match rate, et al).</li>
+<li>Send a notification of process completion to the originator of a list request.</li>
+</ol>
+</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dict_data</strong> – A python dictionary containing meta data regarding a single list in the queue.</li>
+<li><strong>log</strong> – A logger instance.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A python dictionary containing next steps for the list program.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.processes.id_preprocessing_needs">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">id_preprocessing_needs</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#id_preprocessing_needs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.id_preprocessing_needs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.processes.parse_list_based_on_type">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">parse_list_based_on_type</code><span class="sig-paren">(</span><em>path</em>, <em>l_type=None</em>, <em>pre_or_post=None</em>, <em>log=None</em>, <em>to_create_path=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#parse_list_based_on_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.parse_list_based_on_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serves as a routing point to parse a list, dependent on the sources object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – A string representing a full file path.</li>
+<li><strong>l_type</strong> – A string containing the source Salesforce object for the list request.</li>
+<li><strong>pre_or_post</strong> – A string containing ‘Pre’ or ‘Post’.</li>
+<li><strong>log</strong> – A logger instance.</li>
+<li><strong>to_create_path</strong> – The name of file ending with the ‘_to_create’ suffix.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">An updated dictionary mapper object.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.processes.sfdc_upload">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">sfdc_upload</code><span class="sig-paren">(</span><em>path</em>, <em>obj</em>, <em>obj_id</em>, <em>session</em>, <em>log=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#sfdc_upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.sfdc_upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>A routing method which performs final preparation and orchestrates a Salesforce upload
+for a given file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – A string representing a full file path.</li>
+<li><strong>obj</strong> – A string representing the name of a Salesforce object.</li>
+<li><strong>obj_id</strong> – An 18-char string; The id of a Salesforce object.</li>
+<li><strong>session</strong> – An authenticated Salesforce REST API session.</li>
+<li><strong>log</strong> – A logger instance.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A python dictionary containing metadata and next steps for the list program.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.processes.source_channel">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">source_channel</code><span class="sig-paren">(</span><em>path</em>, <em>record_name</em>, <em>obj_id</em>, <em>obj</em>, <em>aid=None</em>, <em>log=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#source_channel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.source_channel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepares a list for Salesforce upload and/or contact creation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – A string representing a full file path.</li>
+<li><strong>record_name</strong> – A string; name of a Salesforce record.</li>
+<li><strong>obj_id</strong> – An 18-char string; Id of a Salesforce Object.</li>
+<li><strong>obj</strong> – A string; Name of a Salesforce Object.</li>
+<li><strong>aid</strong> – An 18-char string; Optional. Parent Id (or Account Id) related to an Object in Salesforce.</li>
+<li><strong>log</strong> – A logger instance.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A python dictionary containing next steps for the list processing tool.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.processes.upload">
+<code class="descclassname">ListManagement.utility.processes.</code><code class="descname">upload</code><span class="sig-paren">(</span><em>session</em>, <em>headers</em>, <em>data</em>, <em>obj_id</em>, <em>obj</em>, <em>col_num=None</em>, <em>df_path=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/processes.html#upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.processes.upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helps to perform an actual salesforce upload.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>session</strong> – An authenticated Salesforce REST API session.</li>
+<li><strong>headers</strong> – A list of strings representing column names in a Salesforce table.
+Should consider removing, as it doesn’t seem used.</li>
+<li><strong>data</strong> – A list containing the data which will be uploaded to Salesforce.</li>
+<li><strong>obj_id</strong> – An 18-char string; Represents an Id of a Salesforce object.</li>
+<li><strong>obj</strong> – A string; Represents the name of a Salesforce object.</li>
+<li><strong>col_num</strong> – TBD</li>
+<li><strong>df_path</strong> – A string representing the a full file path.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">TBD</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<span class="target" id="module-ListManagement.utility.queue"></span><div class="section" id="queue-py">
+<h2>queue.py<a class="headerlink" href="#queue-py" title="Permalink to this headline">¶</a></h2>
+<p>Extracts necessary metadata from Salesforce
+for pending list requests.</p>
+<dl class="function">
+<dt id="ListManagement.utility.queue.build_queue">
+<code class="descclassname">ListManagement.utility.queue.</code><code class="descname">build_queue</code><span class="sig-paren">(</span><em>sfdc</em>, <em>log=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/queue.html#build_queue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.queue.build_queue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queries Salesforce to extract any pending lists (and necessary metadata).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sfdc</strong> – Authenticated Salesforce REST API session.</li>
+<li><strong>log</strong> – log object.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Dictionary of pending lists in the queue and necessary metadata.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<span class="target" id="module-ListManagement.utility.sf_helper"></span><div class="section" id="sf-helper-py">
+<h2>sf_helper.py<a class="headerlink" href="#sf-helper-py" title="Permalink to this headline">¶</a></h2>
+<p>Contains helper functions that are useful
+when preparing data to upload to Salesforce.</p>
+<dl class="function">
+<dt id="ListManagement.utility.sf_helper.cmp_mbr_id_for_contact_id">
+<code class="descclassname">ListManagement.utility.sf_helper.</code><code class="descname">cmp_mbr_id_for_contact_id</code><span class="sig-paren">(</span><em>update_list</em>, <em>obj_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/sf_helper.html#cmp_mbr_id_for_contact_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.sf_helper.cmp_mbr_id_for_contact_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.sf_helper.get_user_id">
+<code class="descclassname">ListManagement.utility.sf_helper.</code><code class="descname">get_user_id</code><span class="sig-paren">(</span><em>sf</em>, <em>obj_id</em>, <em>att</em>, <em>user_email</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/sf_helper.html#get_user_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.sf_helper.get_user_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an email address, returns a list of metadata to use when uploading to salesforce.
+:param sf: An authenticated Salesforce REST API session.
+:param obj_id: An 18-char string; Represents an Id of a Salesforce object.
+:param att: A string; Represents the name of an attachment.
+:param user_email: A string; Represents a given user’s email address.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">A list of metadata to use when uploading to salesforce</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.sf_helper.headers_clean_up">
+<code class="descclassname">ListManagement.utility.sf_helper.</code><code class="descname">headers_clean_up</code><span class="sig-paren">(</span><em>headers</em>, <em>to_remove='ContactID'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/sf_helper.html#headers_clean_up"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.sf_helper.headers_clean_up" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes an element (or group of elements) from a list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>headers</strong> – A list of column names.</li>
+<li><strong>to_remove</strong> – An element (or group of elements) to remove from a list.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A sliced list.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.sf_helper.remove_duplicates">
+<code class="descclassname">ListManagement.utility.sf_helper.</code><code class="descname">remove_duplicates</code><span class="sig-paren">(</span><em>mbr_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/sf_helper.html#remove_duplicates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.sf_helper.remove_duplicates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to ‘uniqify’ a list.
+:param mbr_list: A list of lists containing duplicates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">A unique set of lists.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ListManagement.utility.sf_helper.split_list">
+<code class="descclassname">ListManagement.utility.sf_helper.</code><code class="descname">split_list</code><span class="sig-paren">(</span><em>id_in_obj</em>, <em>ids_from_search</em>, <em>obj_id</em>, <em>obj</em>, <em>col=None</em>, <em>remove=None</em>, <em>remove_unique=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ListManagement/utility/sf_helper.html#split_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ListManagement.utility.sf_helper.split_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to take two lists and parse them into 2 to 3 different lists.</p>
+<ol class="arabic simple">
+<li>If any ‘ids_from_search’ aren’t present in ‘id_in_obj’, add to insert.</li>
+<li>If any ‘ids_from_search’ are present in ‘id_in_obj’, add to update.</li>
+<li><dl class="first docutils">
+<dt>If any ‘id_in_obj’ aren’t present in ‘ids_from_search’, add to remove.</dt>
+<dd>(Only happens for BizDev Group Lists)</dd>
+</dl>
+</li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>id_in_obj</strong> – A list of unique identifiers present in a Salesforce object.</li>
+<li><strong>ids_from_search</strong> – A list of unique identifiers present in a 3rd party list.</li>
+<li><strong>obj_id</strong> – An 18-char string; Represents an Id of a Salesforce object.</li>
+<li><strong>obj</strong> – A string; Represents the name of a Salesforce object.</li>
+<li><strong>col_num</strong> – An integer; The column to use for when parsing a list.</li>
+<li><strong>remove</strong> – An empty list.</li>
+<li><strong>remove_unique</strong> – REMOVE AS NOT USED.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">A tuple of lists (insert, update, remove)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-ListManagement.cron_jobs">
+<span id="listmanagement-cron-jobs-package"></span><h1>ListManagement.cron_jobs package<a class="headerlink" href="#module-ListManagement.cron_jobs" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-ListManagement.cron_jobs.created_contacts_to_campaign"></span><span class="target" id="module-ListManagement.cron_jobs.ml_diagnostics_update"></span><span class="target" id="module-ListManagement.cron_jobs.requested_email_job"></span></div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">List Management</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ricky Schools.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

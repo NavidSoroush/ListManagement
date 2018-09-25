@@ -1,0 +1,313 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ListManagement.utility.queue &#8212; List Management 4.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ListManagement.utility.queue</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">queue.py</span>
+<span class="sd">====================================</span>
+<span class="sd">Extracts necessary metadata from Salesforce</span>
+<span class="sd">for pending list requests.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">datetime</span> <span class="k">as</span> <span class="nn">_dt</span>
+<span class="kn">from</span> <span class="nn">ListManagement.utility</span> <span class="k">import</span> <span class="n">pandas_helper</span> <span class="k">as</span> <span class="n">_phelp</span>
+<span class="kn">from</span> <span class="nn">ListManagement.utility</span> <span class="k">import</span> <span class="n">general</span> <span class="k">as</span> <span class="n">_ghelp</span>
+
+<span class="n">_LIST_FIELDS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Related_Account__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Related_BizDev_Group__c&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;Related_Campaign__c&#39;</span><span class="p">,</span> <span class="s1">&#39;OwnerId&#39;</span><span class="p">,</span> <span class="s1">&#39;File_Name__c&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;IsDeleted&#39;</span><span class="p">,</span> <span class="s1">&#39;Status__c&#39;</span><span class="p">]</span>
+<span class="n">_LIST_WHERE</span> <span class="o">=</span> <span class="s2">&quot;Status__c=&#39;In Queue&#39;&quot;</span>
+
+<span class="n">_OBJ_MAP</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Attachment&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;CreatedDate&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">,</span> <span class="s1">&#39;ParentId&#39;</span><span class="p">],</span>
+                           <span class="s1">&#39;where_stmt&#39;</span><span class="p">:</span> <span class="s2">&quot;ParentId=&#39;</span><span class="si">{0}</span><span class="s2">&#39; AND Name=&#39;</span><span class="si">{1}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                           <span class="s1">&#39;rename&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;Id&#39;</span><span class="p">:</span> <span class="s1">&#39;AttachmentId&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;File_Name__c&#39;</span><span class="p">,</span> <span class="s1">&#39;ParentId&#39;</span><span class="p">:</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span>
+                                      <span class="s1">&#39;CreatedDate&#39;</span><span class="p">:</span> <span class="s1">&#39;Received Date&#39;</span><span class="p">},</span>
+                           <span class="s1">&#39;merge_on&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span> <span class="s1">&#39;File_Name__c&#39;</span><span class="p">],</span>
+                           <span class="s1">&#39;where_vars&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span> <span class="s1">&#39;File_Name__c&#39;</span><span class="p">]</span>
+                           <span class="p">},</span>
+            <span class="s1">&#39;User&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">,</span> <span class="s1">&#39;Email&#39;</span><span class="p">],</span>
+                     <span class="s1">&#39;where_stmt&#39;</span><span class="p">:</span> <span class="s2">&quot;Id=&#39;</span><span class="si">{0}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                     <span class="s1">&#39;rename&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;Id&#39;</span><span class="p">:</span> <span class="s1">&#39;OwnerId&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Sender Name&#39;</span><span class="p">,</span> <span class="s1">&#39;Email&#39;</span><span class="p">:</span> <span class="s1">&#39;Sender Email&#39;</span><span class="p">},</span>
+                     <span class="s1">&#39;merge_on&#39;</span><span class="p">:</span> <span class="s2">&quot;OwnerId&quot;</span><span class="p">,</span>
+                     <span class="s1">&#39;where_vars&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;OwnerId&#39;</span><span class="p">]</span>
+                     <span class="p">},</span>
+            <span class="s1">&#39;Campaign&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">],</span>
+                         <span class="s1">&#39;where_stmt&#39;</span><span class="p">:</span> <span class="s2">&quot;Id=&#39;</span><span class="si">{0}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                         <span class="s1">&#39;rename&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;Id&#39;</span><span class="p">:</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Record Name&#39;</span><span class="p">},</span>
+                         <span class="s1">&#39;merge_on&#39;</span><span class="p">:</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span>
+                         <span class="s1">&#39;where_vars&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">]</span>
+                         <span class="p">},</span>
+            <span class="s1">&#39;Account&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">],</span>
+                        <span class="s1">&#39;where_stmt&#39;</span><span class="p">:</span> <span class="s2">&quot;Id=&#39;</span><span class="si">{0}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                        <span class="s1">&#39;rename&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;Id&#39;</span><span class="p">:</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Record Name&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;merge_on&#39;</span><span class="p">:</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;where_vars&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">]</span>
+                        <span class="p">},</span>
+            <span class="s1">&#39;BizDev Group&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">],</span>
+                             <span class="s1">&#39;where_stmt&#39;</span><span class="p">:</span> <span class="s2">&quot;Id=&#39;</span><span class="si">{0}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                             <span class="s1">&#39;rename&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;Id&#39;</span><span class="p">:</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Record Name&#39;</span><span class="p">},</span>
+                             <span class="s1">&#39;merge_on&#39;</span><span class="p">:</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;where_vars&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">]</span>
+                             <span class="p">},</span>
+            <span class="p">}</span>
+
+<span class="n">_STATIC_VARIABLES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;Next Step&#39;</span><span class="p">:</span> <span class="s1">&#39;Pre-processing&#39;</span><span class="p">,</span> <span class="s1">&#39;Found Path&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Found in SFDC Search #2&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Num Adding&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s1">&#39;Num Removing&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Num Updating/Staying&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Review Path&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;process_start&#39;</span><span class="p">:</span> <span class="n">_dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">_ghelp</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;CmpAccountName&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;CmpAccountID&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Campaign Start Date&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Pre_or_Post&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;ExtensionType&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;File Path&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">_determine_type</span><span class="p">(</span><span class="n">object_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parses a string to determine the Salesforce object type.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    object_id</span>
+<span class="sd">        Typically, an 18-character id; references a single record within a Salesforce instance.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        Dictionary containing metadata regarding a request to perform comparisons between</span>
+<span class="sd">        a third party advisor list and our Salesforce CRM advisors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">object_id</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;001&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;Account&#39;</span>
+    <span class="k">elif</span> <span class="n">object_id</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;a0v&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;BizDev Group&#39;</span>
+    <span class="k">elif</span> <span class="n">object_id</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;701&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;Campaign&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">_build_clause</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper method to build a dynamic &#39;where&#39; statement for a SOQL query.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    row</span>
+<span class="sd">        A single row of a pandas dataframe/series.</span>
+<span class="sd">    obj</span>
+<span class="sd">        String; represents an object (table) name in Salesforce.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        A populated, dynamic, string; used in a SOQL where clause.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_vars&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">clause</span> <span class="o">=</span> <span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_stmt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">row</span><span class="p">[</span><span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_vars&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]],</span> <span class="n">row</span><span class="p">[</span><span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_vars&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_vars&#39;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">clause</span> <span class="o">=</span> <span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_stmt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_vars&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">clause</span> <span class="o">=</span> <span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;where_stmt&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">clause</span>
+
+
+<span class="k">def</span> <span class="nf">_get_metadata_ids</span><span class="p">(</span><span class="n">sfdc</span><span class="p">,</span> <span class="n">frame</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parent_obj</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generic method to extract metadata from a Salesforce object. Uses the _OBJ_MAP</span>
+<span class="sd">    variable above to define what (and how) information get&#39;s extracted (and blended)</span>
+<span class="sd">    from Salesforce into an existing data structure.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sfdc</span>
+<span class="sd">        Authenticated Salesforce REST API session.</span>
+<span class="sd">    frame</span>
+<span class="sd">        Pandas data frame object.</span>
+<span class="sd">    obj</span>
+<span class="sd">        String; represents an object (table) name in Salesforce.</span>
+<span class="sd">    parent_obj</span>
+<span class="sd">        Optional. Can overwrite the obj parameter, if necessary.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        Metadata regarding a Salesforce object, as defined by _OBJ_MAP[&#39;fields&#39;] values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">_OBJ_MAP</span>
+    <span class="k">if</span> <span class="n">parent_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">parent_obj</span>
+    <span class="n">meta_dfs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">clause</span> <span class="o">=</span> <span class="n">_build_clause</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+        <span class="n">queried_data</span> <span class="o">=</span> <span class="n">sfdc</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;fields&#39;</span><span class="p">],</span> <span class="n">where</span><span class="o">=</span><span class="n">clause</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">queried_data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">meta_dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">queried_data</span><span class="p">)</span>
+    <span class="n">meta_dfs</span> <span class="o">=</span> <span class="n">_phelp</span><span class="o">.</span><span class="n">concat_dfs</span><span class="p">(</span><span class="n">meta_dfs</span><span class="p">)</span>
+    <span class="n">meta_dfs</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;rename&#39;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;merge_on&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">frame</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">meta_dfs</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">meta_dfs</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">_OBJ_MAP</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s1">&#39;merge_on&#39;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">frame</span>
+
+
+<span class="k">def</span> <span class="nf">_get_attachments</span><span class="p">(</span><span class="n">sfdc</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper method to download attachments and populate a single-row&#39;s meta data values</span>
+<span class="sd">    for a list request.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sfdc</span>
+<span class="sd">        Authenticated Salesforce REST API session.</span>
+<span class="sd">    frame</span>
+<span class="sd">        Pandas data frame object.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        An updated frame object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">file_path</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">pre_or_post</span><span class="p">,</span> <span class="n">a_name</span><span class="p">,</span> <span class="n">a_id</span> <span class="o">=</span> <span class="n">sfdc</span><span class="o">.</span><span class="n">download_attachments</span><span class="p">(</span><span class="n">att_id</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;AttachmentId&#39;</span><span class="p">],</span>
+                                                                                     <span class="n">obj</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">],</span>
+                                                                                     <span class="n">obj_url</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;ObjectId&#39;</span><span class="p">])</span>
+        <span class="n">ext_len</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">_ghelp</span><span class="o">.</span><span class="n">determine_ext</span><span class="p">(</span><span class="n">f_name</span><span class="o">=</span><span class="n">file_path</span><span class="p">)</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;File Path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_path</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;Campaign Start Date&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_date</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;Pre_or_Post&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pre_or_post</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;CmpAccountName&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">a_name</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;CmpAccountID&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">a_id</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;ExtensionType&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ext</span>
+    <span class="k">return</span> <span class="n">frame</span>
+
+
+<div class="viewcode-block" id="build_queue"><a class="viewcode-back" href="../../../index.html#ListManagement.utility.queue.build_queue">[docs]</a><span class="k">def</span> <span class="nf">build_queue</span><span class="p">(</span><span class="n">sfdc</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Queries Salesforce to extract any pending lists (and necessary metadata).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sfdc</span>
+<span class="sd">        Authenticated Salesforce REST API session.</span>
+<span class="sd">    log</span>
+<span class="sd">        log object.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        Dictionary of pending lists in the queue and necessary metadata.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">sfdc</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;List__c&#39;</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="n">_LIST_FIELDS</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">_LIST_WHERE</span><span class="p">)</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Id&#39;</span><span class="p">:</span> <span class="s1">&#39;ListObjId&#39;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># establish all of L.I.M.A.&#39;s required variables.</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">_STATIC_VARIABLES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;SFDC Session&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sfdc</span>
+
+        <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;ObjectId&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Related_Campaign__c</span><span class="o">.</span><span class="n">combine_first</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">Related_BizDev_Group__c</span><span class="o">.</span><span class="n">combine_first</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">Related_Account__c</span><span class="p">))</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Related_Account__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Related_BizDev_Group__c&#39;</span><span class="p">,</span> <span class="s1">&#39;Related_Campaign__c&#39;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;Object&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">ObjectId</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_determine_type</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">_get_metadata_ids</span><span class="p">(</span><span class="n">sfdc</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="s1">&#39;Attachment&#39;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">_get_metadata_ids</span><span class="p">(</span><span class="n">sfdc</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="s1">&#39;User&#39;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">_get_metadata_ids</span><span class="p">(</span><span class="n">sfdc</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">_get_attachments</span><span class="p">(</span><span class="n">sfdc</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;ListIndex&#39;</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s1">&#39;rows&#39;</span><span class="p">)</span></div>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">For testing</span>
+
+<span class="sd">import sys</span>
+<span class="sd">sys.path.append(&#39;C:/AllShare/GitHub&#39;)</span>
+<span class="sd">from ListManagement.utility import queue</span>
+<span class="sd">from PythonUtilities.salesforcipy import SFPy</span>
+<span class="sd">from ListManagement.config import Config as con</span>
+<span class="sd">sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False)</span>
+
+<span class="sd">queue.build_queue(sfdc)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">List Management</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ricky Schools.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
