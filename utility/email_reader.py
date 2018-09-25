@@ -5,18 +5,21 @@ import imaplib
 from email.utils import parseaddr
 import time
 import datetime
+import warnings
 
-from cred import outlook_userEmail, password, sfuser, sfpw, sf_token
+from cred import outlook_userEmail, password  # , sfuser, sfpw, sf_token
+
+from PythonUtilities.salesforcipy import SFPy
+from PythonUtilities.EmailHandling import EmailHandler as Email
 
 try:
-    from sf.sf_wrapper import SFPlatform
-    from utility.email_wrapper import Email
-    from utility.gen_helper import determine_ext, date_parsing
-    from utility.email_helper import *
-except ModuleNotFoundError:
-    from ListManagement.sf.sf_wrapper import SFPlatform
-    from ListManagement.utility.email_wrapper import Email
-    from ListManagement.utility.gen_helper import determine_ext, date_parsing
+    from .sf_helper import get_user_id
+    from .general import determine_ext, date_parsing
+    from .email_helper import *
+    from ListManagement.config import Config as con
+except (ModuleNotFoundError, ImportError):
+    from ListManagement.utility.sf_helper import get_user_id
+    from ListManagement.utility.general import determine_ext, date_parsing
     from ListManagement.utility.email_helper import *
 
 
@@ -36,6 +39,9 @@ class MailBoxReader:
         self.mailbox.login(self._email_account, password)
 
     def extract_pending_lists(self, mailbox, folder):
+        warnings.warn('This method will be remove in version 4.0. For gathering necessary '
+                      'meta-data for a list, use the build_queue method found in /utility/queue.py',
+                      PendingDeprecationWarning)
         list_queue = list()
         mailbox.select("%s" % folder)
         s_resp, s_data = mailbox.search(None, 'ALL')
@@ -98,6 +104,9 @@ class MailBoxReader:
         attachment_reader(remove=True)
 
     def iterative_processing(self, msg_list):
+        warnings.warn('This method will be remove in version 4.0. For gathering necessary '
+                      'meta-data for a list, use the build_queue method found in /utility/queue.py',
+                      PendingDeprecationWarning)
         msg = msg_list[0]
         msg_body = msg_list[1]
         msg_id = msg_list[2]
@@ -143,7 +152,7 @@ class MailBoxReader:
         self.log.info('Object Id: %s' % obj_rec_link)
 
         self.log.info('Downloading attachment from SFDC.')
-        sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
+        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain)
         file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=att_link, obj=obj,
                                                                                      obj_url=obj_rec_link)
         ext_len, ext = determine_ext(f_name=file_path)
@@ -208,20 +217,22 @@ class MailBoxReader:
                        "\n\nAll the best," % (dict_data['name'].split(' ')[0], dyn_str, dict_data['sub'])
             sub = "LMA Notification: Missing Attachments or SFDC Links for '%s'" % dict_data['sub']
             list_team.append(dict_data['email'])
-            Email(subject=sub, to=list_team, body=msg_body, attachment_path=None)
+            Email(con.SMTPUser, con.SMTPPass, self.log).send_new_email(
+                subject=sub, to=list_team, body=msg_body, attachments=None)
             self._move_received_list_to_processed_folder(num, _folders[2])
             self.log.info('Mail item has no attachments. Moved to %s' % _folders[2])
         else:
             list_team.append('rickyschools+v3lhm65etri76gwbn0sy@boards.trello.com')
             sub = 'New List Received. Check List Management Trello Board'
             msg_body = "https://trello.com/b/KhPmn9qK/sf-lists-leads\n\n" + msg_body
-            Email(subject=sub, to=list_team, body=msg_body, attachment_path=att)
+            Email(con.SMTPUser, con.SMTPPass, self.log).send_new_email(
+                subject=sub, to=list_team, body=msg_body, attachments=att)
             self.associate_email_request_with_sf_object(dict_data=dict_data, att=att, sender_addr=sender_addr)
             self._move_received_list_to_processed_folder(num, _folders[3])
             self.log.info('Moved mail item to %s' % _folders[3])
 
     def associate_email_request_with_sf_object(self, dict_data, att, sender_addr):
-        sfdc = SFPlatform(user=sfuser, pw=sfpw, token=sf_token, log=self.log)
+        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain)
         data_pkg = [['Id', 'List_Upload__c'], [dict_data['link'], 'True']]
         try:
             self.log.info('Attempting to upload emailed list request to SFDC and attach links.')
