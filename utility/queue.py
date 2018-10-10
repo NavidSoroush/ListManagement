@@ -52,7 +52,8 @@ _STATIC_VARIABLES = {
     'Num Removing': 0, 'Num Updating/Staying': 0, 'Review Path': str(),
     'process_start': _dt.datetime.fromtimestamp(_ghelp.time.time()).strftime('%Y-%m-%d %H:%M:%S'),
     'CmpAccountName': str(), 'CmpAccountID': str(), 'Campaign Start Date': None, 'Pre_or_Post': str(),
-    'ExtensionType': str(), 'File Path': str(),
+    'ExtensionType': str(), 'File Path': str(), 'No CRD': None,
+    'FINRA_SEC Found': None, 'FINRA_Found': 0, 'FINRA Ambiguous': None
 }
 
 
