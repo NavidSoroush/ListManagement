@@ -152,7 +152,8 @@ class MailBoxReader:
         self.log.info('Object Id: %s' % obj_rec_link)
 
         self.log.info('Downloading attachment from SFDC.')
-        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain)
+        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain,
+                    _dir=os.path.expanduser('~/Downloads'))
         file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=att_link, obj=obj,
                                                                                      obj_url=obj_rec_link)
         ext_len, ext = determine_ext(f_name=file_path)
@@ -232,7 +233,8 @@ class MailBoxReader:
             self.log.info('Moved mail item to %s' % _folders[3])
 
     def associate_email_request_with_sf_object(self, dict_data, att, sender_addr):
-        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain)
+        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain,
+                    _dir=os.path.expanduser('~\Downloads'))
         data_pkg = [['Id', 'List_Upload__c'], [dict_data['link'], 'True']]
         try:
             self.log.info('Attempting to upload emailed list request to SFDC and attach links.')
