@@ -68,7 +68,7 @@ class Finra:
         else:
             return _ghelp.create_path_name(path, alter_name)
 
-    def scrape(self, path, alter_name=None, scrape_type=None, parse_list=False, save=False):
+    def scrape(self, _vars, alter_name=None, scrape_type=None, parse_list=False, save=False):
         """
         User level method allowing them access to the Finra 'API'. Given a tabular file (Excel, CSV),
         a user can specify:
@@ -97,8 +97,8 @@ class Finra:
             Scraped results are saved to a file path or returned to the user in a console.
         """
         self._init_selenium_components()
-        self._save_to_path = self._determine_save_path(path=path, alter_name=alter_name)
-        df = read_df(path)
+        self._save_to_path = self._determine_save_path(path=_vars.list_base_path, alter_name=alter_name)
+        df = _vars.list_df.copy() if scrape_type == 'crd' else _vars.found_df.copy()
         df_cols = [x.lower().strip() for x in df.columns.tolist()]
 
         if 'crdnumber' in df_cols or scrape_type == 'all':
@@ -123,13 +123,12 @@ class Finra:
         self._main_scraper(xpath_keys=xpath_keys)
         df = self.return_scraped_data(df=df, on=on)
         if parse_list:
-            found, df = self._parse_scraped_list(df=df)
-            save_df(df, self._save_to_path)
-            return {'Next Step': 'Search SEC',
-                    'No CRD': _ghelp.create_path_name(self._save_to_path, new_name='_nocrd'),
-                    'FINRA_SEC Found': _ghelp.create_path_name(self._save_to_path, new_name='_finrasec_found'),
-                    'FINRA_Found': found,
-                    'FINRA Ambiguous': _ghelp.create_path_name(self._save_to_path, new_name='_FINRA_ambiguous')}
+            _vars, df = self._parse_scraped_list(df=df, _vars=_vars)
+            if scrape_type == 'crd':
+                _vars.list_df = df
+            else:
+                _vars.found_df = df
+            return _vars
 
         if save:
             save_df(df, self._save_to_path)
@@ -241,7 +240,7 @@ class Finra:
         self._wait = WebDriverWait(self._sel, 1)
         return self
 
-    def _parse_scraped_list(self, df):
+    def _parse_scraped_list(self, df, _vars):
         """
         Given a scraped list, a pandas data frame parsed into:
             1) Found
@@ -256,14 +255,16 @@ class Finra:
         -------
             A tuple, (number of advisors found, updated data frame of Found reps only.)
         """
-        no_crd = df[df['CRDNumber'] == 'CRD Not Found']
-        multiple_crds = df[df['CRDNumber'] == 'Multiple CRDs Present']
-        found = df[(df['CRDNumber'] != 'Multiple CRDs Present') & (df['CRDNumber'] != 'CRD Not Found')]
+        _vars.no_crd_df = df[df['CRDNumber'] == 'CRD Not Found']
+        _vars.finra_ambiguous_df = df[df['CRDNumber'] == 'Multiple CRDs Present']
+        _vars.finra_found_df = df[~(df['CRDNumber'].isin(['Multiple CRDs Present', 'CRD Not Found']))]
+
+        _vars.no_crd_path = _ghelp.create_path_name(self._save_to_path, new_name='_nocrd')
+        _vars.finra_ambiguous_path = _ghelp.create_path_name(self._save_to_path, new_name='_FINRA_ambiguous')
+        _vars.finra_found_path = _ghelp.create_path_name(self._save_to_path, new_name='_finrasec_found')
+
         df = df[(df['CRDNumber'] == 'Multiple CRDs Present') | (df['CRDNumber'] == 'CRD Not Found')]
-        save_df(df=no_crd, path=_ghelp.create_path_name(self._save_to_path, new_name='_nocrd'))
-        save_df(df=multiple_crds, path=_ghelp.create_path_name(self._save_to_path, new_name='_FINRA_ambiguous'))
-        save_df(df=found, path=_ghelp.create_path_name(self._save_to_path, new_name='_finrasec_found'))
-        return len(found.index), df
+        return _vars, df
 
     def _refreshing(self):
         """
