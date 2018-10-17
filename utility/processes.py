@@ -5,7 +5,6 @@ Contains core processes that are used
 throughout the processing of a given list.
 """
 
-
 from __future__ import absolute_import
 import traceback
 
@@ -77,7 +76,7 @@ upload_map = {
 }
 
 
-def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_create_path=None):
+def parse_list_based_on_type(_vars, log=None):
     """
     Serves as a routing point to parse a list, dependent on the sources object.
 
@@ -98,29 +97,20 @@ def parse_list_based_on_type(path, l_type=None, pre_or_post=None, log=None, to_c
     -------
         An updated dictionary mapper object.
     """
-    dict_elements = {
-        'cmp_upload': None, 'to_create': None, 'to_update': None, 'bdg_update': None,
-        'no_update': None, 'n_cmp_upload': 0, 'n_to_create': 0, 'n_to_update': 0, 'n_bdg_update': 0,
-        'n_no_update': 0, 'cmp_status': None, 'no_update_path': None, 'update_path': None,
-        'to_create_path': to_create_path, 'cmp_upload_path': None, 'bdg_update_path': None, 'Next Step': 'Data prep.'
-    }
-    df = read_df(path=path)
+    if _vars.list_type == 'Campaign':
+        _vars, files_created = campaigns.parse(_vars)
 
-    if l_type == 'Campaign':
-        dict_elements, files_created = campaigns.parse(path=path, frame=df, dict_elements=dict_elements,
-                                                       event_timing=pre_or_post)
+    # elif _vars.list_type == 'Account':
+    #     dict_elements, files_created = accounts.parse(path=path, frame=df, dict_elements=dict_elements)
+    #
+    # elif _vars.list_type == 'BizDev Group':
+    #     dict_elements, files_created = bdgs.parse(path=path, frame=df, dict_elements=dict_elements)
 
-    elif l_type == 'Account':
-        dict_elements, files_created = accounts.parse(path=path, frame=df, dict_elements=dict_elements)
-
-    elif l_type == 'BizDev Group':
-        dict_elements, files_created = bdgs.parse(path=path, frame=df, dict_elements=dict_elements)
-
-    log.info('Parsed the %s list in to the the below files: %s' % (l_type, '\n'.join(files_created)))
-    return dict_elements
+    log.info('Parsed the %s list in to the the below files: %s' % (_vars.list_type, '\n'.join(files_created)))
+    return _vars
 
 
-def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
+def source_channel(_vars, log):
     """
     Prepares a list for Salesforce upload and/or contact creation.
 
@@ -143,41 +133,40 @@ def source_channel(path, record_name, obj_id, obj, aid=None, log=None):
     -------
         A python dictionary containing next steps for the list processing tool.
     """
-    move_to_bulk = False
-    if obj == 'Campaign':
-        msg = 'Will be performed twice.'
-    elif obj == 'BizDev Group':
+    if _vars.list_type == 'Campaign':
+        _vars.campaign_upload_df, _vars = campaigns.make_sc(path=_vars.campaign_upload_path,
+                                                            frame=_vars.campaign_upload_df,
+                                                            _vars=_vars)
+        _vars.create_df, _vars = campaigns.make_sc(path=_vars.create_path,
+                                                   frame=_vars.create_df,
+                                                   _vars=_vars)
+    elif _vars.list_type == 'BizDev Group':
         msg = 'Will be performed thrice.'
     else:
         msg = ''
-    log.info("Preparing data prep for the %s list's action files, based list type. %s" % (obj, msg))
-    list_df = read_df(path)
+    # log.info("Preparing data prep for the %s list's action files, based list type. %s" % (obj, msg))
+    # list_df = read_df(path)
 
-    if obj == 'Account' and _ghelp.is_path(path):
-        frame, move_to_bulk, to_create = accounts.make_sc(path, list_df, record_name, obj_id, obj)
+    # if _vars.list_type == 'Account' and _ghelp.is_path(path):
+    #     frame, move_to_bulk, to_create = accounts.make_sc(path, list_df, record_name, obj_id, obj)
+    #
+    # elif _vars.list_type == 'Campaign':
+    #     frame, move_to_bulk, to_create = campaigns.make_sc(path, list_df, record_name, obj_id, obj)
+    #
+    # elif _vars.list_type == 'BizDev Group':
+    #     frame, move_to_bulk, to_create = bdgs.make_sc(path, list_df, record_name, obj_id, obj, aid)
 
-    elif obj == 'Campaign':
-        frame, move_to_bulk, to_create = campaigns.make_sc(path, list_df, record_name, obj_id, obj)
+    # n_head = ['Phone', 'Fax']
+    # for ph in n_head:
+    #     if ph in list_df.columns.values:
+    #         try:
+    #             list_df[ph].astype(str)
+    #             for index, row in list_df.iterrows():
+    #                 list_df.loc[index, ph] = _ghelp.clean_phone_number(row[ph])
+    #         except:
+    #             log.info("Can't clean up %s numbers due to %s." % (ph, Exception.message))
 
-    elif obj == 'BizDev Group':
-        frame, move_to_bulk, to_create = bdgs.make_sc(path, list_df, record_name, obj_id, obj, aid)
-
-    n_head = ['Phone', 'Fax']
-    for ph in n_head:
-        if ph in list_df.columns.values:
-            try:
-                list_df[ph].astype(str)
-                for index, row in list_df.iterrows():
-                    list_df.loc[index, ph] = _ghelp.clean_phone_number(row[ph])
-            except:
-                log.info("Can't clean up %s numbers due to %s." % (ph, Exception.message))
-
-    save_df(df=list_df, path=path)
-    return {
-        'Next Step': 'Parse Out Advisors Updates'
-        , 'Create': to_create
-        , 'Move To Bulk': move_to_bulk
-    }
+    return _vars
 
 
 def extract_dictionary_values(dict_data, log=None):
