@@ -22,6 +22,10 @@ except:
 _todays_sfdc_advisor_list = 'T:\\Shared\\FS2 Business Operations\\Python Search Program' \
                             '\\Salesforce Data Files\\SFDC Advisor List as of ' \
                             + time.strftime("%m-%d-%y") + '.csv'
+_names_to_remove = ["jr", "jr.", "sr", "sr.", "ii", "iii", "iv", 'aams', 'aif', 'aifa', 'bcm', 'caia',
+                    'casl', 'ccps', 'cdfa', 'cea', 'cebs', 'ces', 'cfa', 'cfe', 'cfp', 'cfs', 'chfc',
+                    'chfcicap', 'chfebc', 'cic', 'cima', 'cis', 'cltc', 'clu', 'cpa', 'cpwa', 'crpc',
+                    'crps', 'csa', 'iar', 'jd', 'lutcf', 'mba', 'msa', 'msfp', 'pfs', 'phd', 'ppc']
 
 
 class Search:
@@ -43,11 +47,7 @@ class Search:
         self._search_fields = ['AMPFMBRID', 'Email', 'LkupName']
         self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel',
                                'ContactID', 'Needs Info Updated?', 'BizDev Group']
-        self._found_contacts = make_df()
-        self._contacts_to_review = make_df()
-        self._to_create = make_df()
         self._keep_cols = []
-        self._to_finra = True
         self._is_crd_check = False
         self._search_one_crd_additional = False
         self._save_to_review_df = False
@@ -77,7 +77,7 @@ class Search:
 
             run(path_name=_todays_sfdc_advisor_list, logger=self.log)
 
-    def __init_list_metadata(self):
+    def __init_list_metadata(self, _vars, search_two=False):
         """
         Helper method which stores the list file's column names and determines if it's known, or not.
 
@@ -85,8 +85,11 @@ class Search:
         -------
             Nothing
         """
+        if search_two:
+            self._headers = _vars.finra_found_df.columns.values
+        else:
+            self._headers = _vars.list_df.columns.values
 
-        self._headers = self._search_list.columns.values
         self._keep_cols = [c for c in self._headers if 'unknown' not in c.lower()]
 
     @staticmethod
@@ -108,7 +111,7 @@ class Search:
         self._SFDC_advisor_list = self._SFDC_advisor_list.iloc[:, i]
         self._SFDC_advisor_list['CRDNumber'] = self._crd_formatter(self._SFDC_advisor_list['CRDNumber'])
 
-    def __data_preprocessing(self, additional=False):
+    def __data_preprocessing(self, _vars, additional=False, search_two=False):
         """
         Helper method that attempts to clean the 3rd party list file.
 
@@ -120,22 +123,35 @@ class Search:
         -------
             Nothing
         """
-        for col in self._search_list.columns.tolist():
+        if search_two:
+            frame = _vars.finra_found_df
+        else:
+            frame = _vars.list_df
+        for col in frame.columns.tolist():
             if col in self._SFDC_advisor_list.columns.tolist():
                 if col == 'CRDNumber':
-                    self._search_list[col] = self._crd_formatter(self._search_list[col])
+                    frame[col] = self._crd_formatter(frame[col])
                 else:
-                    self._search_list[col] = self._search_list[col].astype(self._SFDC_advisor_list[col].dtypes.name)
-        self._search_list = self._search_list[self._keep_cols]
-        self._search_list.fillna('', inplace=True)
-        if len(self._search_list.columns) > 3:
-            self._search_list.dropna(axis=0, thresh=3, inplace=True)
+                    frame[col] = frame[col].astype(self._SFDC_advisor_list[col].dtypes.name)
+        frame = frame[self._keep_cols]
+        frame.fillna('', inplace=True)
+        if len(frame.columns) > 3:
+            frame.dropna(axis=0, thresh=3, inplace=True)
         if additional:
-            self._search_list = self._name_preprocessing(self._headers, self._search_list)
-            self._search_list = self._lkup_name_address_processing(self._headers, self._search_list)
-        self._headers = self._search_list.columns.values
+            frame = self._name_preprocessing(frame)
+            frame = self._lkup_name_address_processing(frame)
+            if 'FinraLookup' not in frame.columns.tolist():
+                _vars.search_finra = False
+        self._headers = frame.columns.values
 
-    def __check_list_type(self):
+        if search_two:
+            _vars.finra_found_df = frame
+        else:
+            _vars.list_df = frame
+
+        return _vars
+
+    def __check_list_type(self, _vars):
         """
         Helper method to subset the fields returned upon merging 3rd party list with SF,
         based on the source object.
@@ -144,7 +160,7 @@ class Search:
         -------
             Nothing
         """
-        if self._list_type != 'BizDev Group':
+        if _vars.list_type != 'BizDev Group':
             del self._return_fields[-1]
 
     def _df_column_preprocessing(self, df):
@@ -187,7 +203,7 @@ class Search:
         [joined_headers.append(rf) for rf in self._return_fields]
         return list(joined_headers)
 
-    def __create_meta_data(self, headers=None, search_two=False):
+    def __create_meta_data(self, _vars, headers=None, search_two=False):
         """
         Helper method to determine how a merged list (3rd party & FS SFDC data) get's handled.
 
@@ -214,59 +230,60 @@ class Search:
         """
         # TODO: may need to try and clean this method up, it's a bit confusing and messy.
         if search_two:
-            self._found_contacts = read_df(self._found_contact_path)
-            finra_matched_to_sf = self._search_list[self._search_list['ContactID'] != '']
+            # _vars.found_df = read_df(self._found_contact_path)
+            finra_matched_to_sf = _vars.finra_found_df[_vars.finra_found_df['ContactID'] != '']
             self.log.info('\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf))
-            self._found_contacts = self._found_contacts.append(finra_matched_to_sf, ignore_index=True, sort=False)
+            _vars.found_df = _vars.found_df.append(finra_matched_to_sf, ignore_index=True, sort=False)
 
         else:
             if self._is_crd_check and 'CRD Provided by List' not in self._headers:
-                self._found_contacts = self._found_contacts.append(
-                    self._search_list[self._search_list['ContactID'] != ''], ignore_index=True)
+                _vars.found_df = _vars.found_df.append(
+                    _vars.list_df[_vars.list_df['ContactID'] != ''], ignore_index=True)
 
-                if self._search_list['CRDNumber'].count() == len(self._search_list.index) and \
-                        len(self._search_list['CRDNumber'].nonzero()[0]) == len(self._search_list.index):
+                if _vars.list_df['CRDNumber'].count() == len(_vars.list_df.index) and \
+                        len(_vars.list_df['CRDNumber'].nonzero()[0]) == len(_vars.list_df.index):
 
-                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
-                    self._to_finra = False
-                    if len(self._search_list.index) != len(self._found_contacts.index):
+                    _vars.list_df.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+                    _vars.search_finra = False
+                    if len(_vars.list_df.index) != len(_vars.found_df.index):
                         self._search_one_crd_additional = True
                         self.log.info('CRD Info provided for all contacts. Will not search FINRA, but will '
                                       'perform remaining standard searches to maximize match rate.')
-                        self._search_list = self._search_list[self._search_list['ContactID'] == '']
+                        _vars.list_df = _vars.list_df[_vars.list_df['ContactID'] == '']
                         # self._contacts_to_review = self._contacts_to_review.append(
-                        #     self._search_list[self._search_list['ContactID'] == ''], ignore_index=True)
+                        #     _vars.list_df[_vars.list_df['ContactID'] == ''], ignore_index=True)
                         # self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
 
                 else:
-                    self._search_list = self._search_list[self._search_list['ContactID'] == '']
-                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
-                self._headers = self._search_list.columns.values
+                    _vars.list_df = _vars.list_df[_vars.list_df['ContactID'] == '']
+                    _vars.list_df.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+                self._headers = _vars.list_df.columns.values
 
             else:
-                self._search_list.fillna('', inplace=True)
+                _vars.list_df.fillna('', inplace=True)
                 if "CRD Provided by List" in self._headers:
-                    self._identify_to_review_records()
-                    self._search_list.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
-                    self._found_contacts = self._found_contacts.append(
-                        self._search_list[self._search_list['ContactID'] != ''],
+                    _vars = self._identify_to_review_records(_vars)
+                    _vars.list_df.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
+                    _vars.found_df = _vars.found_df.append(
+                        _vars.list_df[_vars.list_df['ContactID'] != ''],
                         ignore_index=True)
-                    self._search_list = self._search_list[self._search_list['ContactID'] == '']
-                    self._search_list.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+                    _vars.list_df = _vars.list_df[_vars.list_df['ContactID'] == '']
+                    _vars.list_df.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
 
                 else:
-                    self._found_contacts = self._found_contacts.append(
-                        self._search_list[self._search_list['CRDNumber'] != ''],
+                    _vars.found_df = _vars.found_df.append(
+                        _vars.list_df[_vars.list_df['CRDNumber'] != ''],
                         ignore_index=True)
-                    self._search_list = self._search_list[self._search_list['CRDNumber'] == '']
+                    _vars.list_df = _vars.list_df[_vars.list_df['CRDNumber'] == '']
 
             for r_field in self._return_fields:
                 try:
-                    del self._search_list[r_field]
+                    del _vars.list_df[r_field]
                 except:
                     pass
+        return _vars
 
-    def _identify_to_review_records(self):
+    def _identify_to_review_records(self, _vars):
         """
         Helper method that's used to help identify records that need to be manually reviewed.
 
@@ -279,17 +296,17 @@ class Search:
         -------
             Nothing
         """
-        self._search_list['ToReview'] = 0
-        self._search_list['ToReview'] = self._search_list.apply(
+        _vars.list_df['ToReview'] = 0
+        _vars.list_df['ToReview'] = _vars.list_df.apply(
             lambda x: 1 if x['CRDNumber'] != '' and x['CRDNumber'] != x["CRD Provided by List"] else x[
                 'ToReview'], axis=1)
-        self._contacts_to_review = self._contacts_to_review.append(
-            self._search_list[self._search_list['ToReview'] == 1], ignore_index=True)
-        self._search_list = self._search_list[self._search_list['ToReview'] == 0]
-        del self._search_list['CRDNumber']
-        del self._search_list['ToReview']
-        self._save_to_review_df = True
-        self.log.info('Identified %s contacts that need to be reviewed.' % len(self._contacts_to_review.index))
+        _vars.review_df = _vars.review_df.append(
+            _vars.list_df[_vars.list_df['ToReview'] == 1], ignore_index=True)
+        _vars.list_df = _vars.list_df[_vars.list_df['ToReview'] == 0]
+        del _vars.list_df['CRDNumber']
+        del _vars.list_df['ToReview']
+        self.log.info('Identified %s contacts that need to be reviewed.' % len(_vars.review_df.index))
+        return _vars
 
     def __num_found(self, found_df):
         """
@@ -308,7 +325,7 @@ class Search:
         self._num_found_contacts = len(found_df)
         self._total_found += self._num_found_contacts
 
-    def __search_and_merge(self, search_fields, search_two=False):
+    def __search_and_merge(self, _vars, search_fields, search_two=False):
         """
         Helper method that actually performs the merging of data from 3rd party and SF list files.
 
@@ -331,6 +348,11 @@ class Search:
         -------
             Nothing
         """
+        if search_two:
+            frame = _vars.finra_found_df
+        else:
+            frame = _vars.list_df
+
         if len(search_fields) > 1:
             self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?',
                                    'BizDev Group']
@@ -344,18 +366,31 @@ class Search:
                 self._headers_and_ids = self._SFDC_advisor_list[self._joined_headers]
                 if header == 'CRDNumber':
                     self._headers_and_ids = self._headers_and_ids[self._headers_and_ids[header] != '']
-                self._search_list = self._search_list.merge(self._headers_and_ids, how='left', on=header, sort=False)
-                self._search_list.fillna('', inplace=True)
-                self._num_searched_on = len(self._search_list)
-                self.__create_meta_data(self._headers, search_two=search_two)
-                self._num_remaining = len(self._search_list)
+                frame = frame.merge(self._headers_and_ids, how='left', on=header, sort=False)
+                frame.fillna('', inplace=True)
 
-                self.__num_found(self._found_contacts)
+                self._num_searched_on = len(frame.index)
+                if search_two:
+                    _vars.finra_found_df = frame
+                else:
+                    _vars.list_df = frame
 
-                self.log.info('Found %s on %s search.\n' % (self._num_found_contacts, header))
-                self._headers = self._search_list.columns.values
+                _vars = self.__create_meta_data(_vars, self._headers, search_two=search_two)
+                self._num_remaining = len(frame.index)
 
-    def _crd_search(self, search_field=['CRDNumber']):
+                self.__num_found(_vars.found_df)
+                _vars.search_found[header] = self._num_searched_on - self._num_remaining
+
+                self.log.info('Found %s on %s search.\n' % (_vars.search_found[header], header))
+                self._headers = frame.columns.values
+        if search_two:
+            _vars.finra_found_df = frame
+        else:
+            _vars.list_df = frame
+
+        return _vars
+
+    def _crd_search(self, _vars, search_field=['CRDNumber']):
         """
         Helper method to help properly guide the search process when matching on CRDNumbers.
 
@@ -376,11 +411,11 @@ class Search:
         self._is_crd_check = True
         self._return_fields = ['AccountId', 'SourceChannel',
                                'Needs Info Updated?', 'ContactID', 'BizDev Group']
-        self._search_list.fillna('', inplace=True)
-        self.__search_and_merge(search_field)
-        return self
+        _vars.list_df.fillna('', inplace=True)
+        _vars = self.__search_and_merge(_vars, search_field)
+        return _vars
 
-    def _lkup_name_address_processing(self, headers, search_list):
+    def _lkup_name_address_processing(self, frame):
         """
         Helper method to create the LkupName search field, if the necessary columns are present,
         and pre-process them.
@@ -405,75 +440,75 @@ class Search:
         -------
             An updated (enriched) pandas data frame object.
         """
-        if "MailingPostalCode" in headers and "MailingState" in headers:
+        if set(['MailingPostalCode', 'MailingState']).issubset(frame.columns.tolist()):
             import us
             import uszipcode
             zs = uszipcode.ZipcodeSearchEngine()
 
-            search_list['MailingPostalCode'] = search_list['MailingPostalCode'].astype(str)
+            frame['MailingPostalCode'] = frame['MailingPostalCode'].astype(str)
 
-            search_list['MailingPostalCode'] = search_list.apply(
+            frame['MailingPostalCode'] = frame.apply(
                 lambda x: x['MailingPostalCode'].split('-')[0] if '-' in x['MailingPostalCode'] else x[
                     'MailingPostalCode'], axis=1)
 
-            search_list['MailingPostalCode'] = search_list.apply(
+            frame['MailingPostalCode'] = frame.apply(
                 lambda x: x['MailingPostalCode'][:5] if len(x['MailingPostalCode']) == 9 else x['MailingPostalCode'],
                 axis=1)
 
-            search_list['MailingPostalCode'] = search_list.apply(
+            frame['MailingPostalCode'] = frame.apply(
                 lambda x: str(0) + x['MailingPostalCode'][:4] if len(x['MailingPostalCode']) == 8 else x[
                     'MailingPostalCode'], axis=1)
 
             try:
-                search_list['MailingState'] = search_list.apply(
+                frame['MailingState'] = frame.apply(
                     lambda x: us.states.lookup(x['MailingState'].str, use_cache=False).abbr if len(
                         x['MailingState']) > 2 else x['MailingState'], axis=1)
             except:
                 try:
                     self.log.info("Unable to transform MailingState with the python 'us' library.")
-                    search_list['MailingState'] = search_list.apply(
+                    frame['MailingState'] = frame.apply(
                         lambda x: zs.by_zipcode(x['MailingPostalCode'])['State'], axis=1)
                 except:
                     self.log.info("Unable to transform MailingState with the python 'uszipcode' library.")
                     self.log.info('Will forgo attempting to transform MailingState')
 
             """ archaic code for zip below
-            search_list['MailingPostalCode'] = search_list['MailingPostalCode'].astype(str)
-            for index, row in search_list.iterrows():
-                search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"].split('-')[0]
+            frame['MailingPostalCode'] = frame['MailingPostalCode'].astype(str)
+            for index, row in frame.iterrows():
+                frame.loc[index, "MailingPostalCode"] = row["MailingPostalCode"].split('-')[0]
                 if len(row["MailingPostalCode"]) == 9:
-                    search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"][:5]
+                    frame.loc[index, "MailingPostalCode"] = row["MailingPostalCode"][:5]
                 elif len(row["MailingPostalCode"]) == 8:
-                    search_list.loc[index, "MailingPostalCode"] = row["MailingPostalCode"][:4]
+                    frame.loc[index, "MailingPostalCode"] = row["MailingPostalCode"][:4]
 
-            if np.mean(search_list['MailingState'].str.len()) > 2:
+            if np.mean(frame['MailingState'].str.len()) > 2:
                 import us
                 self.log.info('MailingState column needs to be transformed.')
-                for index, row in search_list.iterrows():
+                for index, row in frame.iterrows():
                     try:
-                        state = us.states.lookup(search_list.loc[index, "MailingState"])
-                        search_list.loc[index, "MailingState"] = str(state.abbr)
+                        state = us.states.lookup(frame.loc[index, "MailingState"])
+                        frame.loc[index, "MailingState"] = str(state.abbr)
                     except:
                         pass
             """
-            headers = search_list.columns.values
-            if "FirstName" in headers and "LastName" in headers:
-                search_list["FirstName"] = search_list["FirstName"].apply(lambda x: x.title())
-                search_list["LastName"] = search_list["LastName"].apply(lambda x: x.title())
-                search_list["Account"] = search_list["Account"].str.replace(',', '')
-                search_list["LkupName"] = search_list["FirstName"].str[:3] + search_list["LastName"] + search_list[
-                                                                                                           "Account"].str[
-                                                                                                       :10] + \
-                                          search_list["MailingState"] + search_list["MailingPostalCode"]  # .str[:-2]
-
-            else:
-                self.log.info("Advisor name or account information missing")
+            # headers = frame.columns.values
+            # if "FirstName" in headers and "LastName" in headers:
+            #     frame["FirstName"] = frame["FirstName"].apply(lambda x: x.title())
+            #     frame["LastName"] = frame["LastName"].apply(lambda x: x.title())
+            #     frame["Account"] = frame["Account"].str.replace(',', '')
+            #     frame["LkupName"] = frame["FirstName"].str[:3] + frame["LastName"] + frame[
+            #                                                                                                "Account"].str[
+            #                                                                                            :10] + \
+            #                               frame["MailingState"] + frame["MailingPostalCode"]  # .str[:-2]
+            #
+            # else:
+            #     self.log.info("Advisor name or account information missing")
         try:
-            search_list['FinraLookup'] = search_list["FirstName"] + ' ' + search_list["LastName"] + " " + \
-                                         search_list["Account"].str[:9]
+            frame['FinraLookup'] = frame["FirstName"] + ' ' + frame["LastName"] + " " + \
+                                   frame["Account"].str[:9]
         except:
-            self._to_finra = False
-        return search_list
+            pass
+        return frame
 
     def _clean_comma_and_space(self, row):
         """
@@ -494,7 +529,7 @@ class Search:
             row.replace(',', ', ')
         return row
 
-    def _name_preprocessing(self, headers, search_list):
+    def _name_preprocessing(self, frame):
         """
         Helper method to split and clean the FullName column of the 3rd party data frame.
 
@@ -525,31 +560,31 @@ class Search:
                            'chfcicap', 'chfebc', 'cic', 'cima', 'cis', 'cltc', 'clu', 'cpa', 'cpwa', 'crpc',
                            'crps', 'csa', 'iar', 'jd', 'lutcf', 'mba', 'msa', 'msfp', 'pfs', 'phd', 'ppc']
 
-        if "FullName" in headers:
-            search_list.insert(0, "LastName", "")
-            search_list.insert(0, "FirstName", "")
-            for index, row in search_list.iterrows():
+        if "FullName" in frame.columns.tolist():
+            frame.insert(0, "LastName", "")
+            frame.insert(0, "FirstName", "")
+            for index, row in frame.iterrows():
                 if ',' in row["FullName"]:
                     if row["FullName"].index(' ') < row["FullName"].index(','):
-                        search_list.loc[index, "FirstName"] = row["FullName"].split(' ')[0]
-                        search_list.loc[index, "LastName"] = ' '.join(row["FullName"].split(' ')[1:])
+                        frame.loc[index, "FirstName"] = row["FullName"].split(' ')[0]
+                        frame.loc[index, "LastName"] = ' '.join(row["FullName"].split(' ')[1:])
                     else:
-                        search_list.loc[index, "LastName"] = row["FullName"].split(',')[0]
-                        search_list.loc[index, "FirstName"] = row["FullName"].split(' ')[1]
+                        frame.loc[index, "LastName"] = row["FullName"].split(',')[0]
+                        frame.loc[index, "FirstName"] = row["FullName"].split(' ')[1]
                 else:
                     full_name_list = row["FullName"].split()
                     for name in full_name_list:
                         if name.lower() in names_to_remove:
                             full_name_list.pop(full_name_list.index(name))
                     if len(full_name_list) == 3:
-                        search_list.loc[index, "FirstName"] = full_name_list[0]
-                        search_list.loc[index, "LastName"] = full_name_list[2]
+                        frame.loc[index, "FirstName"] = full_name_list[0]
+                        frame.loc[index, "LastName"] = full_name_list[2]
                     else:
-                        search_list.loc[index, "FirstName"] = full_name_list[0]
-                        search_list.loc[index, "LastName"] = full_name_list[1]
-        return search_list
+                        frame.loc[index, "FirstName"] = full_name_list[0]
+                        frame.loc[index, "LastName"] = full_name_list[1]
+        return frame
 
-    def perform_search_one(self, searching_list_path, list_type):
+    def perform_search_one(self, _vars):
         """
         User method to implement the first comparison between a 3rd party list and Salesforce.
 
@@ -564,49 +599,37 @@ class Search:
         -------
             A python dictionary containing next steps for list processing.
         """
-        self.log.info('Implementing search_one method on the %s list. Search 1 pre-processing begins.' % list_type)
-        self._search_list = read_df(searching_list_path)
-        self.__init_list_metadata()
-        self._list_type = list_type
-        self.__check_list_type()
-        self.__data_preprocessing(additional=True)
-        self._found_contact_path = create_path_name(path=searching_list_path, new_name='_foundcontacts')
-        self._review_contact_path = create_path_name(path=searching_list_path, new_name='_review_contacts')
-        self._to_create_path = create_path_name(path=searching_list_path, new_name='to_create')
+        _vars.state = _vars.States(_vars.state + 1).value
+        self.log.info(
+            'Implementing search_one method on the %s list. Search 1 pre-processing begins.' % _vars.list_type)
+        self.__init_list_metadata(_vars)
+        self.__check_list_type(_vars)
+        _vars = self.__data_preprocessing(_vars, additional=True)
+        _vars.found_path = create_path_name(path=_vars.list_base_path, new_name='_foundcontacts')
+        _vars.review_path = create_path_name(path=_vars.list_base_path, new_name='_review_contacts')
+        _vars.create_path = create_path_name(path=_vars.list_base_path, new_name='to_create')
+        _vars.found_df = make_df()
+        _vars.review_df = make_df()
+        _vars.create_df = make_df()
 
         if 'CRDNumber' in self._headers and not self._is_crd_check:
             self.log.info("Performing a CRD search, as 'CRDNumber' is present.")
-            self._crd_search()
+            _vars = self._crd_search(_vars)
             if self._search_one_crd_additional:
                 self.log.info("Performing additional searches as the CRD search didn't find all records successfully.")
-                self.__search_and_merge(self._search_fields)
+                _vars = self.__search_and_merge(_vars, self._search_fields)
 
-                self._search_list.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
-                self._to_create = self._search_list[~is_null(self._search_list['CRDNumber'])]
-                self._search_list = self._search_list[is_null(self._search_list['CRDNumber'])]
+                _vars.list_df.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
+                _vars.create_df = _vars.list_df[~is_null(_vars.list_df['CRDNumber'])]
+                _vars.list_df = _vars.list_df[is_null(_vars.list_df['CRDNumber'])]
 
         else:
             self.log.info("Performing standard search, as 'CRDNumber' is not present.")
-            self.__search_and_merge(self._search_fields)
+            _vars = self.__search_and_merge(_vars, self._search_fields)
 
-        if self._save_to_review_df:
-            save_df(df=self._contacts_to_review, path=self._review_contact_path)
+        return _vars
 
-        if len(self._to_create.index) > 0:
-            save_df(df=self._to_create, path=self._to_create_path)
-
-        save_df(df=self._found_contacts, path=self._found_contact_path)
-        save_df(df=self._search_list, path=searching_list_path)
-
-        ret_item = {'Next Step': 'FINRA Search',
-                    'Found Path': self._found_contact_path,
-                    'SFDC_Found': self._num_found_contacts,
-                    'FINRA?': self._to_finra,
-                    'Review Path': self._review_contact_path,
-                    'to_create_path': self._to_create_path}
-        return ret_item
-
-    def perform_search_two(self, searching_list_path, found_path, list_type):
+    def perform_search_two(self, _vars):
         """
         User method to implement the second comparison between a 3rd party list and Salesforce.
 
@@ -626,37 +649,28 @@ class Search:
         -------
             A python dictionary containing next steps for list processing.
         """
-        self.log.info('Implementing search_two method on the %s list. Search 2 pre-processing begins.' % list_type)
+        self.log.info(
+            'Implementing search_two method on the %s list. Search 2 pre-processing begins.' % _vars.list_type)
         self._search_fields = ['CRDNumber']
         self._return_fields = ['AccountId', 'SourceChannel', 'ContactID',
                                'Needs Info Updated?', 'BizDev Group']
-        self._found_contacts = read_df(found_path)
+        self.__init_list_metadata(_vars, search_two=True)
+        self._keep_cols = [c for c in _vars.finra_found_df.columns if not c.lower()[:7].__contains__('unknown')]
 
-        self._search_list = read_df(searching_list_path)
-        self.__init_list_metadata()
-        self._keep_cols = [c for c in self._search_list.columns if not c.lower()[:7].__contains__('unknown')]
-        self._list_type = list_type
-
-        self.__check_list_type()
-        self.__data_preprocessing()
+        self.__check_list_type(_vars)
+        _vars = self.__data_preprocessing(_vars, search_two=True)
         self.log.info('Searching against SFDC following FINRA/SEC searches.')
-        self.__search_and_merge(search_fields=self._search_fields, search_two=True)
-        save_df(df=self._found_contacts, path=found_path)
-        save_df(df=self._search_list, path=searching_list_path)
+        _vars = self.__search_and_merge(_vars, search_fields=self._search_fields, search_two=True)
+        return _vars
 
-        ret_item = {'Next Step': 'Upload Prep',
-                    'Found in SFDC Search #2': self._num_found_contacts}
-        return ret_item
-
-    def perform_sec_search(self, searching_list_path, found_path):
+    def perform_sec_search(self, _vars, searching_list_path, found_path):
         if not os.path.exists(self._sec_path):
             self.log.info("Skipping SEC Search. Today's files could not be found in the listed directory.")
-            ret_item = {'Next Step': 'SFDC Search #2', 'SEC_Found': 0}
-            return ret_item
+            return _vars
 
         self.log.info('Searching against SEC Data.')
         self._search_list = read_df(searching_list_path)
-        self.__init_list_metadata()
+        self.__init_list_metadata(_vars)
         self._sec_files = os.listdir(self._sec_path)
         self._search_fields = ['LkupName']
 
@@ -665,8 +679,4 @@ class Search:
             self._sec_df.rename(columns={'indvlPK': 'CRDNumber'}, inplace=True)
             self.__search_and_merge(self._search_fields)
 
-        save_df(df=self._found_contacts, path=found_path)
-        save_df(df=self._search_list, path=searching_list_path)
-
-        ret_item = {'Next Step': 'SFDC Search #2', 'SEC_Found': self._num_found_contacts}
-        return ret_item
+        return _vars
