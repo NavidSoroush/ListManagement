@@ -27,7 +27,7 @@ sys.path.append(os.path.abspath('.'))
 from ListManagement.config import Config as con
 from ListManagement.search import Search, Finra
 from ListManagement.search.ml import header_predictions as predicts
-from ListManagement.utility import queue
+from ListManagement.utility import build_queue
 from ListManagement.utility import general as _ghelp
 from ListManagement.utility import processes as _process
 
@@ -62,9 +62,9 @@ class ListProcessing:
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._search_api = Search(log=self._log)
         self._finra_api = Finra(log=self._log)
-        self.vars = queue.build_queue(sfdc=SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken,
-                                                domain=con.SFDomain, verbose=False, _dir=con.BaseDir),
-                                      log=self._log)
+        self._sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken,
+                          domain=con.SFDomain, verbose=False, _dir=con.BaseDir)
+        self.vars = build_queue.build_queue(sfdc=self._sfdc, log=self._log)
         self.main_contact_based_processing()
 
     def main_contact_based_processing(self):
@@ -88,14 +88,16 @@ class ListProcessing:
         """
         for _vars in self.vars:
             if not self.is_bad_extension(_vars):
+                _vars.state = _vars.States(_vars.state + 1).value
                 try:
-                    if _vars['Object'] == 'Campaign':
+                    _vars.state = _vars.States(_vars.state + 1).value
+                    if _vars.list_type == 'Campaign':
                         _vars = self.campaign_processing(_vars)
 
-                    elif _vars['Object'] == 'Account':
+                    elif _vars.list_type == 'Account':
                         _vars = self.account_processing(_vars)
 
-                    elif _vars['Object'] == 'BizDev Group':
+                    elif _vars.list_type == 'BizDev Group':
                         _vars = self.bizdev_processing(_vars)
 
                     _ghelp.record_processing_stats(_vars['Stats Data'])
@@ -120,21 +122,18 @@ class ListProcessing:
         -------
             Boolean (True or False)
         """
-        if _vars['ExtensionType'] in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
-            if _vars['CmpAccountName'] is None:
-                obj_name = _vars['Record Name']
-            else:
-                obj_name = _vars['CmpAccountName']
+        if _vars.extension in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
+            obj_name = _vars.account_name if _vars.account_name is not None else _vars.object_name
             sub = 'LMA: Unable to Process List Attached to %s' % obj_name
             msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
-                  'List Management App.' % (obj_name, _vars['ExtensionType'])
+                  'List Management App.' % (obj_name, _vars.extension)
             self._log.warning(msg)
             Email(con.SMTPUser, con.SMTPPass, self._log).send_new_email(
-                subject=sub, to=[_vars['Sender Email']], body=msg, attachments=None
+                subject=sub, to=[_vars.requested_by_email], body=msg, attachments=None
                 , name=con.FullName
             )
-            _vars['SFDC Session'].update_records(obj='List__c', fields=['Status__c'],
-                                                 upload_data=[[_vars['ListObjId'], 'Unable to Process']])
+            self._sfdc.update_records(obj='List__c', fields=['Status__c'],
+                                      upload_data=[[_vars.list_id, 'Unable to Process']])
             return True
         else:
             return False
@@ -164,24 +163,19 @@ class ListProcessing:
         -------
             Nothing
         """
-        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'],
-                                                                 _vars['CmpAccountName'], self._log, self.mode))
-        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
-        try:
-            self.finra_search_and_search_two(_vars)
-        except:
-            self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
-            pass
+        _vars = predicts.predict_headers_and_pre_processing(_vars, self._log, self.mode)
+        _vars = self._search_api.perform_search_one(_vars)
+        # try:
+        _vars = self.finra_search_and_search_two(_vars)
+        # except:
+        #     self._log.info('An error occurred during FINRA or SearchTwo processing. Skipping.')
+        #     pass
 
-        _vars.update(_process.parse_list_based_on_type(path=_vars['Found Path'], l_type=_vars['Object'],
-                                                       pre_or_post=_vars['Pre_or_Post'], log=self._log,
-                                                       to_create_path=_vars['to_create_path']))
-        _vars.update(_process.source_channel(_vars['cmp_upload_path'], _vars['Record Name'],
-                                             _vars['ObjectId'], _vars['Object'], log=self._log))
-        _vars.update(_process.source_channel(_vars['to_create_path'], _vars['Record Name'],
-                                             _vars['CmpAccountID'], _vars['Object'], log=self._log))
+        _vars = _process.parse_list_based_on_type(_vars, log=self._log)
+        _vars = _process.source_channel(_vars, log=self._log)
+
         _vars.update(_process.sfdc_upload(path=_vars['cmp_upload_path'], obj=_vars['Object'],
-                                          obj_id=_vars['ObjectId'], session=_vars['SFDC Session'],
+                                          obj_id=_vars['ObjectId'], session=self._sfdc,
                                           log=self._log))
         _vars.update(_process.extract_dictionary_values(dict_data=_vars, log=self._log))
         if _vars['Move To Bulk']:
@@ -216,13 +210,10 @@ class ListProcessing:
         -------
             Nothing
         """
-        _vars.update(
-            predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['Record Name'],
-                                                        log=self._log, mode=self.mode))
-        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
-
+        _vars = predicts.predict_headers_and_pre_processing(_vars, self._log, self.mode)
+        _vars = self._search_api.perform_search_one(_vars)
         try:
-            self.finra_search_and_search_two(_vars)
+            _vars = self.finra_search_and_search_two(_vars)
         except:
             self._log.info('An error occurred during FINRA or SearchTwo processing, Skipping.')
             pass
@@ -283,13 +274,10 @@ class ListProcessing:
         -------
             Nothing
         """
-
-        _vars.update(predicts.predict_headers_and_pre_processing(_vars['File Path'], _vars['CmpAccountName'],
-                                                                 log=self._log, mode=self.mode))
-        _vars.update(self._search_api.perform_search_one(_vars['File Path'], _vars['Object']))
-
+        _vars = predicts.predict_headers_and_pre_processing(_vars, self._log, self.mode)
+        _vars = self._search_api.perform_search_one(_vars)
         try:
-            self.finra_search_and_search_two(_vars)
+            _vars = self.finra_search_and_search_two(_vars)
         except:
             self._log.info('An error occurred during FINRA or SearchTwo processing.')
             pass
@@ -348,22 +336,17 @@ class ListProcessing:
         -------
             Updated python dictionary containing metadata regarding a list request.
         """
-        if _vars['SFDC_Found'] < _vars['Total Records'] \
-                and _vars['FINRA?']:
+        if len(_vars.list_df.index) > 0 and _vars.search_finra:
 
-            _vars.update(self._finra_api.scrape(path=_vars['File Path'],
-                                                scrape_type='crd',
-                                                parse_list=True))
-            if (_vars['SFDC_Found'] + _vars['FINRA_Found']) < _vars['Total Records']:
-                _vars.update(
-                    self._search_api.perform_sec_search(_vars['No CRD'], _vars['FINRA_SEC Found']))
+            _vars = self._finra_api.scrape(_vars=_vars, scrape_type='crd', parse_list=True)
+            # if (_vars['SFDC_Found'] + _vars['FINRA_Found']) < _vars['Total Records']:
+            #     _vars.update(
+            #         self._search_api.perform_sec_search(_vars['No CRD'], _vars['FINRA_SEC Found']))
+            #
+            # else:
+            #     self._log.info(_steps[0])
 
-            else:
-                self._log.info(_steps[0])
-
-            _vars.update(self._search_api.perform_search_two(_vars['FINRA_SEC Found'],
-                                                             _vars['Found Path'],
-                                                             _vars['Object']))
+            _vars = self._search_api.perform_search_two(_vars)
         else:
             self._log.info(_steps[1])
         return _vars
@@ -386,6 +369,6 @@ class ListProcessing:
         self._log.error(msg)
         raise RuntimeError(msg)
 
-#
-# if __name__ == '__main__':
-#     lp = ListProcessing()
+
+if __name__ == '__main__':
+    lp = ListProcessing()
