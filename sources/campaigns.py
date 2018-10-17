@@ -10,7 +10,7 @@ from ListManagement.utility import general as ghelp
 from ListManagement.utility import pandas_helper as phelp
 
 
-def parse(path, frame, dict_elements, event_timing):
+def parse(_vars):
     """
     Function to help parse Campaign list requests into
     actionable Salesforce jobs (update, create).
@@ -30,27 +30,22 @@ def parse(path, frame, dict_elements, event_timing):
     -------
         Tuple; updated dictionary and list of files created.
     """
-    if event_timing == 'Post':
-        dict_elements['cmp_status'] = 'Needs Follow-Up'
-    else:
-        dict_elements['cmp_status'] = 'Invited'
-    dict_elements['to_create_path'] = ghelp.create_path_name(path, 'cmp_to_create')
-    dict_elements['cmp_upload_path'] = ghelp.create_path_name(path, 'cmp_upload')
+    _vars.campaign_member_status = 'Needs Follow-Up' if _vars.pre_or_post == 'Post' else 'Invited'
 
-    cmp_upload_df = frame[frame['AccountId'].notnull()]
-    to_create_df = frame[frame['AccountId'].isnull()]
+    _vars.create_path = ghelp.create_path_name(_vars.list_base_path, 'cmp_to_create')
+    _vars.campaign_upload_path = ghelp.create_path_name(_vars.list_base_path, 'cmp_upload')
 
-    dict_elements['n_cmp_upload'] = len(cmp_upload_df.index)
-    dict_elements['n_to_create'] = len(to_create_df.index)
-    cmp_upload_df['Status'] = dict_elements['cmp_status']
+    _vars.campaign_upload_df = _vars.found_df[_vars.found_df['AccountId'].notnull()]
+    _vars.create_df = _vars.found_df[_vars.found_df['AccountId'].isnull()]
 
-    phelp.save_df(df=cmp_upload_df, path=dict_elements['cmp_upload_path'])
-    phelp.save_df(df=to_create_df, path=dict_elements['to_create_path'])
+    _vars.campaign_upload_records = len(_vars.campaign_upload_df.index)
+    _vars.create_records = len(_vars.create_df.index)
+
     files_created = ['cmp_upload_path', 'to_create_path']
-    return dict_elements, files_created
+    return _vars, files_created
 
 
-def make_sc(path, frame, record_name, obj_id, obj):
+def make_sc(path, frame, _vars):
     """
     Function to manufacture a 'source_channel' for contacts
     that need to be created.
@@ -75,18 +70,15 @@ def make_sc(path, frame, record_name, obj_id, obj):
     -------
         Tuple; updated pandas dataframe, move to bulk (boolean), and to_create_path (string)
     """
-    move_to_bulk = False
-    sc_to_add = 'conference_' + record_name + '_' + ghelp.yyyy_mm
+    sc_to_add = 'conference_' + _vars.object_name + '_' + ghelp.yyyy_mm
     if 'to_create_path' in path:
-        frame = ghelp.drop_unneeded_columns(frame, obj)
-        to_create = 0
-        frame.loc[frame['AccountId'].isnull(), 'AccountId'] = obj_id
+        frame = ghelp.drop_unneeded_columns(frame, _vars.list_type)
+        frame.loc[frame['AccountId'].isnull(), 'AccountId'] = _vars.account_id
         frame.loc[frame['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
-        move_to_bulk = ghelp.determine_move_to_bulk_processing(frame)
-        if move_to_bulk:
-            ghelp.save_conf_creation_meta(sc=sc_to_add, objid=obj_id, status=frame.iloc[0, 0])
+        _vars.bulk_processing = ghelp.determine_move_to_bulk_processing(frame)
+        if _vars.bulk_processing:
+            ghelp.save_conf_creation_meta(sc=sc_to_add, objid=_vars.object_id, status=frame.iloc[0, 0])
     else:
-        list_df = ghelp.drop_unneeded_columns(frame, obj, create=False)
-        to_create = 0
-        list_df['CampaignId'] = obj_id
-    return frame, move_to_bulk, to_create
+        frame = ghelp.drop_unneeded_columns(frame, _vars.list_type, create=False)
+        frame['CampaignId'] = _vars.object_id
+    return frame, _vars
