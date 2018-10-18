@@ -134,16 +134,26 @@ def source_channel(_vars, log):
         A python dictionary containing next steps for the list processing tool.
     """
     if _vars.list_type == 'Campaign':
-        _vars.campaign_upload_df, _vars = campaigns.make_sc(path=_vars.campaign_upload_path,
-                                                            frame=_vars.campaign_upload_df,
-                                                            _vars=_vars)
+        _vars.src_object_upload_df, _vars = campaigns.make_sc(path=_vars.src_object_upload_path,
+                                                              frame=_vars.src_object_upload_df,
+                                                              _vars=_vars)
         _vars.create_df, _vars = campaigns.make_sc(path=_vars.create_path,
                                                    frame=_vars.create_df,
                                                    _vars=_vars)
     elif _vars.list_type == 'BizDev Group':
-        msg = 'Will be performed thrice.'
+        _vars.update_df, _vars = bdgs.make_sc(path=_vars.update_path,
+                                              frame=_vars.update_df,
+                                              _vars=_vars)
+        _vars.create_df, _vars = bdgs.make_sc(path=_vars.create_path,
+                                              frame=_vars.create_df,
+                                              _vars=_vars)
+        _vars.src_object_upload_df, _vars = bdgs.make_sc(path=_vars.src_object_upload_path,
+                                                         frame=_vars.src_object_upload_df,
+                                                         _vars=_vars)
     else:
-        msg = ''
+        _vars.update_df, _vars = bdgs.make_sc(path=_vars.update_path,
+                                              frame=_vars.update_df,
+                                              _vars=_vars)
     # log.info("Preparing data prep for the %s list's action files, based list type. %s" % (obj, msg))
     # list_df = read_df(path)
 
@@ -288,7 +298,7 @@ def extract_dictionary_values(dict_data, log=None):
             'Stats Data': items_for_stats}
 
 
-def sfdc_upload(path, obj, obj_id, session, log=None):
+def sfdc_upload(path, obj, obj_id, session, _vars=None, log=None, ):
     # Todo: consider refactoring.
     """
     A routing method which performs final preparation and orchestrates a Salesforce upload
@@ -311,8 +321,7 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
     -------
         A python dictionary containing metadata and next steps for the list program.
     """
-    paths, stats = ['', '', '', ''], ['', '', '']
-    df = read_df(path=path)
+    df = _vars.src_object_upload_df
     if obj == 'BizDev Group':
         df.rename(columns={'BizDev Group': 'BizDev_Group__c', 'Licenses': 'Licenses__c'}, inplace=True)
         df = df[['ContactID', 'BizDev_Group__c', 'Licenses__c']]
@@ -323,7 +332,7 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
     if len(df.index) > 0:
         log.info('Attempting to upload data to SalesForce for the %s object.' % obj)
         try:
-            paths, stats = upload(session, df, obj_id, obj, path)
+            paths, stats = upload(session, df, _vars.object_id, _vars.list_type, _vars)
         except:
             sub = 'LMA: %s upload fail for %s' % (path, obj)
             body = 'Experienced an error upload the %s file to the %s object in SFDC. Please' \
@@ -347,7 +356,7 @@ def sfdc_upload(path, obj, obj_id, session, log=None):
             'Num Updating/Staying': stats[2]}
 
 
-def upload(session, data, obj_id, obj, path):
+def upload(session, data, obj_id, obj, path, _vars):
     """
     import pandas as pd
     source_data = {'A': [1, 2, 3], 'B': ['X', 'Y', 'Z']}
@@ -371,6 +380,7 @@ def upload(session, data, obj_id, obj, path):
         current_members = session.query(sfdc_object=upload_map[obj]['sf_query']['object']
                                         , fields=upload_map[obj]['sf_query']['fields']
                                         , where=upload_map[obj]['sf_query']['where'].format(obj_id))
+
         save_df(current_members, _ghelp.create_path_name(path, 'current_members'))
         insert, update, remove = crud(data, current_members, on=upload_map[obj]['sf_query']['fields'][0])
         n_add, n_up, n_re = len(insert.index), len(update.index), len(remove.index)
