@@ -7,7 +7,6 @@ object in Salesforce.
 """
 
 from ListManagement.utility import general as ghelp
-from ListManagement.utility import pandas_helper as phelp
 
 
 def parse(_vars):
@@ -33,16 +32,15 @@ def parse(_vars):
     _vars.campaign_member_status = 'Needs Follow-Up' if _vars.pre_or_post == 'Post' else 'Invited'
 
     _vars.create_path = ghelp.create_path_name(_vars.list_base_path, 'cmp_to_create')
-    _vars.campaign_upload_path = ghelp.create_path_name(_vars.list_base_path, 'cmp_upload')
+    _vars.src_object_upload_path = ghelp.create_path_name(_vars.list_base_path, 'cmp_upload')
 
-    _vars.campaign_upload_df = _vars.found_df[_vars.found_df['AccountId'].notnull()]
+    _vars.src_object_upload_df = _vars.found_df[_vars.found_df['AccountId'].notnull()]
     _vars.create_df = _vars.found_df[_vars.found_df['AccountId'].isnull()]
 
-    _vars.campaign_upload_records = len(_vars.campaign_upload_df.index)
+    _vars.src_object_upload_records = len(_vars.src_object_upload_path.index)
     _vars.create_records = len(_vars.create_df.index)
 
-    files_created = ['cmp_upload_path', 'to_create_path']
-    return _vars, files_created
+    return _vars
 
 
 def make_sc(path, frame, _vars):
@@ -70,15 +68,16 @@ def make_sc(path, frame, _vars):
     -------
         Tuple; updated pandas dataframe, move to bulk (boolean), and to_create_path (string)
     """
-    sc_to_add = 'conference_' + _vars.object_name + '_' + ghelp.yyyy_mm
-    if 'to_create_path' in path:
-        frame = ghelp.drop_unneeded_columns(frame, _vars.list_type)
-        frame.loc[frame['AccountId'].isnull(), 'AccountId'] = _vars.account_id
-        frame.loc[frame['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
-        _vars.bulk_processing = ghelp.determine_move_to_bulk_processing(frame)
-        if _vars.bulk_processing:
-            ghelp.save_conf_creation_meta(sc=sc_to_add, objid=_vars.object_id, status=frame.iloc[0, 0])
-    else:
-        frame = ghelp.drop_unneeded_columns(frame, _vars.list_type, create=False)
-        frame['CampaignId'] = _vars.object_id
+    if len(frame.index):
+        sc_to_add = 'conference_' + _vars.object_name + '_' + ghelp.yyyy_mm
+        if 'to_create_path' in path:
+            frame = ghelp.drop_unneeded_columns(frame, _vars.list_type)
+            frame.loc[frame['AccountId'].isnull(), 'AccountId'] = _vars.account_id
+            frame.loc[frame['SourceChannel'].isnull(), 'SourceChannel'] = sc_to_add
+            _vars.bulk_processing = ghelp.determine_move_to_bulk_processing(frame)
+            if _vars.bulk_processing:
+                ghelp.save_conf_creation_meta(sc=sc_to_add, objid=_vars.object_id, status=frame.iloc[0, 0])
+        else:
+            frame = ghelp.drop_unneeded_columns(frame, _vars.list_type, create=False)
+            frame['CampaignId'] = _vars.object_id
     return frame, _vars
