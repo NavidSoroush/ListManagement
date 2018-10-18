@@ -38,10 +38,12 @@ _accepted_cols = [
 _necessary_cols = _accepted_cols[:8]
 _bdg_accepted_cols = ['ContactID', 'BizDev Group', 'Licenses']
 _cmp_accepted_cols = ['ContactID', 'CampaignId', 'Status']
-_new_path_names = ['_nocrd', '_finrasec_found', '_FINRA_ambiguous',
-                   '_review_contacts', '_foundcontacts', 'cmp_to_create',
-                   'cmp_upload', 'no_updates', 'to_update', 'to_create', 'bdg_update',
-                   'to_add', 'to_stay', 'current_members', 'to_remove']
+
+_new_path_names = [
+    '_foundcontacts', 'to_create', 'to_update', 'to_remove', 'to_stay',
+    '_finrasec_found', '_FINRA_ambiguous', '_nocrd', '_review_contacts',
+    '_research', '_sf_update', '_sf_create', '_no_updates', '_current_members'
+]
 
 
 def is_path(path):
