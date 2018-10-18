@@ -40,28 +40,32 @@ class ListBase(object):
         self.create_df = None
         self.update_df = None
         self.remove_df = None
+        self.stay_df = None
         self.finra_found_df = None
         self.finra_ambiguous_df = None
         self.no_crd_df = None
         self.review_df = None
         self.research_df = None
-        self.campaign_upload_df = None
-        self.bdg_upload_df = None
+        self.src_object_upload_df = None
+        self.src_object_create_df = None
         self.no_update_df = None
+        self.current_members_df = None
 
         # Output file paths
         self.found_path = None
         self.create_path = None
         self.update_path = None
         self.remove_path = None
+        self.stay_path = None
         self.finra_found_path = None
         self.finra_ambiguous_path = None
         self.no_crd_path = None
         self.review_path = None
         self.research_path = None
-        self.campaign_upload_path = None
-        self.bdg_upload_path = None
+        self.src_object_upload_path = None
+        self.src_object_create_path = None
         self.no_update_path = None
+        self.current_members_path = None
 
         # Salesforce metadata
         self.list_type = kwargs['list_type']
@@ -87,7 +91,7 @@ class ListBase(object):
         self.total_records = 0
         self.found_records = 0
         self.updating_records = 0
-        self.campaign_upload_records = 0
+        self.src_object_upload_records = 0
         self.create_records = 0
         self.remove_records = 0
         self.no_update_records = 0
