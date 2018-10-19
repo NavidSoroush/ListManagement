@@ -5,9 +5,9 @@ import datetime as dt
 from PythonUtilities.LoggingUtility import Logging
 from PythonUtilities.EmailHandling import EmailHandler as Email
 
-from ListManagement.utility.email_reader import MailBoxReader
+from ListManagement.utils.email_reader import MailBoxReader
 from ListManagement.config import Config as con
-from ListManagement.utility.general import duration, time
+from ListManagement.utils.general import duration, time
 
 if __name__ == '__main__':
     log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
