@@ -6,9 +6,9 @@ for pending list requests.
 """
 
 import datetime as _dt
-from ListManagement.utility import pandas_helper as _phelp
-from ListManagement.utility import general as _ghelp
-from ListManagement.models import lists as model
+from ListManagement.utils import pandas_helper as _phelp
+from ListManagement.utils import general as _ghelp
+from ListManagement.core.models import lists as model
 
 _LIST_FIELDS = ['Id', 'Related_Account__c', 'Related_BizDev_Group__c',
                 'Related_Campaign__c', 'OwnerId', 'File_Name__c',
@@ -187,7 +187,7 @@ def queue_metadata_to_list(data):
     return list_queue
 
 
-def build_queue(sfdc, log=None):
+def establish_queue(sfdc, log=None):
     """
     Queries Salesforce to extract any pending lists (and necessary metadata).
 
@@ -232,12 +232,40 @@ def build_queue(sfdc, log=None):
 """
 For testing
 
-from ListManagement.utility import build_queue
 from PythonUtilities.salesforcipy import SFPy
+from ListManagement.utility import build_queue
 from ListManagement.config import Config as con
-import logging
-sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False, _dir=con.BaseDir)
+from ListManagement import standardization as _std
+from ListManagement.search.ml import header_predictions as predicts
+from ListManagement.search import salesforce, finra
+from ListManagement import data_staging as stage
+from ListManagement import parsing as parse
+from ListManagement import pruning as prune
+from ListManagement import uploads as upload
 
+import logging
+
+sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, domain=con.SFDomain, verbose=False, _dir=con.BaseDir)
 log = logging.getLogger()
-list_queue = build_queue.build_queue(sfdc, log)
+searcher = salesforce.Search(log)
+finra = finra.Finra(log)
+stager = stage.Staging(log)
+parser = parse.Parser(log)
+pruner = prune.Pruning(log)
+uploader = upload.Uploader(log)
+
+list_queue = build_queue.establish_queue(sfdc, log)
+for item in list_queue:
+    item.update_state()
+    item = predicts.predict_headers_and_pre_processing(item, log, 'manual')
+    item = _std.DataStandardization(log).standardize_all(item)
+    
+    item = searcher.perform_search_one(item)
+    item = finra.scrape(_vars=item, scrape_type='crd', parse_list=True)
+    item = searcher.perform_search_two(item)
+    
+    item = stager.fill_gaps(item)
+    item = parser.split_found_into_actions(item)
+    item = pruner.upload_preparation(item)
+    item = uploader.upload(item, sfdc)
 """
