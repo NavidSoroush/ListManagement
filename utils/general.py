@@ -9,10 +9,9 @@ import os
 import sys
 import re
 import time
-import datetime
+import datetime as _dt
 from dateutil.parser import parse
 import shutil
-import errno
 import ntpath
 
 import pandas as pd
@@ -25,22 +24,13 @@ userEmail = userEmail
 userPhone = userPhone
 
 user = os.environ.get("USERNAME")
-today = datetime.datetime.strftime(datetime.datetime.now(), '%m_%d_%Y')
-m_d_y = format(datetime.datetime.now(), '%m-%d-%y')
-time_now = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-yyyy_mm = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m')
-_accepted_cols = [
-    'CRDNumber', 'FirstName', 'LastName', 'AccountId'
-    , 'MailingStreet', 'MailingCity', 'MailingState', 'MailingPostalCode'
-    , 'SourceChannel', 'Email', 'Website', 'AUM', 'GDC', 'Fax'
-    , 'HomePhone', 'MobilePhone', 'Phone'
-]
-_necessary_cols = _accepted_cols[:8]
-_bdg_accepted_cols = ['ContactID', 'BizDev Group', 'Licenses']
-_cmp_accepted_cols = ['ContactID', 'CampaignId', 'Status']
+today = _dt.datetime.strftime(_dt.datetime.now(), '%m_%d_%Y')
+m_d_y = format(_dt.datetime.now(), '%m-%d-%y')
+time_now = _dt.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+yyyy_mm = _dt.datetime.strftime(_dt.datetime.now(), '%Y%m')
 
 _new_path_names = [
-    '_foundcontacts', 'to_create', 'to_update', 'to_remove', 'to_stay',
+    '_foundcontacts', 'to_create', 'to_update', 'to_remove', 'to_stay', 'to_add',
     '_finrasec_found', '_FINRA_ambiguous', '_nocrd', '_review_contacts',
     '_research', '_sf_update', '_sf_create', '_no_updates', '_current_members'
 ]
@@ -97,7 +87,7 @@ def date_parsing(str_date_value):
     -------
         Datetime object of given date.
     """
-    return datetime.datetime.strptime(str_date_value, '%a, %d %b %Y %H:%M:%S %z')
+    return _dt.datetime.strptime(str_date_value, '%a, %d %b %Y %H:%M:%S %z')
 
 
 def split_dir_name(full_path):
@@ -152,7 +142,7 @@ def last_list_uploaded_data(object_id):
         A list.
         Examples: [object_id, current time in ISO-format.]
     """
-    uploaded_date = datetime.datetime.utcnow().isoformat()
+    uploaded_date = _dt.datetime.utcnow().isoformat()
     return [object_id, uploaded_date]
 
 
@@ -196,151 +186,6 @@ def split_name(path):
     if name[1][-1] == ' ':
         name[1] = name[1][:-1]
     return name[1]
-
-
-def convert_unicode_to_date(date_string):
-    """
-    Transforms a string containing a date into a datetime object. Decides if
-    the date is in the future or in the past.
-
-    Parameters
-    ----------
-    date_string
-        A string representing a date.
-
-    Returns
-    -------
-        A tuple containing the 1) datetime object and 2) if the date is in the future or past.
-    """
-    date_string = parse(date_string)
-    today = datetime.datetime.now()
-    diff = today - date_string
-    if diff.days > 0:
-        time_type = 'Post'
-    else:
-        time_type = 'Pre'
-    return date_string, time_type
-
-
-def create_dir_move_file(path):
-    """
-    Creates and moves a given file from it's current directory to a child directory.
-
-    Parameters
-    ----------
-    path
-        A string representing a full file path.
-
-    Returns
-    -------
-        A string representing the new full file path location.
-    """
-    og_path = path[0]
-    name = split_name(path[0])
-    ext_len, file_ext = determine_ext(name)
-    new_path = og_path[:-int(ext_len)]
-    if not os.path.isdir(new_path):
-        try:
-            os.makedirs(new_path)
-        except OSError:
-            if OSError.errno == errno.EEXIST and os.path.isdir(new_path):
-                pass
-            else:
-                raise
-
-    shutil.copy(og_path, new_path)
-    new_path = new_path + '/' + name
-    os.remove(og_path)
-    return new_path
-
-
-def clean_phone_number(number):
-    """
-    Aims to normalize the formatting of a phone number.
-
-    Parameters
-    ----------
-    number
-        A string representation of a phone number.
-
-    Returns
-    -------
-        A normalized & updated string representation of a phone number.
-    """
-    phone = re.sub(r'\D', '', str(number))
-    phone = phone.lstrip('1')
-    if len(phone) > 10:
-        return '({}) {}-{}x{}'.format(phone[0:3], phone[3:6], phone[6:10], phone[10:])
-
-    elif len(phone) < 10:
-        return ''
-    else:
-        return '({}) {}-{}'.format(phone[0:3], phone[3:6], phone[6:])
-
-
-def drop_unneeded_columns(df, obj, ac=_accepted_cols, create=True, bdg=False):
-    """
-    Removes all columns that are not needed by Business Solutions' Salesforce
-    bulk uploading tool.
-
-    Parameters
-    ----------
-    df
-        A pandas data frame containing a list.
-    obj
-        A string representing a Salesforce object.
-    ac
-        A list containing the columns accepted by the bulk tool.
-    create
-        Boolean. Denotes if this call is coming from a 'to_create' contacts
-        request or not.
-    bdg
-        Boolean. Denotes if this call is coming from a BizDev Group request
-        or not.
-
-    Returns
-    -------
-        An updated pandas data frame object containing only the
-        bulk tool's accepted columns.
-    """
-    if bdg:
-        ac = _bdg_accepted_cols
-    headers = df.columns.values
-    if obj != 'Campaign' or create:
-        for header in headers:
-            if header not in ac:
-                del df[header]
-        return df
-    else:
-        for header in headers:
-            if header not in _cmp_accepted_cols:
-                del df[header]
-        return df
-
-
-def determine_move_to_bulk_processing(df):
-    """
-    Determines of a list request contains the necessary columns (meta-data)
-    to be passed to Business Solutions' Salesforce bulk processing tool.
-
-    Parameters
-    ----------
-    df
-        A pandas data frame containing a list.
-    Returns
-    -------
-        Boolean (True or False).
-    """
-    headers = df.columns.values
-    for ac in _necessary_cols:
-        if ac not in headers:
-            move = False
-            break
-        else:
-            move = True
-    if len(df.index) == 0:
-        move = False
-    return move
 
 
 def save_conf_creation_meta(sc, objid, status):
@@ -509,7 +354,7 @@ def date_to_string(d_value):
     -------
         The string representation of a date.
     """
-    return datetime.datetime.strftime(d_value, '%m/%d/%Y %H:%M:%S')
+    return _dt.datetime.strftime(d_value, '%m/%d/%Y %H:%M:%S')
 
 
 def timedelta_to_processing_str(duration):
@@ -550,7 +395,7 @@ def auto_maintain(directory, destination=None, ndays=30, log=None):
         Nothing
     """
     cleaned = 0
-    dt = datetime.datetime
+    dt = _dt.datetime
     for f in os.listdir(directory):
         delta = dt.now() - dt.fromtimestamp(os.path.getmtime(os.path.join(directory, f)))
         if delta.days > ndays:

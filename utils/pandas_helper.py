@@ -4,7 +4,7 @@ import pandas as pd
 try:
     from .general import determine_ext
 except:
-    from ListManagement.utility.general import determine_ext
+    from ListManagement.utils.general import determine_ext
 
 
 def read_df(path):

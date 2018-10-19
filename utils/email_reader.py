@@ -1,26 +1,22 @@
 from __future__ import absolute_import
-
 import re
 import imaplib
 from email.utils import parseaddr
-import time
 import datetime
 import warnings
 
-from cred import outlook_userEmail, password  # , sfuser, sfpw, sf_token
+# from cred import outlook_userEmail, password  # , sfuser, sfpw, sf_token
+import os
+
+outlook_userEmail, password = os.environ['useremail'], os.environ['useremailpassword']
 
 from PythonUtilities.salesforcipy import SFPy
 from PythonUtilities.EmailHandling import EmailHandler as Email
 
-try:
-    from .sf_helper import get_user_id
-    from .general import determine_ext, date_parsing
-    from .email_helper import *
-    from ListManagement.config import Config as con
-except (ModuleNotFoundError, ImportError):
-    from ListManagement.utility.sf_helper import get_user_id
-    from ListManagement.utility.general import determine_ext, date_parsing
-    from ListManagement.utility.email_helper import *
+
+from ListManagement.utils.sf_helper import get_user_id
+from ListManagement.utils.general import date_parsing
+from ListManagement.utils.email_helper import *
 
 
 class ReturnDict(object):
@@ -57,17 +53,6 @@ class MailBoxReader:
             else:
                 if folder == self.new_requests_folder:
                     self.handle_new_email_requests(num, email.message_from_string(f_data[0][1].decode('utf-8')))
-                else:
-                    list_queue = handle_list_queue_requests(num, f_data, list_queue)
-
-        if folder == self.new_requests_folder:
-            return
-        else:
-            self.log.info('Found %s lists pending in the queue.' % len(list_queue))
-            item = {'Lists_In_Queue': len(list_queue),
-                    'Num_Processed': 0,
-                    'Lists_Data': list_queue}
-            return item
 
     def handle_new_email_requests(self, num, raw_email):
         attmts = list()
@@ -102,88 +87,6 @@ class MailBoxReader:
         self.determine_path_and_complete_processing(num=num, dict_data=tmp_dict, att=attmts, msg_body=msg_body,
                                                     sender_addr=tmp_dict['email'])
         attachment_reader(remove=True)
-
-    def iterative_processing(self, msg_list):
-        warnings.warn('This method will be remove in version 4.0. For gathering necessary '
-                      'meta-data for a list, use the build_queue method found in /utility/build_queue.py',
-                      PendingDeprecationWarning)
-        msg = msg_list[0]
-        msg_body = msg_list[1]
-        msg_id = msg_list[2]
-
-        if objects[0] in msg_body:
-            obj = objects[0]
-        elif objects[1] in msg_body:
-            obj = objects[1]
-        else:
-            obj = 'Account'
-
-        rec_date = datetime.datetime.strftime(
-            date_parsing(msg['Date']), '%m/%d/%Y %H:%M:%S')
-
-        sender_name = parseaddr(msg['From'])[0]
-        sent_from = parseaddr(msg['From'])[1]
-
-        obj_rec_name = info_parser(msg_body, list_notification_elements[1],
-                                   list_notification_elements[2])
-
-        self.log.info(
-            "Processing begins on %s's list attached to %s on the %s object" % (sender_name, obj_rec_name, obj))
-
-        obj_rec_link = info_parser(msg_body, list_notification_elements[3],
-                                   list_notification_elements[4])
-
-        att_link = info_parser(msg_body, list_notification_elements[4],
-                               list_notification_elements[-2])[39:57]
-
-        list_obj = info_parser(msg_body, list_notification_elements[-1])[40:58]
-
-        self.log.info('Attachment Id: %s' % att_link)
-        self.log.info('List Object Id: %s' % list_obj)
-
-        if obj == 'Campaign':
-            obj_rec_link = obj_rec_link[-18:]
-        elif obj == 'BizDev Group':
-            obj_rec_link = info_parser(msg_body, list_notification_elements[5],
-                                       list_notification_elements[4])
-            obj_rec_link = obj_rec_link[39:57]
-        else:
-            obj_rec_link = obj_rec_link[39:57]
-        self.log.info('Object Id: %s' % obj_rec_link)
-
-        self.log.info('Downloading attachment from SFDC.')
-        sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken, log=self.log, domain=con.SFDomain,
-                    _dir=os.path.expanduser('~/Downloads'))
-        file_path, start_date, pre_or_post, a_name, a_id = sfdc.download_attachments(att_id=att_link, obj=obj,
-                                                                                     obj_url=obj_rec_link)
-        ext_len, ext = determine_ext(f_name=file_path)
-
-        self._move_received_list_to_processed_folder(num=msg_id, folder='"INBOX/Auto Processed Lists"')
-
-        # _subject = "LMA Notification: %s list received." % obj_rec_name
-        # _body = '%s, \n \nThe list that you attached to the %s object, %s has been added to our list queue. ' \
-        #         'You will receive a notification after your list has been processed. \n \n' % (sender_name, obj,
-        #                                                                                        obj_rec_name)
-        # Email(subject=_subject, to=[sent_from], body=_body, attachment_path=None)
-        self.log.info('Combining all meta data from %s list for processing.' % obj)
-        pstart = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-        Items = [ReturnDict('Object', obj), ReturnDict('Record Name', obj_rec_name),
-                 ReturnDict('Sender Email', sent_from), ReturnDict('Sender Name', sender_name),
-                 ReturnDict('Received Date', rec_date), ReturnDict('File Path', file_path),
-                 ReturnDict('Campaign Start Date', start_date), ReturnDict('Next Step', 'Pre-processing'),
-                 ReturnDict('Found Path', None), ReturnDict('ObjectId', obj_rec_link),
-                 ReturnDict('Pre_or_Post', pre_or_post), ReturnDict('process_start', pstart),
-                 ReturnDict('CmpAccountName', a_name), ReturnDict('CmpAccountID', a_id),
-                 ReturnDict('Found in SFDC Search #2', 0), ReturnDict('Num Adding', 0),
-                 ReturnDict('Num Removing', 0), ReturnDict('Num Updating/Staying', 0),
-                 ReturnDict('Review Path', None), ReturnDict('SFDC Session', sfdc),
-                 ReturnDict('AttachmentId', att_link), ReturnDict('ListObjId', list_obj),
-                 ReturnDict('ExtensionType', ext)]
-
-        vars_list = dict([(i.item, i.email_var) for i in Items])
-        self.log.info('Current vars list: \n%s' % vars_list)
-
-        return vars_list
 
     def _move_received_list_to_processed_folder(self, num, folder):
         self.mailbox.copy(num, folder)
