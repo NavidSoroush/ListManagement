@@ -1,9 +1,5 @@
-try:
-    from ListManagement.search.ml.model import HeaderPredictions
-    from ListManagement.utility.pandas_helper import read_df, make_df, save_df, concat_dfs
-except:
-    from ml.model import HeaderPredictions
-    from utility.pandas_helper import read_df, make_df, save_df, concat_dfs
+from ListManagement.core.ml.model import HeaderPredictions
+from ListManagement.utils.pandas_helper import read_df, make_df, save_df, concat_dfs
 
 _confidence = .99
 
@@ -13,9 +9,9 @@ def _update_column_names_with_predictions():
 
 
 def predict_headers_and_pre_processing(_vars, log, mode):
-    _vars.state = _vars.States(_vars.state + 1).value
+    _vars.update_state()
     model = HeaderPredictions(log=log, use_saved=True)
-    model.predict(predict_path=_vars.list_base_path, obj=_vars.list_type)
+    model.predict(_vars)
     headers = model.p_df.columns.values
     log.info("Here are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, headers))
     output = make_df(data={"1. Header": headers, "3. Prediction": model.predictions})
@@ -65,42 +61,9 @@ def predict_headers_and_pre_processing(_vars, log, mode):
 
             model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
 
-    account_name = _vars.account_name if _vars.account_name is not None else _vars.object_name
-    model.p_df = pre_processing(df=model.p_df, obj=account_name)
-
     # clean up this part of the code
     new_data = make_df(data=new_headers, columns=('Header Value', 'Class'))
-    num_records = len(model.p_df.index)
     new_brain = concat_dfs([read_df(model.brain), new_data])
     save_df(new_brain, model.brain)
-    _vars.list_df = model.p_df
-    _vars.total_records = num_records
-    _vars.state = _vars.States(_vars.state + 1).value
+    _vars.list_source['frame'] = model.p_df
     return _vars
-
-
-def pre_processing(df, obj):
-    if 'Account' not in df.columns.values:
-        acc_list = [obj] * len(df.index)
-        df.insert(0, "Account", acc_list)
-
-    if 'MailingStreet1' in df.columns.values and 'MailingStreet2' in df.columns.values:
-        df.MailingStreet1 = df.MailingStreet1.astype(str)
-        df.MailingStreet2 = df.MailingStreet2.astype(str)
-        df.fillna('NaN')
-        df['MailingStreet'] = ''
-        for index, row in df.iterrows():
-            if df.loc[index, 'MailingStreet2'] == 'nan':
-                df.loc[index, 'MailingStreet'] = df.loc[index, 'MailingStreet1']
-            else:
-                df.loc[index, 'MailingStreet'] = df.loc[index, 'MailingStreet1'] + ' ' + \
-                                                 df.loc[index, 'MailingStreet2']
-
-        del df['MailingStreet1']
-        del df['MailingStreet2']
-        df['MailingStreet'] = df['MailingStreet'].str.replace(',', '')
-    elif 'MailingStreet1' in df.columns.values and 'MailingStreet2' not in df.columns.values:
-        df.rename(columns={'MailingStreet1': 'MailingStreet'}, inplace=True)
-        df['MailingStreet'] = df['MailingStreet'].str.replace(',', '')
-
-    return df
