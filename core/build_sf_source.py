@@ -1,6 +1,5 @@
-from ListManagement.legacy.sf_adv_formatting import needs_update_flag
-from ListManagement.utility import general as _ghelp
-from ListManagement.utility.pandas_helper import pd
+from ListManagement.utils import general as _ghelp
+from ListManagement.utils.pandas_helper import pd
 
 _ADDRESS_STOP_WORDS = [
     'Address', 'Postal', 'State', 'Street', 'City', 'Metro', 'Geocode'
@@ -26,6 +25,39 @@ _query_where = "DST_Contact_Type__c = 'Single' and Territory__c != 'Partnership 
 _todays_sfdc_advisor_list = 'T:\\Shared\\FS2 Business Operations\\Python Search Program' \
                             '\\Salesforce Data Files\\SFDC Advisor List as of ' \
                             + _ghelp.time.strftime("%m-%d-%y") + '.csv'
+
+
+# this function will coerce the dates from an object format to datetime
+def clean_dates(frame, headers):
+    for i in range(len(frame.columns)):
+        frame.loc[:, headers[i]] = pd.to_datetime(frame.loc[:, headers[i]], errors='coerce')
+    return frame
+
+
+# create function to evalute last time an advisor was contact / updated
+def needs_update_flag(frame, headers, activity_range, sales_range):
+    df2 = clean_dates(frame, headers)
+    activ_day = pd.Timestamp.now() - pd.Timedelta(days=activity_range)
+    sale_day = pd.Timestamp.now() - pd.Timedelta(days=sales_range)
+    var = []
+    for ind, val in df2.iterrows():
+        colcount = 0
+        count = 0
+        for v in val:
+            word = str(type(v))
+            if colcount < 2:
+                if v > activ_day and 'NaTType' not in word:
+                    count += 1
+                colcount += 1
+            else:
+                if v > sale_day and 'NaTType' not in word:
+                    count += 1
+                colcount += 1
+        if count > 0:
+            var.append('N')
+        else:
+            var.append('Y')
+    return var
 
 
 def remove_stopwords(fields):
@@ -81,7 +113,6 @@ def build_current_fa_list(sf):
     query_end = _ghelp.time.time()
     # printing success and time it took to complete query and save
     print("Saving complete. Query took: %s" % _ghelp.duration(query_start, query_end))
-    return {'SFDC Target': data}
 
 #
 # if __name__ == '__main__':
