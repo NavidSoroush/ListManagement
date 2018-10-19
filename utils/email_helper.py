@@ -8,7 +8,7 @@ from lxml.html import fromstring
 try:
     from . import general as _ghelp
 except ModuleNotFoundError:
-    from ListManagement.utility import general as _ghelp
+    from ListManagement.utils import general as _ghelp
 
 objects = ['Campaign', 'BizDev Group', 'Account']
 list_notification_elements = [
