@@ -12,11 +12,11 @@ from selenium.webdriver.common.by import By
 from chromedriver import CHROMEDRV_PATH
 
 try:
-    from ListManagement.utility import general as _ghelp
-    from ListManagement.utility.pandas_helper import read_df, save_df, make_df
+    from ListManagement.utils import general as _ghelp
+    from ListManagement.utils.pandas_helper import read_df, save_df, make_df
 except:
-    from ..utility import general as _ghelp
-    from ..utility.pandas_helper import read_df, save_df, make_df
+    from ListManagement.utils import general as _ghelp
+    from ListManagement.utils.pandas_helper import read_df, save_df, make_df
 
 
 class Finra:
@@ -96,9 +96,10 @@ class Finra:
             Dependent on save parameter above.
             Scraped results are saved to a file path or returned to the user in a console.
         """
+        _vars.update_state()
         self._init_selenium_components()
         self._save_to_path = self._determine_save_path(path=_vars.list_base_path, alter_name=alter_name)
-        df = _vars.list_df.copy() if scrape_type == 'crd' else _vars.found_df.copy()
+        df = _vars.list_source['frame'].copy() if scrape_type == 'crd' else _vars.found['frame'].copy()
         df_cols = [x.lower().strip() for x in df.columns.tolist()]
 
         if 'crdnumber' in df_cols or scrape_type == 'all':
@@ -125,17 +126,14 @@ class Finra:
         if parse_list:
             _vars, df = self._parse_scraped_list(df=df, _vars=_vars)
             if scrape_type == 'crd':
-                _vars.list_df = df
+                _vars.list_source['frame'] = df
             else:
-                _vars.found_df = df
+                _vars.found['frame'] = df
             return _vars
 
         if save:
-            save_df(df, self._save_to_path)
-            return df
-
-        if not save and not parse_list:
-            return df
+            _vars.found['frame'] = df
+            return _vars
 
     def _main_scraper(self, xpath_keys):
         """
@@ -255,13 +253,9 @@ class Finra:
         -------
             A tuple, (number of advisors found, updated data frame of Found reps only.)
         """
-        _vars.no_crd_df = df[df['CRDNumber'] == 'CRD Not Found']
-        _vars.finra_ambiguous_df = df[df['CRDNumber'] == 'Multiple CRDs Present']
-        _vars.finra_found_df = df[~(df['CRDNumber'].isin(['Multiple CRDs Present', 'CRD Not Found']))]
-
-        _vars.no_crd_path = _ghelp.create_path_name(self._save_to_path, new_name='_nocrd')
-        _vars.finra_ambiguous_path = _ghelp.create_path_name(self._save_to_path, new_name='_FINRA_ambiguous')
-        _vars.finra_found_path = _ghelp.create_path_name(self._save_to_path, new_name='_finrasec_found')
+        _vars.no_crd['frame'] = df[df['CRDNumber'] == 'CRD Not Found']
+        _vars.finra_ambiguous['frame'] = df[df['CRDNumber'] == 'Multiple CRDs Present']
+        _vars.finra_found['frame'] = df[~(df['CRDNumber'].isin(['Multiple CRDs Present', 'CRD Not Found']))]
 
         df = df[(df['CRDNumber'] == 'Multiple CRDs Present') | (df['CRDNumber'] == 'CRD Not Found')]
         return _vars, df
