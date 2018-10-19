@@ -10,12 +10,10 @@ from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn import metrics
 import pickle
 
-try:
-    from ListManagement.utility.pandas_helper import read_df
-    from ListManagement.utility.general import path_leaf, lower_head_values
-except:
-    from utility.pandas_helper import read_df
-    from utility.gen_helper import path_leaf, lower_head_values
+
+from ListManagement.utils.pandas_helper import read_df
+from ListManagement.utils.general import path_leaf, lower_head_values
+
 
 _acceptable_diagnostics = [True, False, 'only_diagnostics', ]
 
@@ -82,19 +80,15 @@ class HeaderPredictions:
                            'train or predict.' % t_type)
         return features.toarray()
 
-    def _init_predict_meta_data(self):
-        predict_file_name = path_leaf(self.predict_path)
-        predict_df = read_df(self.predict_path)
-        headers = lower_head_values(predict_df.columns.values)
+    def _init_predict_meta_data(self, frame):
+        headers = lower_head_values(frame.columns.values)
         p_features = self.create_training_features(headers, t_type='predict')
-        return predict_file_name, predict_df, headers, p_features
+        return headers, p_features
 
-    def predict(self, predict_path, obj):
-        self.log.info("Attempting to predict header names for '%s' file." % predict_path)
-        self.predict_path = predict_path
-        self.obj = obj
-        self.predict_file_name, self.p_df, self.p_headers, self.p_features = \
-            self._init_predict_meta_data()
+    def predict(self, _vars):
+        # self.log.info("Attempting to predict header names for '%s' file." % predict_path)
+        self.p_df = _vars.list_source['frame']
+        self.p_headers, self.p_features = self._init_predict_meta_data(self.p_df)
         r = self.classifier.predict(self.p_features)
         r_prob = self.classifier.predict_proba(self.p_features)
         prob = [np.max(rp) / np.sum(rp) for rp in r_prob]
