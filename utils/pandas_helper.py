@@ -53,7 +53,7 @@ def new_stat_line(value_dict):
 def determine_num_records(path):
     df = read_df(path)
     if 'found' in path:
-        num = int(df['ContactID'].count())
+        num = int(df['ContactId'].count())
     del df
     return num
 
@@ -68,12 +68,8 @@ def regex_search_columns(frame, regex, add=None):
     return cols
 
 
-def determine_output(frame, output):
-    if len(frame.index) > 0:
-        frame.columns = output.columns
-        return frame
-    else:
-        return frame
+def determine_output(frame, replace):
+    return [col.replace(replace, '') for col in frame.columns.tolist()]
 
 
 def crud(source, target, on):
@@ -98,6 +94,7 @@ def crud(source, target, on):
         columns=regex_search_columns(comparison_df, 'tgt', '_merge'), axis=1).dropna(axis=1)
     remove = comparison_df[comparison_df['_merge'] == 'right_only'].drop(
         columns=regex_search_columns(comparison_df, 'src', '_merge'), axis=1).dropna(axis=1)
-    insert, update, remove = determine_output(insert, source), determine_output(update, target), determine_output(
-        remove, target)
+    insert.columns, update.columns, remove.columns = determine_output(insert, '_src'), \
+                                                     determine_output(update, '_src'), \
+                                                     determine_output(remove, '_src')
     return insert, update, remove
