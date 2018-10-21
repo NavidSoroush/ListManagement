@@ -14,7 +14,7 @@ _query_fields = {
     , 'BizDev_Group__c': 'BizDev Group', 'Email': 'Email', 'MailingStreet': 'Mailing Address Line 1'
     , 'MailingCity': 'Mailing City', 'MailingState': 'Mailing State/Province'
     , 'MailingPostalCode': 'Mailing Zip/Postal Code', 'Phone': 'Phone', 'CRD_Number__c': 'CRDNumber'
-    , 'Id': 'ContactID', 'Rating__c': 'Rating', 'Products_Used__c': 'Products Used'
+    , 'Id': 'ContactId', 'Rating__c': 'Rating', 'Products_Used__c': 'Products Used'
     , 'Licenses__c': 'Licenses', 'Source_Channel__c': 'SourceChannel'
     , 'Last_Meeting_Event__c': 'Last Meeting/Event', 'Last_Sales_Presentation_Date__c': 'Last SP'
     , 'Most_Recent_Sale_New__c': 'Most Recent Sale'
