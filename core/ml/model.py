@@ -8,14 +8,16 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn import metrics
-import pickle
-
+from sklearn.externals import joblib
 
 from ListManagement.utils.pandas_helper import read_df
 from ListManagement.utils.general import path_leaf, lower_head_values
 
-
 _acceptable_diagnostics = [True, False, 'only_diagnostics', ]
+
+_base_path = os.path.join(os.path.dirname(__file__))
+_saved_model = os.path.join(_base_path, 'data\\hp_model.sav')
+_saved_name = os.path.join(_base_path, 'data\\model_name.txt')
 
 
 class HeaderPredictions:
@@ -31,7 +33,7 @@ class HeaderPredictions:
         self.p_df = None
         self.p_headers = None
         self.p_features = None
-        self.model_pickle_loc, self.model_name_loc = '\\data\\hp_model.sav', '\\data\\model_name.txt'
+        self.model_pickle_loc, self.model_name_loc = _saved_model, _saved_name
         self.vectorizer = self._init_vectorizer()
         self.features, self.train_class = self.data_preprocessing()
         self.__handle_diagnostics(diagnostics=run_diagnostics)
@@ -54,21 +56,25 @@ class HeaderPredictions:
                                max_features=100)
 
     def _init_and_train_classifier(self):
-        train_feat, test_feat, train_class, test_class = train_test_split(self.features, self.train_class,
-                                                                          test_size=0.2)
         if not self.use_saved:
+            train_feat, test_feat, train_class, test_class = train_test_split(self.features, self.train_class,
+                                                                              test_size=0.2)
             f = RandomForestClassifier(n_estimators=1000, n_jobs=-1, oob_score=True)
             model = [f, 'Random Forest']
             hard_code_words = 'a stock'
+
+            self.log.info('Training %s %s model.' % (hard_code_words, model[1]))
+            model[0].fit(train_feat, train_class)
+            test_results = model[0].predict(test_feat)
+            accuracy = metrics.accuracy_score(test_class, test_results) * 100
+            self.log.info('Current %s Model Accuracy: %s' % (model[1], "{0:.0f}%".format(accuracy)))
+            return model[0].fit(self.features, self.train_class)
         else:
-            model = self.__read_saved_model()
-            hard_code_words = 'the diagnostics selected'
-        self.log.info('Training %s %s model.' % (hard_code_words, model[1]))
-        model[0].fit(train_feat, train_class)
-        test_results = model[0].predict(test_feat)
-        accuracy = metrics.accuracy_score(test_class, test_results) * 100
-        self.log.info('Current %s Model Accuracy: %s' % (model[1], "{0:.0f}%".format(accuracy)))
-        return model[0].fit(self.features, self.train_class)
+            model = joblib.load(self.model_pickle_loc)
+            with open(self.model_name_loc, mode='r') as m_name:
+                model_name = m_name.read()
+            self.log.info('Loaded diagnostics selected %s model.' % model_name)
+            return model
 
     def create_training_features(self, headers, t_type='train'):
         if t_type == 'train':
@@ -113,8 +119,9 @@ class HeaderPredictions:
         self.log.info('%s is the winning model.' % winning_model[1])
         if save:
             self.log.info('Will use %s in production.' % winning_model[1])
-            pickle.dump(winning_model[0], open(self.__loc_dir + self.model_pickle_loc, mode='wb'))
-            with open(self.__loc_dir + self.model_name_loc, mode='w') as name:
+            winning_model[0] = winning_model[0].fit(self.features, self.train_class)
+            joblib.dump(winning_model[0], self.model_pickle_loc)
+            with open(self.model_name_loc, mode='w') as name:
                 name.write('%s' % winning_model[1])
         else:
             self.log.info('Will not use %s in production.\n'
@@ -133,12 +140,6 @@ class HeaderPredictions:
     def __model_selection(self, models, scores):
         self.log.info('Comparing model scores.')
         return models[scores.index(max(scores))]
-
-    def __read_saved_model(self):
-        model = pickle.load(open(self.__loc_dir + self.model_pickle_loc, mode='rb'))
-        with open(self.__loc_dir + self.model_name_loc, mode='r') as m_name:
-            model_name = m_name.read()
-        return [model, model_name]
 
     def __handle_diagnostics(self, diagnostics):
         if not diagnostics in _acceptable_diagnostics:
