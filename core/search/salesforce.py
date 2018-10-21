@@ -98,10 +98,10 @@ class Search:
         Steps:
         ------
         1) Determine if this is the first, or second, set of searches against SFDC.
-        2) If this is the second set of searches, then 'found contacts' are only records that have a ContactID
+        2) If this is the second set of searches, then 'found contacts' are only records that have a ContactId
         3) If this is the first set of searches then:
             a) If a CRD search is passed to the 'create_meta_data' method:
-                1a. 'found contacts' are records that have a ContactID merged with the original data
+                1a. 'found contacts' are records that have a ContactId merged with the original data
                 2a. If CRD's are provided for all records, set 'to_finra' to False and rename the CRDNumber column
                 3a. If the length of the search list and found contact list are not the same, we need to
                     perform additional searches to attempt to identify additional matches & duplicate records.
@@ -119,14 +119,14 @@ class Search:
         # TODO: may need to try and clean this method up, it's a bit confusing and messy.
         if search_two:
             # _vars.found = read_df(self._found_contact_path)
-            finra_matched_to_sf = frame[frame['ContactID'] != '']
+            finra_matched_to_sf = frame[frame['ContactId'] != '']
             self.log.info('\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf))
             _vars.found['frame'] = _vars.found['frame'].append(finra_matched_to_sf, ignore_index=True, sort=False)
 
         else:
             if self._is_crd_check and 'CRD Provided by List' not in self._headers:
                 _vars.found['frame'] = _vars.found['frame'].append(
-                    frame[frame['ContactID'] != ''], ignore_index=True)
+                    frame[frame['ContactId'] != ''], ignore_index=True)
 
                 if frame['CRDNumber'].count() == len(frame.index) and \
                         len(frame['CRDNumber'].nonzero()[0]) == len(frame.index):
@@ -137,13 +137,13 @@ class Search:
                         self._search_one_crd_additional = True
                         self.log.info('CRD Info provided for all contacts. Will not search FINRA, but will '
                                       'perform remaining standard searches to maximize match rate.')
-                        frame = frame[frame['ContactID'] == '']
+                        frame = frame[frame['ContactId'] == '']
                         # self._contacts_to_review = self._contacts_to_review.append(
-                        #     _vars.list_df[_vars.list_df['ContactID'] == ''], ignore_index=True)
+                        #     _vars.list_df[_vars.list_df['ContactId'] == ''], ignore_index=True)
                         # self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
 
                 else:
-                    frame = _vars.list_df[frame['ContactID'] == '']
+                    frame = _vars.list_df[frame['ContactId'] == '']
                     frame.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
                 self._headers = frame.columns.tolist()
 
@@ -152,9 +152,9 @@ class Search:
                 if "CRD Provided by List" in self._headers:
                     frame, _vars = self._identify_to_review_records(frame, _vars)
                     frame.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
-                    _vars.found['frame'] = _vars.found['frame'].append(frame[frame['ContactID'] != ''],
+                    _vars.found['frame'] = _vars.found['frame'].append(frame[frame['ContactId'] != ''],
                                                                        ignore_index=True)
-                    frame = frame[frame['ContactID'] == '']
+                    frame = frame[frame['ContactId'] == '']
                     frame.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
 
                 else:
@@ -234,7 +234,7 @@ class Search:
             Nothing
         """
         if len(search_fields) > 1:
-            self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel', 'ContactID', 'Needs Info Updated?',
+            self._return_fields = ['CRDNumber', 'AccountId', 'SourceChannel', 'ContactId', 'Needs Info Updated?',
                                    'BizDev Group']
         for header in search_fields:
             if header in self._headers:
@@ -283,7 +283,7 @@ class Search:
         """
         self._is_crd_check = True
         self._return_fields = ['AccountId', 'SourceChannel',
-                               'Needs Info Updated?', 'ContactID', 'BizDev Group']
+                               'Needs Info Updated?', 'ContactId', 'BizDev Group']
         frame.fillna('', inplace=True)
         _vars, frame = self.__search_and_merge(_vars, frame, search_field)
         return _vars, frame
@@ -304,7 +304,7 @@ class Search:
             A python dictionary containing next steps for list processing.
         """
         _vars.update_state()
-        self.log.info('Starting second Salesforce comparison on the %s list.' % _vars.list_type)
+        self.log.info('Starting first Salesforce comparison on the %s list.' % _vars.list_type)
         frame = _vars.list_source['frame']
         self._SFDC_advisor_list = _vars.sfdc_target['frame']
         self._SFDC_advisor_list['CRDNumber'] = self._crd_formatter(self._SFDC_advisor_list['CRDNumber'])
