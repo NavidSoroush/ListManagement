@@ -233,15 +233,16 @@ def establish_queue(sfdc, log=None):
 For testing
 
 from PythonUtilities.salesforcipy import SFPy
-from ListManagement.utility import build_queue
+from ListManagement.core.build_sf_source import _todays_sfdc_advisor_list, build_current_fa_list
+from ListManagement.core.build_queue import establish_queue
 from ListManagement.config import Config as con
-from ListManagement import standardization as _std
-from ListManagement.search.ml import header_predictions as predicts
-from ListManagement.search import salesforce, finra
-from ListManagement import data_staging as stage
-from ListManagement import parsing as parse
-from ListManagement import pruning as prune
-from ListManagement import uploads as upload
+from ListManagement.core import standardization as _std
+from ListManagement.core.ml import header_predictions as predicts
+from ListManagement.core.search import salesforce, finra
+from ListManagement.core import data_staging as stage
+from ListManagement.core import parsing as parse
+from ListManagement.core import pruning as prune
+from ListManagement.core import uploads as upload
 
 import logging
 
@@ -254,16 +255,19 @@ parser = parse.Parser(log)
 pruner = prune.Pruning(log)
 uploader = upload.Uploader(log)
 
+if not os.path.isfile(_todays_sfdc_advisor_list):
+    build_current_fa_list(sfdc)
+
 list_queue = build_queue.establish_queue(sfdc, log)
 for item in list_queue:
     item.update_state()
     item = predicts.predict_headers_and_pre_processing(item, log, 'manual')
     item = _std.DataStandardization(log).standardize_all(item)
-    
+
     item = searcher.perform_search_one(item)
     item = finra.scrape(_vars=item, scrape_type='crd', parse_list=True)
     item = searcher.perform_search_two(item)
-    
+
     item = stager.fill_gaps(item)
     item = parser.split_found_into_actions(item)
     item = pruner.upload_preparation(item)
