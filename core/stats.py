@@ -13,8 +13,8 @@ class ProcessingStats:
     def record(self, item, sfdc):
         item.update_state()
         item.record_end_time()
-        _list_stats = [item.list_id, 'Process Completed', item.total_records, item.src_object_upload_records,
-                       item.create_records, item.found_records, item.need_research, item.need_research,
-                       item.updating_records, item.match_rate * 100, item.process_end,
+        _list_stats = [item.list_id, 'Process Completed', item.total_records, item.add_records,
+                       item.create_records, item.found_records, item.need_research,
+                       item.need_research, item.updating_records, item.match_rate * 100, item.process_end.isoformat(),
                        os.environ['SFUSERID']]
         sfdc.update_records(obj='List__c', fields=_list_stats_cols, upload_data=[_list_stats])
