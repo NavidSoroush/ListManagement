@@ -5,13 +5,14 @@ _accepted_cols = [
     , 'HomePhone', 'MobilePhone', 'Phone'
 ]
 _necessary_cols = _accepted_cols[:8]
-_bdg_accepted_cols = ['ContactID', 'BizDev Group', 'Licenses']
-_cmp_accepted_cols = ['ContactID', 'Status', 'CampaignId']
+_bdg_update_cols = ['ContactId', 'BizDev Group', 'Licenses', 'ContactId']
+_cmp_create_cols = ['ContactId', 'Status', 'CampaignId']
+_cmp_update_cols = ['ContactId', 'Status', 'CampaignId', 'Id']
 
 _switcher = {
-    'Account': {'bulk_upload': _accepted_cols, 'sf_upload': _accepted_cols},
-    'BizDev Group': {'bulk_upload': _accepted_cols, 'sf_upload': _bdg_accepted_cols},
-    'Campaign': {'bulk_upload': _accepted_cols, 'sf_upload': _cmp_accepted_cols}
+    'Account': {'bulk_upload': _accepted_cols, 'sf_create': _accepted_cols, 'sf_update': _accepted_cols},
+    'BizDev Group': {'bulk_upload': _accepted_cols, 'sf_create': _bdg_update_cols, 'sf_update': _bdg_update_cols},
+    'Campaign': {'bulk_upload': _accepted_cols, 'sf_create': _cmp_create_cols, 'sf_update': _cmp_update_cols}
 }
 
 
@@ -35,22 +36,23 @@ class Pruning:
             _vars.create['frame'] = self._limit_cols(_vars.create['frame'], bulk_cols)
             _vars.create = self._is_bulk_possible(_vars.create)
 
-        sf_cols = _switcher[_vars.list_type]['sf_upload']
+        sf_update_cols = _switcher[_vars.list_type]['sf_update']
+        sf_create_cols = _switcher[_vars.list_type]['sf_create']
         if len(_vars.src_object_upload['frame'].index) > 0:
-            _vars.src_object_upload['frame'] = self._limit_cols(_vars.src_object_upload['frame'], sf_cols)
-            _vars.src_object_upload['frame'] = _vars.src_object_upload['frame'][sf_cols]
+            _vars.src_object_upload['frame'] = self._limit_cols(_vars.src_object_upload['frame'], sf_update_cols)
+            _vars.src_object_upload['frame'] = _vars.src_object_upload['frame'][sf_create_cols]
 
-        if len(_vars.src_object_upload['frame'].index) > 0:
-            _vars.src_object_create['frame'] = self._limit_cols(_vars.src_object_create['frame'], sf_cols)
-            _vars.src_object_create['frame'] = _vars.src_object_create['frame'][sf_cols]
+        if len(_vars.src_object_create['frame'].index) > 0:
+            _vars.src_object_create['frame'] = self._limit_cols(_vars.src_object_create['frame'], sf_create_cols)
+            _vars.src_object_create['frame'] = _vars.src_object_create['frame'][sf_create_cols]
 
         if len(_vars.add['frame'].index) > 0:
-            _vars.add['frame'] = self._limit_cols(_vars.add['frame'], sf_cols)
-            _vars.add['frame'] = _vars.add['frame'][sf_cols]
+            _vars.add['frame'] = self._limit_cols(_vars.add['frame'], sf_create_cols)
+            _vars.add['frame'] = _vars.add['frame'][sf_create_cols]
 
         if len(_vars.stay['frame'].index) > 0:
-            _vars.stay['frame'] = self._limit_cols(_vars.stay['frame'], sf_cols)
-            _vars.stay['frame'] = _vars.stay['frame'][sf_cols]
+            _vars.stay['frame'] = self._limit_cols(_vars.stay['frame'], sf_update_cols)
+            _vars.stay['frame'] = _vars.stay['frame'][sf_update_cols]
 
         return _vars
 
