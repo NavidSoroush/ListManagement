@@ -140,6 +140,7 @@ class ListBase(object):
         if self.need_research > 0:
             combine = [self.list_source['frame'], self.no_crd['frame'], self.finra_ambiguous['frame']]
             self.research['frame'] = concat_dfs(combine)
+            self.research['frame'].drop_duplicates(keep='first', inplace=True)
 
     def save_frames(self):
         self.update_state()
