@@ -1,8 +1,12 @@
 from PythonUtilities.EmailHandling import EmailHandler as Email
 
 from ListManagement.config import Config
-from ListManagement.static.notification_message import (complete_message, complete_subject)
+from ListManagement.static.notification_message import (
+    complete_message, complete_subject, unable_to_process_message,
+    unable_to_process_subject
+)
 
+Config = Config()
 
 class Notify:
     def __init__(self, log):
@@ -25,4 +29,15 @@ class Notify:
         Email(Config.SMTPUser, Config.SMTPPass).send_new_email(
             subject=subject, to=Config.ListTeam + [item.requested_by_email]
             , body=body, attachments=item.generated_files, name=Config.FullName
+        )
+
+    @staticmethod
+    def send_unable_to_process_message(item):
+        subject = unable_to_process_subject.format(object_name=item.object_name)
+        body = unable_to_process_message.format(requestor=item.requested_by, object_name=item.object_name,
+                                                extension=item.extension,
+                                                formats=', '.join(Config.ACCEPTED_FILE_TYPES))
+        Email(Config.SMTPUser, Config.SMTPPass).send_new_email(
+            subject=subject, to=Config.ListTeam + [item.requested_by_email]
+            , body=body, attachments=item.list_source['path'], name=Config.FullName
         )
