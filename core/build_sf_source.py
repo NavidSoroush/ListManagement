@@ -1,5 +1,8 @@
 from ListManagement.utils import general as _ghelp
 from ListManagement.utils.pandas_helper import pd
+from ListManagement.config import Config
+
+Config = Config()
 
 _ADDRESS_STOP_WORDS = [
     'Address', 'Postal', 'State', 'Street', 'City', 'Metro', 'Geocode'
@@ -21,10 +24,6 @@ _query_fields = {
 }
 
 _query_where = "DST_Contact_Type__c = 'Single' and Territory__c != 'Partnership Records'"
-
-_todays_sfdc_advisor_list = 'T:\\Shared\\FS2 Business Operations\\Python Search Program' \
-                            '\\Salesforce Data Files\\SFDC Advisor List as of ' \
-                            + _ghelp.time.strftime("%m-%d-%y") + '.csv'
 
 
 # this function will coerce the dates from an object format to datetime
@@ -109,7 +108,7 @@ def build_current_fa_list(sf):
                 needs_update_flag(data[update_cols], update_cols, 180, 90))
 
     data = data[~data.CRDNumber.str.contains('[a-zA-Z]').fillna(False)]
-    data.to_csv(_todays_sfdc_advisor_list, header=True, index=False, encoding='utf-8')
+    data.to_csv(Config.SFDCLoc, header=True, index=False, encoding='utf-8')
     query_end = _ghelp.time.time()
     # printing success and time it took to complete query and save
     print("Saving complete. Query took: %s" % _ghelp.duration(query_start, query_end))
