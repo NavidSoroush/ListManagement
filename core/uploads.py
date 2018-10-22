@@ -36,7 +36,7 @@ class Uploader:
 
     def upload(self, _vars, sf):
         _vars.update_state()
-        # self._handle_bulk([_vars.update, _vars.create])
+        self._handle_bulk([_vars.update, _vars.create])
         self._salesforce_upload(list_type=_vars.list_type, updates=[_vars.stay],
                                 creates=[_vars.add, _vars.src_object_create], sf=sf)
         return _vars
