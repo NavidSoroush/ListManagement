@@ -5,7 +5,9 @@ from pandas import DataFrame
 
 from ListManagement.utils.pandas_helper import read_df, concat_dfs
 from ListManagement.utils.general import create_path_name
-from ListManagement.core.build_sf_source import _todays_sfdc_advisor_list as sfdc_path
+from ListManagement.config import Config
+
+Config = Config()
 
 _return_fields = ['CRDNumber', 'AccountId', 'SourceChannel',
                   'ContactID', 'Needs Info Updated?', 'BizDev Group']
@@ -49,10 +51,11 @@ class ListBase(object):
         self.file_name = kwargs['file_name']
         self.extension = kwargs['extension']
 
+
         # All potential data frames
         self.list_source = {'frame': read_df(self.list_base_path),
                             'path': self.list_base_path[:-len(self.extension)] + '.xlsx'}
-        self.sfdc_target = {'frame': read_df(sfdc_path), 'path': sfdc_path}
+        self.sfdc_target = {'frame': read_df(Config.SFDCLoc), 'path': Config.SFDCLoc}
         self.found = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_foundcontacts')}
         self.create = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'to_create'),
                        'bulk': False}
