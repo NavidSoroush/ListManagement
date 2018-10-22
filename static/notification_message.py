@@ -24,3 +24,12 @@ Process Started: {started}
 Process Completed: {ended}
 Processing Time: {duration}
 """
+
+unable_to_process_subject = "'ALM: Unable to Process List Attached to {object_name}'"
+unable_to_process_message = """{requestor},
+
+The list attached to {object_name} has a file extension of {extension} which is unable to be processed. 
+
+Please re-upload the list in one of the following accepted formats below.
+
+Accepted formats: {formats}"""
