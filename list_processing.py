@@ -24,9 +24,9 @@ from PythonUtilities.salesforcipy import SFPy
 
 sys.path.append(os.path.abspath('.'))
 
-from ListManagement.config import Config as con
+from ListManagement.config import Config
 
-from ListManagement.core.build_sf_source import _todays_sfdc_advisor_list, build_current_fa_list
+from ListManagement.core.build_sf_source import build_current_fa_list
 from ListManagement.core.build_queue import establish_queue
 from ListManagement.core.ml import header_predictions as predicts
 from ListManagement.core.standardization import DataStandardization
@@ -37,6 +37,8 @@ from ListManagement.core.pruning import Pruning
 from ListManagement.core.uploads import Uploader
 from ListManagement.core.stats import ProcessingStats
 from ListManagement.core.notifications import Notify
+
+con = Config()
 
 _steps = [
     '\nSkipping step 6, because all contacts were found.',
@@ -75,8 +77,13 @@ class ListProcessing:
         self._notifier = Notify(self._log)
         self._sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken,
                           domain=con.SFDomain, verbose=False, _dir=con.BaseDir)
+        self._sfdc_file_check()
         self.vars = establish_queue(sfdc=self._sfdc, log=self._log)
         self.main_contact_based_processing()
+
+    def _sfdc_file_check(self):
+        if not os.path.isfile(con.SFDCLoc):
+            build_current_fa_list(self._sfdc)
 
     def main_contact_based_processing(self):
         """
@@ -97,9 +104,6 @@ class ListProcessing:
         -------
             Nothing
         """
-        if not os.path.isfile(_todays_sfdc_advisor_list):
-            build_current_fa_list(self._sfdc)
-
         for item in self.vars:
             if not self.is_bad_extension(item):
                 item.update_state()
