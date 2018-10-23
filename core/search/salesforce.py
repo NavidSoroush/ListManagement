@@ -117,56 +117,34 @@ class Search:
             Nothing.
         """
         # TODO: may need to try and clean this method up, it's a bit confusing and messy.
-        if search_two:
+        if not search_two:
+            _vars.found['frame'] = _vars.found['frame'].append(frame[frame['ContactId'] != ''],
+                                                               ignore_index=True)
+
+            if self._is_crd_check and 'CRD Provided by List' not in self._headers:
+
+                if len(frame.index) != len(_vars.found['frame'].index):
+                    self._search_one_crd_additional = True
+
+                total_crds, total_non_zero_crds = frame['CRDNumber'].count(), len(frame['CRDNumber'].nonzero()[0])
+                if all(len(frame.index) == a for a in (total_crds, total_non_zero_crds)):
+                    _vars.search_finra = False
+                    self._search_one_crd_additional = False
+
+                frame.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
+
+            frame = frame[frame['ContactId'] == '']
+        else:
             # _vars.found = read_df(self._found_contact_path)
             finra_matched_to_sf = frame[frame['ContactId'] != '']
             self.log.info('\nMatched CRDs from FINRA to %s records in Salesforce' % len(finra_matched_to_sf))
             _vars.found['frame'] = _vars.found['frame'].append(finra_matched_to_sf, ignore_index=True, sort=False)
 
-        else:
-            if self._is_crd_check and 'CRD Provided by List' not in self._headers:
-                _vars.found['frame'] = _vars.found['frame'].append(
-                    frame[frame['ContactId'] != ''], ignore_index=True)
-
-                if frame['CRDNumber'].count() == len(frame.index) and \
-                        len(frame['CRDNumber'].nonzero()[0]) == len(frame.index):
-
-                    frame.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
-                    _vars.search_finra = False
-                    if len(frame.index) != len(_vars.found['frame'].index):
-                        self._search_one_crd_additional = True
-                        self.log.info('CRD Info provided for all contacts. Will not search FINRA, but will '
-                                      'perform remaining standard searches to maximize match rate.')
-                        frame = frame[frame['ContactId'] == '']
-                        # self._contacts_to_review = self._contacts_to_review.append(
-                        #     _vars.list_df[_vars.list_df['ContactId'] == ''], ignore_index=True)
-                        # self.log.info('CRD Info provided for all contacts. Will not search FINRA.')
-
-                else:
-                    frame = _vars.list_df[frame['ContactId'] == '']
-                    frame.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
-                self._headers = frame.columns.tolist()
-
-            else:
-                frame.fillna('', inplace=True)
-                if "CRD Provided by List" in self._headers:
-                    frame, _vars = self._identify_to_review_records(frame, _vars)
-                    frame.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
-                    _vars.found['frame'] = _vars.found['frame'].append(frame[frame['ContactId'] != ''],
-                                                                       ignore_index=True)
-                    frame = frame[frame['ContactId'] == '']
-                    frame.rename(columns={'CRDNumber': 'CRD Provided by List'}, inplace=True)
-
-                else:
-                    _vars.found['frame'] = _vars.found['frame'].append(frame[frame['CRDNumber'] != ''],
-                                                                       ignore_index=True)
-                    frame = frame[frame['CRDNumber'] == '']
-
-            for r_field in self._return_fields:
-                try:
-                    del frame[r_field]
-                except:
-                    pass
+        for r_field in self._return_fields:
+            try:
+                del frame[r_field]
+            except:
+                pass
         return _vars, frame
 
     def _identify_to_review_records(self, frame, _vars):
@@ -319,13 +297,19 @@ class Search:
                 self.log.info("Performing additional searches as the CRD search didn't find all records successfully.")
                 _vars, frame = self.__search_and_merge(_vars, frame, _vars.search_one_keys)
 
-                frame.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
-                _vars.create_df = frame[~is_null(frame['CRDNumber'])]
-                frame = frame[is_null(frame['CRDNumber'])]
 
         else:
             self.log.info("Performing standard search, as 'CRDNumber' is not present.")
             _vars, frame = self.__search_and_merge(_vars, frame, _vars.search_one_keys)
+
+        if 'CRD Provided by List' in frame.columns.tolist():
+            frame.rename(columns={'CRD Provided by List': 'CRDNumber'}, inplace=True)
+            if not _vars.search_finra:
+                for col in _vars.found['frame'].columns.tolist():
+                    if col not in frame.columns.tolist():
+                        frame.loc[:, col] = ''
+
+                _vars.found['frame'] = _vars.found['frame'].append(frame, ignore_index=True)
 
         _vars.list_source['frame'] = frame
         return _vars
