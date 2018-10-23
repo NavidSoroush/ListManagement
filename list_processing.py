@@ -19,7 +19,6 @@ import sys
 import traceback
 
 from PythonUtilities.LoggingUtility import Logging
-from PythonUtilities.EmailHandling import EmailHandler as Email
 from PythonUtilities.salesforcipy import SFPy
 
 sys.path.append(os.path.abspath('.'))
@@ -66,17 +65,17 @@ class ListProcessing:
         """
         self.mode = mode
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
-        self._search_api = Search(log=self._log)
-        self._finra_api = Finra(log=self._log)
-        self._standardizer = DataStandardization(self._log)
-        self._stager = Staging(self._log)
-        self._parser = Parser(self._log)
-        self._pruner = Pruning(self._log)
-        self._uploader = Uploader(self._log)
-        self._stats = ProcessingStats(self._log)
-        self._notifier = Notify(self._log)
         self._sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken,
                           domain=con.SFDomain, verbose=False, _dir=con.BaseDir)
+        self._search_api = None
+        self._finra_api = None
+        self._standardizer = None
+        self._stager = None
+        self._parser = None
+        self._pruner = None
+        self._uploader = None
+        self._stats = None
+        self._notifier = None
         self._sfdc_file_check()
         self.vars = establish_queue(sfdc=self._sfdc, log=self._log)
         self.main_contact_based_processing()
@@ -107,7 +106,17 @@ class ListProcessing:
         for item in self.vars:
             if item.processable:
                 item.update_state()
+                self._search_api = Search(log=self._log)
+                self._finra_api = Finra(log=self._log)
+                self._standardizer = DataStandardization(self._log)
+                self._stager = Staging(self._log)
+                self._parser = Parser(self._log)
+                self._pruner = Pruning(self._log)
+                self._uploader = Uploader(self._log)
+                self._stats = ProcessingStats(self._log)
+                self._notifier = Notify(self._log)
                 try:
+                    self._log.info('Beginning processing on {}.'.format(item.object_name))
                     item = predicts.predict_headers_and_pre_processing(item, self._log, self.mode)
                     item = self._standardizer.standardize_all(item)
 
@@ -124,7 +133,6 @@ class ListProcessing:
                     item = self._parser.split_found_into_actions(item, self._sfdc)
                     item = self._pruner.upload_preparation(item)
                     item.save_frames()
-                    item.update_statistics()
                     item.gather_attachments()
                     item = self._uploader.upload(item, self._sfdc)
                     self._stats.record(item, self._sfdc)
@@ -135,39 +143,9 @@ class ListProcessing:
                     self.create_log_record_of_current_list_data(msg=str(traceback.format_exc()))
 
                 finally:
-                    self._log.info('List #%s processed.' % item.id)
+                    self._log.info('List #%s processed.\n\n' % item.id)
             else:
                 self._notifier.send_unable_to_process_message(item)
-
-    def is_bad_extension(self, _vars):
-        """
-        Checks if the a list request has an extension that can be processed. If a list is
-        unable to be processed, notify the requester of the situation.
-
-        Parameters
-        ----------
-        _vars
-            Python dictionary containing metadata regarding a list request.
-
-        Returns
-        -------
-            Boolean (True or False)
-        """
-        if _vars.extension in ['.pdf', '.gif', '.png', '.jpg', '.doc', '.docx']:
-            obj_name = _vars.account_name if _vars.account_name is not None else _vars.object_name
-            sub = 'LMA: Unable to Process List Attached to %s' % obj_name
-            msg = 'The list attached to %s has a file extension, %s,  that cannot currently be processed by the ' \
-                  'List Management App.' % (obj_name, _vars.extension)
-            self._log.warning(msg)
-            Email(con.SMTPUser, con.SMTPPass, self._log).send_new_email(
-                subject=sub, to=[_vars.requested_by_email], body=msg, attachments=None
-                , name=con.FullName
-            )
-            self._sfdc.update_records(obj='List__c', fields=['Status__c'],
-                                      upload_data=[[_vars.list_id, 'Unable to Process']])
-            return True
-        else:
-            return False
 
     def create_log_record_of_current_list_data(self, msg):
         """
