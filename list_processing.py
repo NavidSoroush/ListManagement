@@ -105,15 +105,17 @@ class ListProcessing:
             Nothing
         """
         for item in self.vars:
-            if not self.is_bad_extension(item):
+            if item.processable:
                 item.update_state()
                 try:
                     item = predicts.predict_headers_and_pre_processing(item, self._log, self.mode)
                     item = self._standardizer.standardize_all(item)
 
                     item = self._search_api.perform_search_one(item)
-                    item = self._finra_api.scrape(_vars=item, scrape_type='crd', parse_list=True)
-                    item = self._search_api.perform_search_two(item)
+
+                    if item.search_finra:
+                        item = self._finra_api.scrape(_vars=item, scrape_type='crd', parse_list=True)
+                        item = self._search_api.perform_search_two(item)
 
                     if item.list_type == 'BizDev Group':
                         item = self._finra_api.scrape(item, scrape_type='all', save=True)
@@ -121,10 +123,10 @@ class ListProcessing:
                     item = self._stager.fill_gaps(item)
                     item = self._parser.split_found_into_actions(item, self._sfdc)
                     item = self._pruner.upload_preparation(item)
-                    item = self._uploader.upload(item, self._sfdc)
                     item.save_frames()
                     item.update_statistics()
                     item.gather_attachments()
+                    item = self._uploader.upload(item, self._sfdc)
                     self._stats.record(item, self._sfdc)
                     self._notifier.send_completion_message(item)
 
@@ -134,6 +136,8 @@ class ListProcessing:
 
                 finally:
                     self._log.info('List #%s processed.' % item.id)
+            else:
+                self._notifier.send_unable_to_process_message(item)
 
     def is_bad_extension(self, _vars):
         """
