@@ -13,6 +13,7 @@ class DataStandardization:
         self.log = log
 
     def standardize_all(self, _vars):
+        self.log.info('Standardizing data formatting.')
         _vars.update_state()
         account_name = _vars.account_name if _vars.account_name is not None else _vars.object_name
         _vars.list_source['frame'] = self.standardize_account_names(_vars.list_source['frame'], account_name)
@@ -24,9 +25,13 @@ class DataStandardization:
         _vars.list_source['frame'] = self.remove_unknown_columns(_vars.list_source['frame'])
         return _vars
 
+    def notify_status(self, obj):
+        self.log.info(' >{0} standardization complete.'.format(obj))
+
     def standardize_account_names(self, frame, account_name):
         frame = self._is_account_col_present(frame, account_name)
         frame = self._remove_delimiters_from_account_name(frame)
+        self.notify_status('Account')
         return frame
 
     @staticmethod
@@ -44,6 +49,7 @@ class DataStandardization:
         frame = self._combine_mailing_streets(frame)
         frame = self._clean_postal_code(frame)
         frame = self._clean_mailing_state(frame)
+        self.notify_status('Address')
         return frame
 
     @staticmethod
@@ -135,6 +141,7 @@ class DataStandardization:
     def standardize_people_names(self, frame):
         frame = self._split_full_names(frame)
         frame = self._normalize_name_case(frame)
+        self.notify_status('People names')
         return frame
 
     @staticmethod
@@ -166,8 +173,8 @@ class DataStandardization:
     @staticmethod
     def _normalize_name_case(frame):
         if set(['FirstName', 'LastName']).issubset(frame.columns.tolist()):
-            frame["FirstName"] = frame["FirstName"].apply(lambda x: x.title())
-            frame["LastName"] = frame["LastName"].apply(lambda x: x.title())
+            frame["FirstName"] = frame["FirstName"].astype('str').apply(lambda x: x.title())
+            frame["LastName"] = frame["LastName"].astype('str').apply(lambda x: x.title())
         return frame
 
     @staticmethod
@@ -190,6 +197,7 @@ class DataStandardization:
     def standardize_phone_number(self, frame):
         if 'Phone' in frame.columns.values:
             frame['Phone'] = frame['Phone'].apply(self._clean_phone_number)
+        self.notify_status('Phone numbers')
         return frame
 
     @staticmethod
