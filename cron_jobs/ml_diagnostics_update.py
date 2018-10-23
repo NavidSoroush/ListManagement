@@ -1,7 +1,7 @@
 from PythonUtilities.LoggingUtility import Logging
 
-from ListManagement.search.ml.header_predictions import HeaderPredictions
-from ListManagement.utility.general import duration, time
+from ListManagement.core.ml.header_predictions import HeaderPredictions
+from ListManagement.utils.general import duration, time
 from ListManagement.config import Config as con
 
 if __name__ == '__main__':
