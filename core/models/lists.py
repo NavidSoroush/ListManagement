@@ -50,6 +50,7 @@ class ListBase(object):
         self.list_base_path = kwargs['file_path']
         self.file_name = kwargs['file_name']
         self.extension = kwargs['extension']
+        self.processable = False if self.extension in Config.ACCEPTED_FILE_TYPES else True
 
 
         # All potential data frames
@@ -90,7 +91,7 @@ class ListBase(object):
         self.account_id = kwargs['account_id'] if 'account_id' in kwargs else None
         self.event_start_date = kwargs['event_start'] if 'event_start' in kwargs else None
         self.pre_or_post = kwargs['pre_or_post'] if 'pre_or_post' in kwargs else None
-        self.source_channel = self.list_type + '_' + self.object_name + '_' + _dt.date.today().strftime('%Y_%m')
+        self.source_channel = self.list_type + '_' + self.object_name + '_' + _dt.date.today().strftime('%Y%m')
         self.campaign_member_status = 'Needs Follow-Up' if self.pre_or_post == 'Post' else 'Invited'
 
         # Requestor metadata
@@ -153,6 +154,7 @@ class ListBase(object):
                      self.research, self.src_object_upload, self.src_object_create, self.no_update,
                      self.current_members]:
             if len(item['frame'].index) > 0:
+                item['frame'].drop_duplicates(keep='first', inplace=True)
                 item['frame'].to_excel(item['path'], index=False)
 
     def gather_attachments(self):
