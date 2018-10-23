@@ -41,11 +41,12 @@ class Staging:
 
     @staticmethod
     def _identify_actions(frame):
-        frame['action_flag'] = frame['SourceChannel'].apply(lambda x: 'create' if x == '' else 'found')
+        frame['action_flag'] = frame['ContactId'].apply(lambda x: 'create' if x == '' else 'found')
         return frame
 
     @staticmethod
     def _populate_source_channel(frame, source_channel):
+        frame['SourceChannel'] = frame['SourceChannel'].replace('', None)
         frame.loc[frame['SourceChannel'].isnull(), 'SourceChannel'] = source_channel
         return frame
 
