@@ -40,6 +40,7 @@ class Parser:
             _vars.src_object_upload['frame'] = _switcher[_vars.list_type](
                 df=_vars.found['frame'][_vars.found['frame']['action_flag'] == 'found'])
             _vars = self._split_existing_members(_vars, sf)
+        self.log.info('Successfully split the lsit request into actionable chunks.')
         return _vars
 
     @staticmethod
