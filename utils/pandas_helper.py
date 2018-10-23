@@ -22,7 +22,7 @@ def save_df(df, path):
 
 
 def concat_dfs(df_list):
-    return pd.concat(df_list, sort=False)
+    return pd.concat(df_list, sort=False, ignore_index=True)
 
 
 def make_df(data=None, columns=None):
