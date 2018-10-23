@@ -54,6 +54,7 @@ class Pruning:
             _vars.stay['frame'] = self._limit_cols(_vars.stay['frame'], sf_update_cols)
             _vars.stay['frame'] = _vars.stay['frame'][sf_update_cols]
 
+        self.log.info('Successfully pruned columns for upload.')
         return _vars
 
     @staticmethod
