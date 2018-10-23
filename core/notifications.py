@@ -8,6 +8,7 @@ from ListManagement.static.notification_message import (
 
 Config = Config()
 
+
 class Notify:
     def __init__(self, log):
         self.log = log
@@ -23,7 +24,8 @@ class Notify:
                                        stayed=item.stay_records, remove=item.remove_records,
                                        research=item.need_research, received=item.requested_timestamp,
                                        started=item.process_start, ended=item.process_end,
-                                       duration=item.duration, object=item.list_type
+                                       duration=item.duration, object=item.list_type, object_id=item.object_id,
+                                       list_id=item.list_id
                                        )
 
         Email(Config.SMTPUser, Config.SMTPPass).send_new_email(
