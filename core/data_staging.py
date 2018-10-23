@@ -37,6 +37,7 @@ class Staging:
         _vars.found['frame'] = self._populate_empty_account_ids(_vars.found['frame'], _account_id)
         _vars.found['frame'] = _switcher[_vars.list_type](_vars.found['frame'], _vars.object_id,
                                                           _vars.campaign_member_status)
+        self.log.info('Successfully filled (staged) all data gaps.')
         return _vars
 
     @staticmethod
