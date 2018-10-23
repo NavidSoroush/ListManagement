@@ -283,6 +283,7 @@ class Search:
         """
         _vars.update_state()
         self.log.info('Starting first Salesforce comparison on the %s list.' % _vars.list_type)
+        self.log.info('There are {0} records on the list.'.format(_vars.total_records))
         frame = _vars.list_source['frame']
         self._SFDC_advisor_list = _vars.sfdc_target['frame']
         self._SFDC_advisor_list['CRDNumber'] = self._crd_formatter(self._SFDC_advisor_list['CRDNumber'])
@@ -292,6 +293,7 @@ class Search:
 
         if 'CRDNumber' in self._headers and not self._is_crd_check:
             self.log.info("Performing a CRD search, as 'CRDNumber' is present.")
+            _vars.search_finra = False
             _vars, frame = self._crd_search(_vars, frame)
             if self._search_one_crd_additional:
                 self.log.info("Performing additional searches as the CRD search didn't find all records successfully.")
