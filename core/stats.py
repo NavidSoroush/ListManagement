@@ -18,3 +18,4 @@ class ProcessingStats:
                        item.need_research, item.updating_records, item.match_rate * 100, item.process_end.isoformat(),
                        os.environ['SFUSERID']]
         sfdc.update_records(obj='List__c', fields=_list_stats_cols, upload_data=[_list_stats])
+        sfdc.upload_attachments(obj_id=item.list_id, attachments=item.generated_files)
