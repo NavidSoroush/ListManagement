@@ -1,9 +1,10 @@
 import datetime as _dt
 import enum
+import re
 
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
-from ListManagement.utils.pandas_helper import read_df, concat_dfs
+from ListManagement.utils.pandas_helper import read_df
 from ListManagement.utils.general import create_path_name
 from ListManagement.config import Config
 
@@ -27,8 +28,8 @@ class ListStates(enum.Enum):
     data_staging = enum.auto()
     file_parsing = enum.auto()
     sfdc_upload_prep = enum.auto()
-    sfdc_upload = enum.auto()
     save_files = enum.auto()
+    sfdc_upload = enum.auto()
     record_stats = enum.auto()
     notify = enum.auto()
     done = 0
@@ -50,34 +51,34 @@ class ListBase(object):
         self.list_base_path = kwargs['file_path']
         self.file_name = kwargs['file_name']
         self.extension = kwargs['extension']
-        self.processable = False if self.extension in Config.ACCEPTED_FILE_TYPES else True
-
+        self.processable = True if self.extension in Config.ACCEPTED_FILE_TYPES else False
 
         # All potential data frames
         self.list_source = {'frame': read_df(self.list_base_path),
                             'path': self.list_base_path[:-len(self.extension)] + '.xlsx'}
         self.sfdc_target = {'frame': read_df(Config.SFDCLoc), 'path': Config.SFDCLoc}
         self.found = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_foundcontacts')}
-        self.create = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'to_create'),
+        self.create = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'tocreate'),
                        'bulk': False}
-        self.update = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'to_update'),
+        self.update = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'toupdate'),
                        'bulk': False}
-        self.add = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'to_remove')}
-        self.remove = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'to_remove')}
-        self.stay = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'to_stay')}
-        self.finra_found = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_finrasec_found')}
+        self.add = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'toremove')}
+        self.remove = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'toremove')}
+        self.stay = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], 'tostay')}
+        self.finra_found = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_finrasecfound')}
         self.finra_ambiguous = {'frame': DataFrame(),
-                                'path': create_path_name(self.list_source['path'], '_FINRA_ambiguous')}
+                                'path': create_path_name(self.list_source['path'], '_FINRAambiguous')}
         self.no_crd = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_nocrd')}
-        self.review = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_review_contacts')}
+        self.review = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_reviewcontacts')}
         self.research = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_research')}
         self.src_object_upload = {'frame': DataFrame(),
-                                  'path': create_path_name(self.list_source['path'], '_sf_update')}
+                                  'path': create_path_name(self.list_source['path'], '_sfupdate')}
         self.src_object_create = {'frame': DataFrame(),
-                                  'path': create_path_name(self.list_source['path'], '_sf_create')}
-        self.no_update = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_no_updates')}
+                                  'path': create_path_name(self.list_source['path'], '_sfcreate')}
+        self.no_update = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_noupdates')}
         self.current_members = {'frame': DataFrame(),
-                                'path': create_path_name(self.list_source['path'], '_current_members')}
+                                'path': create_path_name(self.list_source['path'], '_currentmembers')}
+        self.not_found = {'frame': DataFrame(), 'path': create_path_name(self.list_source['path'], '_notfound')}
 
         # Salesforce metadata
         self.list_type = kwargs['list_type']
@@ -125,7 +126,6 @@ class ListBase(object):
         self.duration = None
 
     def update_statistics(self):
-        self.update_state()
         self.found_records = len(self.found['frame'].index)
         self.updating_records = len(self.update['frame'].index)
         self.src_object_upload_records = len(self.src_object_upload['frame'].index)
@@ -141,13 +141,26 @@ class ListBase(object):
         self.state = ListStates(self.state.value + 1)
 
     def populate_research_frame(self):
+        self.populate_not_found()
         if self.need_research > 0:
-            combine = [self.list_source['frame'], self.no_crd['frame'], self.finra_ambiguous['frame']]
-            self.research['frame'] = concat_dfs(combine)
+            combine = [self.not_found, self.no_crd, self.finra_ambiguous]
+
+            # populate source of research
+            for comb in combine:
+                comb['frame']['research_source'] = re.split('\_|\.', comb['path'])[-2]
+            combine = [comb['frame'] for comb in combine]
+
+            self.research['frame'] = concat(combine, sort=False, ignore_index=True)
             self.research['frame'].drop_duplicates(keep='first', inplace=True)
+
+    def populate_not_found(self):
+        if len(self.list_source['frame'].index) > 0:
+            self.not_found['frame'] = self.list_source['frame']
 
     def save_frames(self):
         self.update_state()
+        self.update_statistics()
+
         self.populate_research_frame()
         for item in [self.list_source, self.found, self.create, self.update, self.remove,
                      self.stay, self.finra_found, self.finra_ambiguous, self.no_crd, self.review,
@@ -158,7 +171,10 @@ class ListBase(object):
                 item['frame'].to_excel(item['path'], index=False)
 
     def gather_attachments(self):
-        for item in [self.research, self.review, self.remove, self.src_object_upload, self.create]:
+        attachments = [self.research, self.review, self.src_object_upload, self.create, self.found]
+        if self.list_type == 'BizDev Group':
+            attachments.append(self.remove)
+        for item in attachments:
             if len(item['frame'].index) > 0:
                 self.generated_files.append(item['path'])
 
