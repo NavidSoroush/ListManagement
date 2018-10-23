@@ -30,9 +30,10 @@ time_now = _dt.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 yyyy_mm = _dt.datetime.strftime(_dt.datetime.now(), '%Y%m')
 
 _new_path_names = [
-    '_foundcontacts', 'to_create', 'to_update', 'to_remove', 'to_stay', 'to_add',
-    '_finrasec_found', '_FINRA_ambiguous', '_nocrd', '_review_contacts',
-    '_research', '_sf_update', '_sf_create', '_no_updates', '_current_members'
+    '_foundcontacts', 'tocreate', 'toupdate', 'toremove', 'tostay', 'toadd',
+    '_finrasecfound', '_FINRAambiguous', '_nocrd', '_reviewcontacts',
+    '_research', '_sfupdate', '_sfcreate', '_noupdates', '_currentmembers',
+    '_notfound'
 ]
 
 
