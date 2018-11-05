@@ -1,4 +1,3 @@
-from ListManagement.core.ml.model import LM_Model
 from ListManagement.utils.pandas_helper import make_df
 
 _confidence = .99
@@ -8,9 +7,8 @@ def _update_column_names_with_predictions():
     pass
 
 
-def predict_headers_and_pre_processing(_vars, log, mode):
+def predict_headers_and_pre_processing(_vars, log, mode, model):
     _vars.update_state()
-    model = LM_Model(log=log, )
     frame, predictions, probability = model.predict(_vars)
     headers = frame.columns.values
     log.info("Here are the headers in the '%s' file: \n\n %s \n" % (_vars.list_source, headers))
@@ -66,4 +64,4 @@ def predict_headers_and_pre_processing(_vars, log, mode):
     new_data = make_df(data=new_headers, columns=('Header Value', 'Class'))
     model.save_new_training_data(new_data)
     _vars.list_source['frame'] = frame
-    return _vars
+    return _vars, model
