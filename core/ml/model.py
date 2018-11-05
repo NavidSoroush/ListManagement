@@ -31,8 +31,8 @@ class LM_Model:
         self.conn = self.dba.init_new_connection(server='DPHL-PROPSCORE', database='ListManagement')
         self.model_pickle_loc, self.model_name_loc = _saved_model, _saved_name
         self.brain_sql = 'TrainingData'
+        self.vectorizer = self._init_vectorizer()
         self.features, self.train_class = self.data_preprocessing()
-        self.vectorizer = None
         self.classifier = None
 
     @staticmethod
@@ -137,7 +137,6 @@ class LM_Model:
             return self.classifier
 
     def predict(self, _vars):
-        self.vectorizer = self._init_vectorizer()
         self.classifier = self._init_and_train_classifier()
         frame = _vars.list_source['frame']
         headers, features = self._init_predict_meta_data(frame)
