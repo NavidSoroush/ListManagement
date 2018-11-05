@@ -11,7 +11,7 @@ def predict_headers_and_pre_processing(_vars, log, mode, model):
     _vars.update_state()
     frame, predictions, probability = model.predict(_vars)
     headers = frame.columns.values
-    log.info("Here are the headers in the '%s' file: \n\n %s \n" % (_vars.list_source, headers))
+    log.info("Here are the headers in the '%s' file: \n\n %s \n" % (_vars.list_source['path'], headers))
     output = make_df(data={"1. Header": headers, "3. Prediction": predictions})
 
     expected_inputs = model.train_class.unique().tolist()
