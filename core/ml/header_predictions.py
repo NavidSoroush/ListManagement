@@ -10,7 +10,7 @@ def _update_column_names_with_predictions():
 
 def predict_headers_and_pre_processing(_vars, log, mode):
     _vars.update_state()
-    model = HeaderPredictions(log=log,) #  use_saved=True)
+    model = HeaderPredictions(log=log, )  # use_saved=True)
     model.predict(_vars)
     headers = model.p_df.columns.values
     log.info("Here are the headers in the '%s' file: \n\n %s \n" % (model.predict_file_name, headers))
@@ -27,7 +27,7 @@ def predict_headers_and_pre_processing(_vars, log, mode):
     new_headers = []
     for index, row in need_validation.iterrows():
         if model.probability[index] > _confidence or mode == 'auto':
-        # if mode == 'auto':
+            # if mode == 'auto':
             tmp = [row['Header Value'], row['Class']]
             new_headers.append(tmp)
             model.p_df.rename(columns={headers[index]: new_headers[index][1]}, inplace=True)
