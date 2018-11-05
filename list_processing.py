@@ -28,6 +28,7 @@ from ListManagement.config import Config
 from ListManagement.core.build_sf_source import build_current_fa_list
 from ListManagement.core.build_queue import establish_queue
 from ListManagement.core.ml import header_predictions as predicts
+from ListManagement.core.ml.model import LM_Model as Model
 from ListManagement.core.standardization import DataStandardization
 from ListManagement.core.search import Search, Finra
 from ListManagement.core.data_staging import Staging
@@ -76,6 +77,7 @@ class ListProcessing:
         self._uploader = None
         self._stats = None
         self._notifier = None
+        self._model = Model(self._log)
         self._sfdc_file_check()
         self.vars = establish_queue(sfdc=self._sfdc, log=self._log)
         self.main_contact_based_processing()
@@ -117,7 +119,8 @@ class ListProcessing:
                 self._notifier = Notify(self._log)
                 try:
                     self._log.info('Beginning processing on {}.'.format(item.object_name))
-                    item = predicts.predict_headers_and_pre_processing(item, self._log, self.mode)
+                    item, self._model = predicts.predict_headers_and_pre_processing(item, self._log, self.mode,
+                                                                                    self._model)
                     item = self._standardizer.standardize_all(item)
 
                     item = self._search_api.perform_search_one(item)
