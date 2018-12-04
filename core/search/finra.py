@@ -105,7 +105,7 @@ class Finra:
         if 'crdnumber' in df_cols or scrape_type == 'all':
             self._scrape_type = 'all'
             self.url = self._broker_check_url
-            self._search = [int(x) for x in df['CRDNumber'].values.tolist()]
+            self._search = [int(x) if x != '' else 0 for x in df['CRDNumber'].values.tolist()]
             xpath_keys = [x for x in self._x_paths.keys() if x != 'crd_only_scrape']
             self._scraped_dict = {x: list() for x in xpath_keys}
             on = 'CRDNumber'
@@ -151,7 +151,7 @@ class Finra:
         """
         # self.log.info('Attempting to get %s meta data from an individual Finra page.' % ', '.join(xpath_keys))
         self._attempted_count = 0
-        while self._attempted_count < len(self._search):
+        while not len(set(map(len, self._scraped_dict.values()))) == 1:
             _ghelp.myprogressbar(self._attempted_count + 1, len(self._search),
                                  message='%s FINRA scraping' % self._scrape_type.upper())
 

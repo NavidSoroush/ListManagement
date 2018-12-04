@@ -2,6 +2,7 @@ from ListManagement.utils.pandas_helper import crud
 
 
 def _bdg_split(frame):
+    frame['Licenses'] = frame['Licenses'].astype(str)
     frame = frame[(frame['Licenses'].str.contains('Series 7')) | (frame['Licenses'].str.contains('Series 22'))]
     return frame
 
@@ -19,12 +20,14 @@ _query_map = {
     'Campaign': {
         'object': 'CampaignMember'
         , 'fields': ['ContactId', 'Status', 'CampaignId', 'Id']
+        , 'rename': None
         , 'where': "CampaignId='{0}'"
     },
     'BizDev Group': {
         'object': 'Contact'
-        , 'fields': ['Id', 'Biz_Dev_Group__c', 'Licences__c']
-        , 'where': "Biz_Dev_Group__c ='{0}'"
+        , 'fields': ['Id', 'BizDev_Group__c', 'Licenses__c']
+        , 'rename': {'Id': 'ContactId'}
+        , 'where': "BizDev_Group__c ='{0}'"
     }
 }
 
@@ -40,7 +43,7 @@ class Parser:
             _vars.src_object_upload['frame'] = _switcher[_vars.list_type](
                 df=_vars.found['frame'][_vars.found['frame']['action_flag'] == 'found'])
             _vars = self._split_existing_members(_vars, sf)
-        self.log.info('Successfully split the lsit request into actionable chunks.')
+        self.log.info('Successfully split the list request into actionable chunks.')
         return _vars
 
     @staticmethod
@@ -61,6 +64,9 @@ class Parser:
                                                       , fields=_query_map[_vars.list_type]['fields']
                                                       , where=_query_map[_vars.list_type]['where'].format(
                     _vars.object_id))
+            if _query_map[_vars.list_type]['rename']:
+                _vars.current_members['frame'].rename(columns=_query_map[_vars.list_type]['rename'], inplace=True)
+                _query_map[_vars.list_type]['fields'][0] = _query_map[_vars.list_type]['rename'][_query_map[_vars.list_type]['fields'][0]]
             if len(_vars.current_members['frame'].index) > 0:
                 add, stay, remove = crud(source=frame, target=_vars.current_members['frame'],
                                          on=_query_map[_vars.list_type]['fields'][0])
