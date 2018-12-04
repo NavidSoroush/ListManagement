@@ -25,6 +25,7 @@ class Config(object):
         self.SFDCDir = os.path.join(self.CoreDir, 'Salesforce Data Files')
         self.SFDCLoc = os.path.join(self.SFDCDir, 'SFDC Advisor List as of ' + time.strftime("%m-%d-%y") + '.csv')
         self.ListTeam = ['ricky.schools@fsinvestments.com']  # , salesops@fsinvestments.com]
+        self.DevTeam = ['ricky.schools@fsinvestments.com']
         self.SFDomain = 'fsinvestments.my.salesforce.com'
         self.SFUser = os.environ['SFUSER']
         self.SFPass = os.environ['SFPASS']
