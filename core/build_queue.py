@@ -15,32 +15,37 @@ _LIST_FIELDS = ['Id', 'Related_Account__c', 'Related_BizDev_Group__c',
                 'IsDeleted', 'Status__c']
 _LIST_WHERE = "Status__c='In Queue'"
 
-_OBJ_MAP = {'Attachment': {'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
+_OBJ_MAP = {'Attachment': {'obj_name': 'Attachment',
+                           'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
                            'where_stmt': "ParentId='{0}' AND Name='{1}'",
                            'rename': {'Id': 'AttachmentId', 'Name': 'File_Name__c', 'ParentId': 'ObjectId',
                                       'CreatedDate': 'Received Date'},
                            'merge_on': ['ObjectId', 'File_Name__c'],
                            'where_vars': ['ObjectId', 'File_Name__c']
                            },
-            'User': {'fields': ['Id', 'Name', 'Email'],
+            'User': {'obj_name': 'User',
+                     'fields': ['Id', 'Name', 'Email'],
                      'where_stmt': "Id='{0}'",
                      'rename': {'Id': 'OwnerId', 'Name': 'Sender Name', 'Email': 'Sender Email'},
                      'merge_on': "OwnerId",
                      'where_vars': ['OwnerId']
                      },
-            'Campaign': {'fields': ['Id', 'Name'],
+            'Campaign': {'obj_name': 'Campaign',
+                         'fields': ['Id', 'Name'],
                          'where_stmt': "Id='{0}'",
                          'rename': {'Id': 'ObjectId', 'Name': 'Record Name'},
                          'merge_on': 'ObjectId',
                          'where_vars': ['ObjectId']
                          },
-            'Account': {'fields': ['Id', 'Name'],
+            'Account': {'obj_name': 'Account',
+                        'fields': ['Id', 'Name'],
                         'where_stmt': "Id='{0}'",
                         'rename': {'Id': 'ObjectId', 'Name': 'Record Name'},
                         'merge_on': 'ObjectId',
                         'where_vars': ['ObjectId']
                         },
-            'BizDev Group': {'fields': ['Id', 'Name'],
+            'BizDev Group': {'obj_name': 'BizDev__c',
+                             'fields': ['Id', 'Name'],
                              'where_stmt': "Id='{0}'",
                              'rename': {'Id': 'ObjectId', 'Name': 'Record Name'},
                              'merge_on': 'ObjectId',
@@ -130,7 +135,7 @@ def _get_metadata_ids(sfdc, frame=None, obj=None, parent_obj=None):
     meta_dfs = list()
     for index, row in frame.iterrows():
         clause = _build_clause(row, obj)
-        queried_data = sfdc.query(obj, _OBJ_MAP[obj]['fields'], where=clause)
+        queried_data = sfdc.query(_OBJ_MAP[obj]['obj_name'], _OBJ_MAP[obj]['fields'], where=clause)
         if len(queried_data.index) > 0:
             meta_dfs.append(queried_data)
     meta_dfs = _phelp.concat_dfs(meta_dfs)
