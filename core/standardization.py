@@ -1,5 +1,6 @@
 import re
 
+_NAMES_COLS = ['FirstName', 'LastName']
 _NAMES_TO_REMOVE = [
     "jr", "jr.", "sr", "sr.", "ii", "iii", "iv", 'aams', 'aif', 'aifa', 'bcm', 'caia',
     'casl', 'ccps', 'cdfa', 'cea', 'cebs', 'ces', 'cfa', 'cfe', 'cfp', 'cfs', 'chfc',
@@ -16,6 +17,8 @@ class DataStandardization:
         self.log.info('Standardizing data formatting.')
         _vars.update_state()
         account_name = _vars.account_name if _vars.account_name is not None else _vars.object_name
+        _vars.list_source['frame'].dropna(axis=0, thresh=3, inplace=True)
+        _vars.list_source['frame'].fillna('', inplace=True)
         _vars.list_source['frame'] = self.standardize_account_names(_vars.list_source['frame'], account_name)
         _vars.list_source['frame'] = self.standardize_address_metadata(_vars.list_source['frame'])
         _vars.list_source['frame'] = self.standardize_people_names(_vars.list_source['frame'])
@@ -140,6 +143,7 @@ class DataStandardization:
 
     def standardize_people_names(self, frame):
         frame = self._split_full_names(frame)
+        frame = self._remove_nicknames(frame)
         frame = self._normalize_name_case(frame)
         self.notify_status('People names')
         return frame
@@ -170,26 +174,41 @@ class DataStandardization:
                         frame.loc[index, "LastName"] = full_name_list[1]
         return frame
 
+    def _remove_nicknames(self, frame):
+        """
+
+        Parameters
+        ----------
+        frame
+
+        Returns
+        -------
+
+        """
+        if set(_NAMES_COLS).issubset(frame.columns.tolist()):
+            for col in _NAMES_COLS:
+                frame[col] = frame[col].map(lambda x: x[:x.find('(') - 1] if "(" in x else x)
+        return frame
+
     @staticmethod
     def _normalize_name_case(frame):
-        if set(['FirstName', 'LastName']).issubset(frame.columns.tolist()):
-            frame["FirstName"] = frame["FirstName"].astype('str').apply(lambda x: x.title())
-            frame["LastName"] = frame["LastName"].astype('str').apply(lambda x: x.title())
+        if set(_NAMES_COLS).issubset(frame.columns.tolist()):
+            for item in _NAMES_COLS:
+                frame[item] = frame[item].map(lambda x: x.title() if type(x) == str else str(x))
         return frame
 
     @staticmethod
     def make_sfdc_lookup(frame):
         lookup_keys = set(['FirstName', 'LastName', 'Account', 'MailingState', 'MailingPostalCode'])
         if lookup_keys.issubset(frame.columns.tolist()):
-            frame["LkupName"] = frame["FirstName"].str[:3] + frame["LastName"] + frame["Account"].str[:10] + \
-                                frame["MailingState"] + frame["MailingPostalCode"]
+            frame["LkupName"] = frame["FirstName"].str[:3] + frame["LastName"].astype(str) + frame["Account"].str[:10] + \
+                                frame["MailingState"].astype(str) + frame["MailingPostalCode"].astype(str)
         return frame
 
     @staticmethod
     def make_finra_lookup(frame):
         try:
-            frame['FinraLookup'] = frame["FirstName"] + ' ' + frame["LastName"] + " " + \
-                                   frame["Account"].str[:10]
+            frame['FinraLookup'] = frame["FirstName"] + " " + frame["LastName"] + " " + frame["Account"].str[:10]
         except KeyError:
             return frame, False
         return frame, True
