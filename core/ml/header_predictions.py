@@ -19,7 +19,7 @@ def predict_headers_and_pre_processing(_vars, log, mode, model):
 
     need_validation = output[['1. Header', '3. Prediction']]
     need_validation = need_validation.rename(columns={'1. Header': 'Header Value', '3. Prediction': 'Class'})
-    if len(need_validation) > 0:
+    if len(need_validation.index) > 0:
         log.info("Here are the predictions that I'm less than %s sure on:\n" % "{0:.0f}%".format(_confidence * 100))
 
     new_headers = []
