@@ -42,7 +42,7 @@ class DataStandardization:
 
     @staticmethod
     def _remove_delimiters_from_account_name(frame):
-        frame["Account"] = frame["Account"].str.replace(',', '')
+        frame["Account"] = frame["Account"].replace(',', '')
         return frame
 
     def standardize_address_metadata(self, frame):
