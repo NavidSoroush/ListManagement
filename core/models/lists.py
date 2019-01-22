@@ -143,7 +143,7 @@ class ListBase(object):
     def populate_research_frame(self):
         self.populate_not_found()
         if self.need_research > 0:
-            combine = [self.not_found, self.no_crd, self.finra_ambiguous]
+            combine = [self.no_crd, self.finra_ambiguous]  # [self.not_found, self.no_crd, self.finra_ambiguous]
 
             # populate source of research
             for comb in combine:
