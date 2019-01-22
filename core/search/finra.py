@@ -151,7 +151,7 @@ class Finra:
         """
         # self.log.info('Attempting to get %s meta data from an individual Finra page.' % ', '.join(xpath_keys))
         self._attempted_count = 0
-        while not len(set(map(len, self._scraped_dict.values()))) == 1:
+        while not len(set(map(len, self._scraped_dict.values()))) == 1 and self._attempted_count < len(self._search):
             _ghelp.myprogressbar(self._attempted_count + 1, len(self._search),
                                  message='%s FINRA scraping' % self._scrape_type.upper())
 
