@@ -14,7 +14,7 @@ At it's core, LIMA is a matching system that can push necessary updates, given a
 ### How lists are processed
 ![Representation of list processing](static/list_process.png)
 
-### Usage
+### Usage (Deprecated - need updated documentation as of version 4.2)
 
 #### Full process
 To leverage the entire functionality of the list program (LIMA), you need only perform the below.
