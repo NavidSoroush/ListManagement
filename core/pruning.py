@@ -61,7 +61,10 @@ class Pruning:
     def _limit_cols(frame, cols):
         for header in frame.columns.tolist():
             if header not in cols:
-                del frame[header]
+                try:
+                    del frame[header]
+                except KeyError:
+                    pass
         return frame
 
     @staticmethod

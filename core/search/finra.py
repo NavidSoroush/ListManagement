@@ -212,11 +212,11 @@ class Finra:
                                 self._scraped_dict['NumSuggestions'].append(0)
 
                             search_bar.clear()
+                            self._attempted_count += 1
+                            self._attempts = 0
                         else:
                             self._refreshing()
                             self._attempts += 1
-
-                    self._attempted_count += 1
 
                 except:
                     self._attempts += 1
