@@ -37,6 +37,7 @@ from ListManagement.core.pruning import Pruning
 from ListManagement.core.uploads import Uploader
 from ListManagement.core.stats import ProcessingStats
 from ListManagement.core.notifications import Notify
+from ListManagement.core.intel_hook import init_intel_processing
 
 con = Config()
 
@@ -118,6 +119,10 @@ class ListProcessing:
                 self._stats = ProcessingStats(self._log)
                 self._notifier = Notify(self._log)
                 try:
+                    intel_source = "{0}--{1}-{2}-{3}".format(item.process_start.date(), item.list_type,
+                                                             item.object_name,
+                                                             os.path.basename(item.list_source['path']))
+                    init_intel_processing(item.list_source['path'], source=intel_source)
                     self._log.info('Beginning processing on {}.'.format(item.object_name))
                     item, self._model = predicts.predict_headers_and_pre_processing(item, self._log, self.mode,
                                                                                     self._model)
