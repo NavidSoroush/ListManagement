@@ -15,6 +15,8 @@ _return_fields = ['CRDNumber', 'AccountId', 'SourceChannel',
 
 _FMT = '%H:%M:%S'
 
+_INTEL_DUMP_LOCATION = 'C:/Temp/data/Intel/list_uploads'
+
 
 class ListStates(enum.Enum):
     pending = enum.auto()  # implicit
@@ -124,6 +126,8 @@ class ListBase(object):
         self.process_start = _dt.datetime.utcnow()
         self.process_end = None
         self.duration = None
+
+        # export
 
     def update_statistics(self):
         self.found_records = len(self.found['frame'].index)
