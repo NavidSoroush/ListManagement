@@ -1,4 +1,5 @@
 import re
+from numpy import nan
 
 _NAMES_COLS = ['FirstName', 'LastName']
 _NAMES_TO_REMOVE = [
@@ -60,10 +61,10 @@ class DataStandardization:
         if set(['MailingStreet1', 'MailingStreet2']).issubset(frame.columns.tolist()):
             frame.MailingStreet1 = frame.MailingStreet1.astype(str)
             frame.MailingStreet2 = frame.MailingStreet2.astype(str)
-            frame.fillna('nan')
+            frame.fillna('')
             frame['MailingStreet'] = ''
             for index, row in frame.iterrows():
-                if frame.loc[index, 'MailingStreet2'] == 'nan':
+                if frame.loc[index, 'MailingStreet2'].empty or frame.loc[index, 'MailingStreet2'] == '':
                     frame.loc[index, 'MailingStreet'] = frame.loc[index, 'MailingStreet1']
                 else:
                     frame.loc[index, 'MailingStreet'] = frame.loc[index, 'MailingStreet1'] + ' ' + \
