@@ -56,6 +56,8 @@ class ListBase(object):
         self.processable = True if self.extension in Config.ACCEPTED_FILE_TYPES else False
 
         # All potential data frames
+        self.original_list = {'frame': read_df(self.list_base_path),
+                              'path': self.list_base_path[:-len(self.extension)] + '_original_list.xlsx'}
         self.list_source = {'frame': read_df(self.list_base_path),
                             'path': self.list_base_path[:-len(self.extension)] + '.xlsx'}
         self.sfdc_target = {'frame': read_df(Config.SFDCLoc), 'path': Config.SFDCLoc}
@@ -144,7 +146,7 @@ class ListBase(object):
     def update_state(self):
         self.state = ListStates(self.state.value + 1)
 
-    def populate_research_frame(self):
+    def populate_research_frame(self, lead_hook=True, dba=None, conn=None):
         self.populate_not_found()
         if self.need_research > 0:
             combine = [self.no_crd, self.finra_ambiguous]  # [self.not_found, self.no_crd, self.finra_ambiguous]
@@ -156,20 +158,28 @@ class ListBase(object):
 
             self.research['frame'] = concat(combine, sort=False, ignore_index=True)
             self.research['frame'].drop_duplicates(keep='first', inplace=True)
+            if lead_hook and dba is not None and conn is not None:
+                self.drop_unfound_leads(dba, conn)
+
+    def drop_unfound_leads(self, dba, conn):
+        leads_df = self.research['frame']
+        leads_df['sourced_date'] = _dt.datetime.date().today()
+        leads_df['source_file'] = self.list_base_path
+        dba.df_to_sql(leads_df, conn, Config.LEAD_TABLE, if_exists='append')
 
     def populate_not_found(self):
         if len(self.list_source['frame'].index) > 0:
             self.not_found['frame'] = self.list_source['frame']
 
-    def save_frames(self):
+    def save_frames(self, lead_hook=True, dba=None, conn=None):
         self.update_state()
         self.update_statistics()
 
-        self.populate_research_frame()
-        for item in [self.list_source, self.found, self.create, self.update, self.remove,
+        self.populate_research_frame(lead_hook=lead_hook, dba=dba, conn=conn)
+        for item in [self.original_list, self.list_source, self.found, self.create, self.update, self.remove,
                      self.stay, self.finra_found, self.finra_ambiguous, self.no_crd, self.review,
                      self.research, self.src_object_upload, self.src_object_create, self.no_update,
-                     self.current_members]:
+                     self.current_members, self.not_found]:
             if len(item['frame'].index) > 0:
                 item['frame'].drop_duplicates(keep='first', inplace=True)
                 item['frame'].to_excel(item['path'], index=False)
