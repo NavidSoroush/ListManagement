@@ -64,7 +64,7 @@ class DataStandardization:
             frame.fillna('')
             frame['MailingStreet'] = ''
             for index, row in frame.iterrows():
-                if frame.loc[index, 'MailingStreet2'].empty or frame.loc[index, 'MailingStreet2'] == '':
+                if frame.loc[index, 'MailingStreet2'] == '':
                     frame.loc[index, 'MailingStreet'] = frame.loc[index, 'MailingStreet1']
                 else:
                     frame.loc[index, 'MailingStreet'] = frame.loc[index, 'MailingStreet1'] + ' ' + \

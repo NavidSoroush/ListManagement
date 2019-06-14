@@ -140,7 +140,7 @@ class ListProcessing:
                     item = self._stager.fill_gaps(item)
                     item = self._parser.split_found_into_actions(item, self._sfdc)
                     item = self._pruner.upload_preparation(item)
-                    item.save_frames()
+                    item.save_frames(lead_hook=True, dba=self._model.dba, conn=self._model.conn)
                     item.gather_attachments()
                     item = self._uploader.upload(item, self._sfdc)
                     self._stats.record(item, self._sfdc)
