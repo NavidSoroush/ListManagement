@@ -68,7 +68,7 @@ class ListProcessing:
         self.mode = mode
         self._log = Logging(name=con.AppName, abbr=con.NameAbbr, dir_=con.LogDrive, level='debug').logger
         self._sfdc = SFPy(user=con.SFUser, pw=con.SFPass, token=con.SFToken,
-                          domain=con.SFDomain, verbose=False, _dir=con.BaseDir)
+                          verbose=False, _dir=con.BaseDir)
         self._search_api = None
         self._finra_api = None
         self._standardizer = None
