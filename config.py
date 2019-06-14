@@ -43,6 +43,10 @@ class Config(object):
                                'cmp_upload', 'no_updates', 'to_update', 'to_create', 'bdg_update',
                                'toAdd', 'bdg_toStay', 'current_bdg_members', 'to_remove']
         self.ACCEPTED_FILE_TYPES = ['.csv', '.txt', '.tsv', '.xlsx', '.xls', '.xlm']
+        self.SERVER = 'DPHL-PROPSCORE'
+        self.DATABASE = 'ListManagement'
+        self.LEAD_TABLE = 'PotentialLeads'
+        self.LEAD_TABLE_BACKUP = 'PotentialLeads_backup'
         self._create_directories()
 
     def _create_directories(self):
