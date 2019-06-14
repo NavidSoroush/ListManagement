@@ -15,10 +15,10 @@ _LIST_FIELDS = ['Id', 'Related_Account__c', 'Related_BizDev_Group__c',
                 'IsDeleted', 'Status__c']
 _LIST_WHERE = "Status__c='In Queue'"
 
-_OBJ_MAP = {'Attachment': {'obj_name': 'Attachment',
-                           'fields': ['Id', 'CreatedDate', 'Name', 'ParentId'],
-                           'where_stmt': "ParentId='{0}' AND Name='{1}'",
-                           'rename': {'Id': 'AttachmentId', 'Name': 'File_Name__c', 'ParentId': 'ObjectId',
+_OBJ_MAP = {'Attachment': {'obj_name': 'ContentDocument',
+                           'fields': ['Id', 'CreatedDate', 'Title'],
+                           'where_stmt': "Title='{1}'",
+                           'rename': {'Id': 'AttachmentId', 'Title': 'File_Name__c', 'ParentId': 'ObjectId',
                                       'CreatedDate': 'Received Date'},
                            'merge_on': ['ObjectId', 'File_Name__c'],
                            'where_vars': ['ObjectId', 'File_Name__c']
@@ -137,8 +137,13 @@ def _get_metadata_ids(sfdc, frame=None, obj=None, parent_obj=None):
         clause = _build_clause(row, obj)
         queried_data = sfdc.query(_OBJ_MAP[obj]['obj_name'], _OBJ_MAP[obj]['fields'], where=clause)
         if len(queried_data.index) > 0:
+            if obj == 'Attachment':
+                queried_data['ParentId'] = row['ObjectId']
             meta_dfs.append(queried_data)
-    meta_dfs = _phelp.concat_dfs(meta_dfs)
+    if len(meta_dfs) > 1:
+        meta_dfs = _phelp.concat_dfs(meta_dfs)
+    else:
+        meta_dfs = meta_dfs[0]
     meta_dfs.rename(columns=_OBJ_MAP[obj]['rename'], inplace=True)
     if _OBJ_MAP[obj]['merge_on'] is None and frame is None:
         frame = meta_dfs
