@@ -163,7 +163,7 @@ class ListBase(object):
 
     def drop_unfound_leads(self, dba, conn):
         leads_df = self.research['frame']
-        leads_df['sourced_date'] = _dt.datetime.date().today()
+        leads_df['sourced_date'] = _dt.datetime.today().date()
         leads_df['source_file'] = self.list_base_path
         dba.df_to_sql(leads_df, conn, Config.LEAD_TABLE, if_exists='append')
 
